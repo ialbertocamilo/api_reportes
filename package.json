@@ -1,0 +1,33 @@
+{
+  "name": "api",
+  "version": "3.0.0",
+  "description": "Servicio de reportes para cursalab_v2",
+  "main": "index.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "eslint": "^7.18.0",
+    "exceljs": "^4.3.0",
+    "express": "^4.17.1",
+    "express-queue": "0.0.12",
+    "knex": "^0.21.16",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.3",
+    "morgan": "^1.10.0",
+    "mysql2": "^2.1.0",
+    "node-cron": "2.0.3",
+    "sequelize": "^6.12.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4",
+    "standard": "^16.0.3"
+  },
+  "scripts": {
+    "dev": "nodemon index.js",
+    "pm2": "pm2 start index.js --name 'API_REPORTE_V2' --only api",
+    "lint": "standard",
+    "lint-fix": "standard --fix"
+  },
+  "author": "Cursalab",
+  "license": "ISC"
+}
