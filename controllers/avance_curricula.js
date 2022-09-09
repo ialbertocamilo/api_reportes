@@ -5,7 +5,7 @@ process.on('message', requestData => {
   const { con } = require('../db')
   const { response } = require('../response')
   const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
-  const { getUsuarios } = require('../helper/Usuarios')
+  const { getUsers } = require('../helper/Usuarios')
   async function AvanceCurricula ({ modulos, UsuariosActivos, UsuariosInactivos, validacion }) {
     let headers = [
         'Modulo',
@@ -17,7 +17,7 @@ process.on('message', requestData => {
     ]
     // worksheet.getColumn(14).numFmt = '0%'
     const Modulos = await con('ab_config')
-    const Usuarios = await getUsuarios(modulos, UsuariosActivos, UsuariosInactivos)
+    const Usuarios = await getUsers(modulos, UsuariosActivos, UsuariosInactivos)
     const ResumenGeneral = await con('resumen_general')
     const TipoCriterios = await con('tipo_criterios')
     const CriteriosUsuarios = await con.raw(`SELECT uc.usuario_id, c.nombre, tc.id as tipo_criterio_id
@@ -72,4 +72,3 @@ process.on('message', requestData => {
     const num_sign = num >= 0 ? 1 : -1
     return parseFloat((Math.round((num * Math.pow(10, dec)) + (num_sign * 0.0001)) / Math.pow(10, dec)).toFixed(dec))
   }
-  

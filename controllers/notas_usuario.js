@@ -6,101 +6,98 @@ require('../error')
 const moment = require('moment')
 moment.locale('es')
 const { con } = require('../db')
+const { findUserByDocument } = require('../helper/Usuarios')
+const { loadEvaluationTypes, getEvaluationTypeName } = require('../helper/CoursesTopicsHelper')
 
-async function notasUsuario({ dni }) {
-  let Usuario = {}
-  const usuario = await con('usuarios').select('id', 'dni', 'nombre', 'apellido_paterno', 'apellido_materno', 'email', 'config_id').where('dni', `${dni}`).then(([row]) => row)
-  if (!usuario || !dni) {
-    process.send({ alert: 'Usuario no encontrado, verifica el DNI' })
+async function notasUsuario ({ document }) {
+  // Load user from database
+
+  const user = await findUserByDocument(document)
+
+  // When there is no user with provided document,
+  // stop execution and return response
+
+  if (!user || !document) {
+    process.send({ alert: 'Usuario no encontrado, verifica el documento' })
     process.exit()
   }
-  Usuario = usuario
 
-  const Modulos = await con('ab_config').where('id', usuario.config_id)
-  const Escuelas = await con('categorias')
-  const Cursos = await con('cursos')
-  const Reinicios = await con('reinicios')
-  const Temas = await con('posteos')
-  const Visitas = await con('visitas')
-  const UsuarioCriterios = await con('usuario_criterios')
-  const Curriculas = await con('curriculas')
-  const CurriculaDetalles = await con('curricula_detalles')
-  const Pruebas = await con('pruebas').where('usuario_id', usuario.id)
-  const VisitasByCurso = await con.raw(
-    'SELECT SUM(sumatoria) as sumatoria, curso_id, usuario_id FROM visitas GROUP BY curso_id,usuario_id'
-  ).then(([rows]) => rows)
-  const Preguntas = await con('preguntas')
-  const ResultadoCurso = []
+  // When user has no summary courses,
+  // stop execution and return response
 
-  const ResumenCurso = await con('resumen_x_curso').where('usuario_id', usuario.id)
-  if (!ResumenCurso.length) {
-    process.send({ alert: `El Usuario con el DNI : ${dni} no tiene evaluaciones desarrolladas` })
+  const [userSummaryCourses] = await con.raw(`
+    select sc.*, c.name as course_name
+    from summary_courses sc 
+        inner join courses c on sc.course_id = c.id
+    where sc.user_id = :userId`,
+  { userId: user.id }
+  )
+
+  if (!userSummaryCourses.length) {
+    process.send({ alert: `El usuario con el documento ${document} no tiene evaluaciones desarrolladas` })
     process.exit()
   }
-  // Datos usuario
-  const modulo = Modulos.find(obj => obj.id == usuario.config_id)
-  Usuario.modulo = modulo.etapa
 
+  // Load user summary topics from database
 
-  for (const curso of ResumenCurso) {
-    const { curso_id, usuario_id } = curso
-    const CursosObj = {}
-    const _curso = Cursos.find(obj => obj.id === curso_id)
-    const reinicioCurso = Reinicios.find(obj => obj.curso_id == curso_id && obj.usuario_id == usuario_id)
+  const [userSummaryTopics] = await con.raw(`
+   select st.*, t.name as topic_name, t.type_evaluation_id
+   from summary_topics st
+           inner join topics t on st.topic_id = t.id
+   where st.user_id = :userId
+   `,
+  { userId: user.id }
+  )
 
-    const temas = Temas.filter(obj => obj.curso_id == curso_id)
-    const TemasArr = []
-    let visitasCurso = 0
+  // Load evaluation types
 
-    for (const tema of temas) {
-      const TemasObj = {}
-      const temaVisita = Visitas.find(obj => obj.curso_id == curso_id && obj.usuario_id == usuario_id && obj.post_id == tema.id)
-      const prueba = Pruebas.find(obj => obj.posteo_id == tema.id && obj.usuario_id == usuario.id)
-      const reinicioTema = Reinicios.find(obj => obj.posteo_id == tema.id && obj.usuario_id == usuario_id)
-      visitasCurso += temaVisita ? temaVisita.sumatoria : 0
-      TemasObj.tema = tema.nombre
-      TemasObj.sistema_calificacion = tema.tipo_cal || '-'
-      TemasObj.puntaje = prueba ? parseInt(prueba.puntaje) : '-'
-      TemasObj.nota = (prueba && prueba.nota) ? parseFloat(prueba.nota).toFixed(2) : '-'
-      TemasObj.correctas = prueba ? prueba.rptas_ok : '-'
-      TemasObj.incorrectas = prueba ? prueba.rptas_fail : '-'
-      TemasObj.visitas = temaVisita ? temaVisita.sumatoria : '-'
-      TemasObj.reinicios = reinicioTema ? reinicioTema.acumulado : 0
-      TemasObj.ultima_evaluacion = prueba ? moment(prueba.last_ev).format('L') + ' ' + moment(prueba.last_ev).format('LT') : '-'
+  const evaluationTypes = await loadEvaluationTypes()
 
-      if (prueba) {
-        const rptas = (prueba.usu_rptas) ? JSON.parse(prueba.usu_rptas) : ""
-        if (rptas) {
-          let Evaluacion = []
-          rptas.forEach((rpta, index) => {
-            let pregunta = Preguntas.find(obj => obj.id == rpta.preg_id) || ''
-            if(pregunta){
-              let respuesta_ok = JSON.parse(pregunta.rptas_json).find(obj => obj.id === pregunta.rpta_ok) || ''
-              let respuesta_usuario = JSON.parse(pregunta.rptas_json).find(obj => obj.id == rpta.opc) || ''
-              let evaluacion = {};
-              evaluacion.pregunta = pregunta ? pregunta.pregunta : '-' || '-'
-              evaluacion.respuesta_ok = respuesta_ok ? respuesta_ok.opc : '-' || '-'
-              evaluacion.respuesta_usuario = respuesta_usuario ? respuesta_usuario.opc : '' || ''
-              evaluacion.correcta = (respuesta_ok.id === respuesta_usuario.id) ? true : false ;
-              Evaluacion.push(evaluacion)
-            }
-          })
-          TemasObj.prueba = Evaluacion
-        }
-      }
-      TemasArr.push(TemasObj)
+  // Generate results
+
+  const courseResults = []
+  for (const summaryCourse of userSummaryCourses) {
+    const { course_id, user_id } = summaryCourse
+    const courseObj = {}
+    const topicsArray = []
+
+    for (const summaryTopic of userSummaryTopics) {
+      const topicObj = {}
+      const evaluationType = getEvaluationTypeName(evaluationTypes, summaryTopic.type_evaluation_id)
+      topicObj.tema = summaryTopic.topic_name
+      topicObj.sistema_calificacion = evaluationType || '-'
+      topicObj.puntaje = ''// summaryTopic.grade ? parseInt(summaryTopic.grade) : '-'
+      topicObj.nota = summaryTopic.grade ? parseFloat(summaryTopic.grade).toFixed(2) : '-'
+      topicObj.correctas = summaryTopic.correct_answers || '-'
+      topicObj.incorrectas = summaryTopic.failed_answers || '-'
+      topicObj.visitas = summaryTopic.views || '-'
+      topicObj.reinicios = summaryTopic.restarts || '-'
+      topicObj.ultima_evaluacion = summaryTopic.last_time_evaluated_at
+        ? moment(summaryTopic.last_time_evaluated_at).format('L')
+        : '-'
+
+      topicsArray.push(topicObj)
     }
 
-    CursosObj.curso = _curso ? _curso.nombre : '-'
-    CursosObj.nota_prom = curso ? curso.nota_prom : '-'
-    CursosObj.visitas = visitasCurso
-    CursosObj.reinicios = reinicioCurso ? reinicioCurso.acumulado : '-'
+    courseObj.curso = summaryCourse.course_name
+    courseObj.nota_prom = summaryCourse.grade_average ? summaryCourse.grade_average : '-'
+    courseObj.visitas = summaryCourse.views
+    courseObj.reinicios = summaryCourse.restarts ? summaryCourse.restarts : '-'
+    courseObj.temas = topicsArray
 
-    CursosObj.temas = TemasArr
-    ResultadoCurso.push(CursosObj)
+    courseResults.push(courseObj)
   }
+
+  // Load user module
+
+  const modules = await con('workspaces')
+    .where('id', user.subworkspace_id)
+
   process.send({
-    Cursos: ResultadoCurso,
-    Usuario
+    courses: courseResults,
+    user: {
+      user, module: modules[0]
+    }
   })
 }
+

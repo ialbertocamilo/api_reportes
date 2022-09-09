@@ -1,14 +1,41 @@
 const router = require('express').Router()
 const tablas = require('./tablas')
-const con = require('../db')
 router.get('/', async (req, res) => {
   res.send('Bienvenido a la api de filtros')
 })
 
-router.get('/datosiniciales', async (req, res) => {
-  const datos = await tablas.datosIniciales()
+router.get('/datosiniciales/:workspaceId', async (req, res) => {
+  const datos = await tablas.datosIniciales(req.params.workspaceId)
   res.json(datos)
 })
+
+router.get('/courses/:workspaceId', async (req, res) => {
+
+  const datos = await tablas.loadSchoolCourses(req.params.workspaceId)
+  res.json(datos)
+})
+
+router.get('/topics/:courseId', async (req, res) => {
+
+  const datos = await tablas.loadCourseTopics(req.params.courseId)
+  res.json(datos)
+})
+
+router.get('/schools/:workspaceId', async (req, res) => {
+
+  const datos = await tablas.loadWorkspaceSchools(req.params.workspaceId)
+  res.json(datos)
+})
+
+
+
+
+
+
+
+
+
+
 
 router.get('/cargar_grupos', async (req, res) => {
   const { mod, esc } = req.query

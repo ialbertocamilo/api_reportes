@@ -9,7 +9,7 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
 const { getCriteriosPorUsuario, getHeadersEstaticos } = require('../helper/Criterios')
-const { getUsuarios } = require('../helper/Usuarios')
+const { getUsers } = require('../helper/Usuarios')
 const moment = require('moment')
 moment.locale('es')
 
@@ -50,7 +50,7 @@ async function exportarUsuariosDW({ modulos, UsuariosActivos, UsuariosInactivos,
   !start && end ? WhereResumen += ` AND updated_at <= '${end}'` : ''
 
   const Modulos = await con('ab_config')
-  const Usuarios = await getUsuarios(modulos, UsuariosActivos, UsuariosInactivos)
+  const Usuarios = await getUsers(modulos, UsuariosActivos, UsuariosInactivos)
   const UsuarioCursos = cursos
     ? await con('usuario_cursos').where('estado', 1).whereIn('curso_id', cursos)
     : await con('usuario_cursos').where('estado', 1)

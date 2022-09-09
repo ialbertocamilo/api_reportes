@@ -11,7 +11,7 @@ if (CARPETA_DESCARGA && !fs.existsSync(CARPETA_DESCARGA)) {
 const createAt = Date.now()
 const name = createAt + extension
 const options = {
-  filename: CARPETA_DESCARGA + name,
+  filename: CARPETA_DESCARGA + '/' + name,
   useStyles: true,
   useSharedStrings: true
 }

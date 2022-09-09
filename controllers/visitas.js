@@ -8,7 +8,7 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
 const { getCriteriosPorUsuario, getHeadersEstaticos } = require('../helper/Criterios')
-const { getUsuarios } = require('../helper/Usuarios')
+const { getUsers } = require('../helper/Usuarios')
 const moment = require('moment')
 
 const Headers = [
@@ -27,7 +27,7 @@ async function visitas({ modulos, UsuariosActivos, UsuariosInactivos, start, end
   start && end ? WhereVisitas += ` AND (visitas.created_at BETWEEN "${start}" AND "${end}")` : ''
   start && !end ? WhereVisitas += ` AND visitas.created_at >= '${start}'` : ''
   !start && end ? WhereVisitas += ` AND visitas.created_at <= '${end}'` : ''
-  const Usuarios = await getUsuarios(modulos, UsuariosActivos, UsuariosInactivos)
+  const Usuarios = await getUsers(modulos, UsuariosActivos, UsuariosInactivos)
   const Modulos = await con('ab_config')
   const Escuelas = await con('categorias')
   const Cursos = await con('cursos')

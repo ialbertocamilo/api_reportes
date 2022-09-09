@@ -8,7 +8,7 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
 const { getCriteriosPorUsuario, getHeadersEstaticos } = require('../helper/Criterios')
-const { getUsuarios } = require('../helper/Usuarios')
+const { getUsers } = require('../helper/Usuarios')
 const moment = require('moment')
 
 const Headers = [
@@ -31,7 +31,7 @@ async function exportarEvaluacionesAbiertas({ modulos, UsuariosActivos, Usuarios
   start && !end ? WhereEvaAbierta += ` AND created_at >= '${start}'` : ''
   !start && end ? WhereEvaAbierta += ` AND created_at <= '${end}'` : ''
 
-  const Usuarios = await getUsuarios(modulos, UsuariosActivos, UsuariosInactivos)
+  const Usuarios = await getUsers(modulos, UsuariosActivos, UsuariosInactivos)
   const Escuelas = await con('categorias')
   const Modulos = await con('ab_config')
   const Cursos = await con('cursos')

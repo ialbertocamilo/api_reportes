@@ -1,26 +1,102 @@
 const { con } = require('../db')
 const knex = require('../db').con
 module.exports = {
-  async datosIniciales() {
-    const modulos = await this.cargarModulos()
-    const admins = await this.cargarAdmins()
+  async datosIniciales (workspaceId) {
+    const modules = await this.cargarModulos(workspaceId)
+    const admins = await this.cargarAdmins(workspaceId)
     return {
-      modulos,
+      modules,
       admins
     }
   },
-  /*
-    Iniciales //
-    */
-  async cargarModulos() {
-    const [rows] = await con.raw('SELECT id, etapa from ab_config WHERE estado = 1')
+
+  /**
+   * Load subworkspaces from workspace
+   *
+   * @param workspaceId
+   * @returns {Promise<*>}
+   */
+  async cargarModulos (workspaceId) {
+    const [rows] = await con.raw(`
+        select id, name, slug
+        from workspaces 
+        where 
+            parent_id = :workspaceId and active = 1
+    `,
+    { workspaceId }
+    )
+
     return rows
   },
 
-  async cargarAdmins() {
-    const [rows] = await con.raw('SELECT id, name FROM users WHERE id IN (select admin_id FROM reinicios) ORDER BY name')
+  async cargarAdmins (workspaceId) {
+    const adminRoleId = 3
+    const [rows] = await con.raw(`
+        select
+          u.id, u.name
+        from
+            users u inner join assigned_roles ar on ar.entity_id = u.id
+        where
+            ar.role_id = :adminRoleId and
+            u.active = 1 and
+            ar.scope = :workspaceId
+      `,
+    { workspaceId, adminRoleId })
     return rows
   },
+  /**
+   * Load workspace's courses
+   * @param schoolId
+   * @returns {Promise<*>}
+   */
+  async loadSchoolCourses (schoolId) {
+    const [rows] = await con.raw(`
+      select
+        c.*
+      from courses c inner join course_school cs on c.id = cs.course_id
+      where cs.school_id = :schoolId
+    `, { schoolId }
+    )
+    return rows
+  }
+  ,
+  /**
+   * Load course's topics
+   * @param courseId
+   * @returns {Promise<*>}
+   */
+  async loadCourseTopics (courseId) {
+    const [rows] = await con.raw(`
+      select
+        *
+      from topics
+      where course_id = :courseId
+    `, { courseId }
+    )
+    return rows
+  }
+  ,
+  /**
+   * Load workspace's courses
+   * @param workspaceId
+   * @returns {Promise<*>}
+   */
+  async loadWorkspaceSchools (workspaceId) {
+    const [rows] = await con.raw(`
+      select
+        s.*
+      from schools s inner join school_workspace sw on s.id = sw.school_id
+      where sw.workspace_id = :workspaceId
+    `, { workspaceId }
+    )
+    return rows
+  }
+  ,
+
+
+
+
+
   /*
    * Primarios
    */
@@ -49,8 +125,7 @@ module.exports = {
     return rows
   },
 
-
-  async cambiaEscuelaCargaCurso(mod, esc) {
+  async cambiaEscuelaCargaCurso (mod, esc) {
     // ! Query Antiguo >>>
     // const [rows] = await con.raw(`SELECT c.id, c.nombre FROM cursos AS c
     //     INNER JOIN posteos AS p ON p.curso_id = c.id
@@ -70,9 +145,9 @@ module.exports = {
     query += mod ? ' AND c.config_id = ' + mod : ''
     query += esc ? ' AND c.categoria_id = ' + esc : ''
     const [rows] = await con.raw(`SELECT c.id, c.nombre FROM cursos AS c
-		INNER JOIN posteos AS p ON p.curso_id = c.id
-		${query}
-		AND p.evaluable = 'si'
+    INNER JOIN posteos AS p ON p.curso_id = c.id
+    ${query}
+    AND p.evaluable = 'si'
         AND p.tipo_ev = 'abierta'
         AND c.estado = 1
         AND p.estado = 1
@@ -181,10 +256,10 @@ module.exports = {
     if (!mods || !escs) return false
     let Where = `WHERE c.config_id in (${mods}) AND c.categoria_id in (${escs})`
     const [rows] = await con.raw(`SELECT c.id, CONCAT(m.codigo,' - ',c.nombre) as nombre FROM cursos AS c
-		INNER JOIN posteos AS p ON p.curso_id = c.id
+    INNER JOIN posteos AS p ON p.curso_id = c.id
     INNER JOIN ab_config as m on m.id=c.config_id
-		${Where}
-		AND p.evaluable = 'si'
+    ${Where}
+    AND p.evaluable = 'si'
     AND p.tipo_ev = 'abierta'
     AND c.estado = 1
     AND p.estado = 1

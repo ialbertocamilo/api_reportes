@@ -1,17 +1,22 @@
 'use strict'
 process.on('message', (requestData) => {
-  ConsolidadoCursos(requestData)
+  generateConsolidatedCoursesReport(requestData)
 })
-const _ = require('lodash')
+
 require('../error')
+const moment = require('moment')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
-const { getCriteriosPorUsuario, getHeadersEstaticos } = require('../helper/Criterios')
-const { getUsuarios } = require('../helper/Usuarios')
-const moment = require('moment')
+const { getHeadersEstaticos, getWorkspaceCriteria } = require('../helper/Criterios')
+const { loadUsersCriteriaValues, getUserCriterionValues } = require('../helper/Usuarios')
+const { getCourseStatusName, getCourseStatusId, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
+const { pluck } = require('../helper/Helper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
 
-const Headers = [
+// Headers for Excel file
+
+const headers = [
   'ULTIMA SESION',
   'ESCUELA',
   'CURSO',
@@ -24,104 +29,192 @@ const Headers = [
   'TEMAS COMPLETADOS',
   'AVANCE (%)'
 ]
-createHeaders(Headers, getHeadersEstaticos)
 
-async function ConsolidadoCursos({ modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, completados, desarollo, pendientes, encuesta_pendiente }) {
-  const WhereResumen = '1'
+async function generateConsolidatedCoursesReport ({
+  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos,
+  aprobados,
+  desaprobados,
+  desarrollo,
+  encuestaPendiente
+}) {
+  // Generate Excel file header
 
-  const Usuarios = await getUsuarios(modulos, UsuariosActivos, UsuariosInactivos)
-  const UsuarioCursos = cursos
-    ? await con('usuario_cursos').where('estado', 1).whereIn('curso_id', cursos)
-    : await con('usuario_cursos').where('estado', 1)
-  const VisitasByCurso = await con.raw(
-    'SELECT SUM(sumatoria) as sumatoria, curso_id, usuario_id FROM visitas GROUP BY curso_id,usuario_id'
-  ).then(([rows]) => rows)
-  const Modulos = await con('ab_config')
-  const Escuelas = await con('categorias')
-  const Cursos = await con('cursos')
-  const Temas = await con('posteos')
-  const ResumenCurso = await con('resumen_x_curso').whereRaw(WhereResumen)
-  const Reinicios = await con('reinicios').where('tipo', 'por_curso')
+  const headersEstaticos = await getHeadersEstaticos(workspaceId)
+  await createHeaders(headersEstaticos.concat(headers))
 
-  for (const usuario of Usuarios) {
-    const modulo = Modulos.find((obj) => obj.id === usuario.config_id)
-    const CursosAsignados = UsuarioCursos.filter(obj => obj.usuario_id === usuario.id)
-    const CriteriosUsuario = await getCriteriosPorUsuario(usuario.id)
-    let m_ultima_sesion = moment(usuario.ultima_sesion).format('DD/MM/YYYY H:mm:ss'); 
+  // Load workspace criteria
 
-    for (const cursoAsignado of _.uniq(CursosAsignados, 'curso_id')) {
-      const curso = Cursos.find(obj => obj.id == cursoAsignado.curso_id)
-      const _escuela = Escuelas.find(obj => obj.id == curso.categoria_id) || ''
-      const visitasCurso = VisitasByCurso.find(obj => obj.curso_id == curso.id && obj.usuario_id == usuario.id) || ''
-      const resumen_curso = ResumenCurso.find(obj => obj.curso_id == curso.id && obj.usuario_id == usuario.id) || ''
-      const resultadoCurso = verificarEstadoCurso(resumen_curso.estado, completados, desarollo, pendientes, encuesta_pendiente)
-      const reinicio = Reinicios.find(obj => obj.usuario_id === usuario.id && obj.curso_id === curso.id) || '-'
-      const filterEscuela = (escuelas && escuelas.includes(_escuela.id))
-      if (filterEscuela) {
-        const CellRow = []
-        CellRow.push(modulo.etapa)
-        CellRow.push(usuario.nombre)
-        CellRow.push(usuario.apellido_paterno)
-        CellRow.push(usuario.apellido_materno)
-        CellRow.push(usuario.dni)
-        CellRow.push((usuario.email) ? usuario.email : 'Email no registrado')
-        CellRow.push(usuario.estado == 1 ? 'Activo' : 'Inactivo')
-        CriteriosUsuario.forEach(obj => CellRow.push(obj.nombre || '-'))
-        CellRow.push( (m_ultima_sesion!='Invalid date') ? m_ultima_sesion : '-')
-        CellRow.push(_escuela ? _escuela.nombre : 'No se encontro la Escuela')
-        CellRow.push(curso ? curso.nombre : 'No se encontro el Curso')
-        CellRow.push(visitasCurso.sumatoria || '-')
-        CellRow.push(resumen_curso.aprobados > 0 ? resumen_curso.nota_prom : '-')
-        CellRow.push(resultadoCurso)
-        CellRow.push(curso.estado == 1 ? 'Activo' : 'Inactivo')
-        // CellRow.push(resumen_curso.updated_at || '-')
-        CellRow.push(reinicio.acumulado || '-')
-        //
-        let temas = [];
-        if(!resumen_curso){
-            temas = Temas.filter(obj => obj.curso_id == curso.id)
-        }
-        // const asignados = (resumen_curso) ? resumen_curso.asignados : temas.length ;
-        // const temas_completados =  (resumen_curso) ? resumen_curso.aprobados + resumen_curso.realizados + resumen_curso.revisados : 0;
-        // const porcentaje = (resumen_curso) ? resumen_curso.porcentaje+'%' : '0%';
-        CellRow.push((resumen_curso) ? resumen_curso.asignados : temas.length )
-        CellRow.push((resumen_curso) ? resumen_curso.aprobados + resumen_curso.realizados + resumen_curso.revisados : 0)
-        CellRow.push((resumen_curso) ? resumen_curso.porcentaje+'%' : '0%')
-        worksheet.addRow(CellRow).commit()
-      }
-    }
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+
+  // Load user course statuses
+
+  const userCourseStatuses = await loadCoursesStatuses()
+
+  // When no modules are provided, get its ids using its parent id
+
+  if (modulos.length === 0) {
+    modulos = await getSuboworkspacesIds(workspaceId)
   }
-  if (worksheet._rowZero > 1)
+
+  // Load users from database and generate ids array
+
+  const users = await loadUsersWithCourses(
+    workspaceId, userCourseStatuses,
+    modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos,
+    aprobados, desaprobados, desarrollo, encuestaPendiente
+  )
+  const usersIds = pluck(users, 'id')
+
+  // Load workspace user criteria
+
+  const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+
+  // Add users to Excel rows
+
+  for (const user of users) {
+    const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
+
+    const cellRow = []
+
+    // Add default values
+
+    cellRow.push(user.subworkspace_name)
+    cellRow.push(user.name)
+    cellRow.push(user.lastname)
+    cellRow.push(user.surname)
+    cellRow.push(user.document)
+    cellRow.push(user.email || 'Email no registrado')
+    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+
+    // Add user's criterion values
+
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
+    // Add course values
+
+    cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
+    cellRow.push(user.school_name)
+    cellRow.push(user.course_name)
+    cellRow.push(user.course_views || '-')
+    cellRow.push(user.course_passed > 0 ? user.grade_average : '-')
+    cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id))
+    cellRow.push(user.course_active === 1 ? 'Activo' : 'Inactivo')
+    cellRow.push(user.course_restarts || '-')
+    cellRow.push(user.assigned)
+    cellRow.push(user.assigned + user.completed + user.reviewed || 0)
+    cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%') // resumen_curso ? resumen_curso.porcentaje + '%' : '0%')
+    worksheet.addRow(cellRow).commit()
+  }
+
+  if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: 'ConsolidadoCursos' }))
     })
-  else {
+  } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
 }
-function verificarEstadoCurso(cursoEstado, completados, desarollo, pendientes, encuesta_pendiente) {
-  // console.log(cursoEstado);
-  switch (cursoEstado) {
-    case 'aprobado':
-      // if (completados)
-      return 'COMPLETADO'
-      break
-    case 'desaprobado':
-      // if (desarollo)
-      return 'DESAPROBADO'
-      break
-    case 'desarrollo':
-      // if (desarollo)
-      return 'DESARROLLO'
-      break
-    case 'enc_pend':
-      // if (encuesta_pendiente)
-      return 'ENCUESTA PENDIENTE'
-      break
-    default:
-      // if (pendientes)
-      return 'PENDIENTE'
-      break
-    // Pendientes
+
+/**
+ * Load users with its courses and schools
+ * @param userCourseStatuses
+ * @param {array} modulesIds
+ * @param {boolean} activeUsers include active users
+ * @param {boolean} inactiveUsers include inactive users
+ * @param {array} schooldIds
+ * @param {array} coursesIds
+ * @param {boolean} aprobados include aprobados
+ * @param {boolean} desaprobados include desaprobados
+ * @param {boolean} desarrollo include desarrollo
+ * @param {boolean} encuestasPendientes include encuestas pendientes
+ * @returns {Promise<*[]|*>}
+ */
+async function loadUsersWithCourses (
+  workspaceId, userCourseStatuses,
+  modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds,
+  aprobados, desaprobados, desarrollo, encuestasPendientes
+) {
+  // Base query
+
+  let query = `
+    select 
+        u.*, 
+        w.name subworkspace_name,
+        group_concat(s.name separator ', ') school_name,
+        c.name course_name,
+        c.active course_active,
+        sc.views course_views,
+        sc.passed course_passed,
+        sc.grade_average,
+        sc.status_id course_status_id,
+        sc.restarts course_restarts,
+        sc.assigned,
+        sc.completed,
+        sc.reviewed,
+        sc.advanced_percentage
+    from users u 
+        inner join workspaces w on u.subworkspace_id = w.id
+        inner join summary_courses sc on u.id = sc.user_id
+        inner join courses c on sc.course_id = c.id
+        inner join course_school cs on c.id = cs.course_id
+        inner join schools s on cs.school_id = s.id 
+        inner join school_workspace sw on s.id = sw.school_id
+    where 
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId}
+    group by 
+        u.id, c.id, sc.id
+  `
+
+  // Add condition for schools ids
+
+  if (schooldIds.length > 0) {
+    query += ` and s.id in (${schooldIds.join()})`
+  }
+
+  // Add condition for courses ids
+
+  if (coursesIds.length > 0) {
+    query += ` and c.id in (${coursesIds.join()})`
+  }
+
+  // Get statuses ids
+
+  const aprobadoId = getCourseStatusId(userCourseStatuses, 'aprobado')
+  const desaprobadoId = getCourseStatusId(userCourseStatuses, 'desaprobado')
+  const desarrolloId = getCourseStatusId(userCourseStatuses, 'desarrollo')
+  const encuestaPendienteId = getCourseStatusId(userCourseStatuses, 'enc_pend')
+
+  // Add condition for statuses
+
+  if (aprobados || desaprobados || desarrollo || encuestasPendientes) {
+    const statusConditions = []
+
+    if (aprobados) { statusConditions.push(`sc.status_id = ${aprobadoId}`) }
+    if (desaprobados) { statusConditions.push(`sc.status_id = ${desaprobadoId}`) }
+    if (desarrollo) { statusConditions.push(`sc.status_id = ${desarrolloId}`) }
+    if (encuestasPendientes) { statusConditions.push(`sc.status_id = ${encuestaPendienteId}`) }
+
+    query += ' and (' + statusConditions.join(' or ') + ')'
+  }
+
+  // Execute query
+
+  if (modulesIds && activeUsers && inactiveUsers) {
+    const [rows] = await con.raw(query)
+    return rows
+  } else if (modulesIds && activeUsers && !inactiveUsers) {
+    const [rows] = await con.raw(`${query} and u.active = 1`)
+    return rows
+  } else if (modulesIds && !activeUsers && inactiveUsers) {
+    const [rows] = await con.raw(`${query} and u.active = 0`)
+    return rows
+  } else if (modulesIds && !activeUsers && !inactiveUsers) {
+    return []
+  } else if (!modulesIds) {
+    return []
   }
 }
+
