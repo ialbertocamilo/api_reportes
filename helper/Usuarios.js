@@ -21,6 +21,16 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   }
 }
 
+exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers) => {
+  if (activeUsers && inactiveUsers) {
+    return query
+  } else if (activeUsers && !inactiveUsers) {
+    return `${query} and u.active = 1`
+  } else if (!activeUsers && inactiveUsers) {
+    return `${query} and u.active = 0`
+  }
+}
+
 /**
  * Load users criteria values from selected values
  * @param modules

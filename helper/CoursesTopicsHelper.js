@@ -68,3 +68,13 @@ exports.getTopicStatusId = (userTopicStatuses, code) => {
   const status = userTopicStatuses.find(st => st.code === code)
   return (status) ? status.id : null
 }
+
+/**
+ * Filter user course status using its id, and return its name
+ * @param userTopicStatuses
+ * @param statusId
+ */
+exports.getTopicStatusName = (userTopicStatuses, statusId) => {
+  const status = userTopicStatuses.find(st => st.id === statusId)
+  return (status) ? status.name : null
+}

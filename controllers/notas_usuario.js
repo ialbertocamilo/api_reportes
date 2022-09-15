@@ -38,16 +38,7 @@ async function notasUsuario ({ document }) {
     process.exit()
   }
 
-  // Load user summary topics from database
 
-  const [userSummaryTopics] = await con.raw(`
-   select st.*, t.name as topic_name, t.type_evaluation_id
-   from summary_topics st
-           inner join topics t on st.topic_id = t.id
-   where st.user_id = :userId
-   `,
-  { userId: user.id }
-  )
 
   // Load evaluation types
 
@@ -60,6 +51,17 @@ async function notasUsuario ({ document }) {
     const { course_id, user_id } = summaryCourse
     const courseObj = {}
     const topicsArray = []
+
+    // Load user summary topics from database
+
+    const [userSummaryTopics] = await con.raw(`
+       select st.*, t.name as topic_name, t.type_evaluation_id
+       from summary_topics st
+               inner join topics t on st.topic_id = t.id
+       where st.user_id = :userId and t.course_id = :courseId
+       `,
+    { userId: user.id, courseId: course_id }
+    )
 
     for (const summaryTopic of userSummaryTopics) {
       const topicObj = {}
@@ -100,4 +102,3 @@ async function notasUsuario ({ document }) {
     }
   })
 }
-

@@ -41,17 +41,15 @@ module.exports = {
       children.kill()
     })
   },
-  avanceCurricula({ body }, res) {
-    const children = fork(__dirname + '/../controllers/avance_curricula.js')
+  avanceCurricula ({ body }, res) {
+    const children = fork('./controllers/avance_curricula.js')
     children.send(body)
     children.on('message', (data) => {
       res.send(data)
       children.kill()
     })
-  },
-/*
-
-
+  }
+  ,
   // * Visitas
   visitas ({ body }, res) {
     const children = fork('./controllers/visitas.js')
@@ -62,7 +60,6 @@ module.exports = {
       children.kill()
     })
   },
-
   // * Reinicios
   reinicios ({ body }, res) {
     const children = fork('./controllers/reinicios.js')
@@ -74,7 +71,7 @@ module.exports = {
     })
   },
   // * Evaluaciones abiertas
-  evaluacionesAbiertas({ body }, res) {
+  evaluacionesAbiertas ({ body }, res) {
     const children = fork('./controllers/eva_abiertas.js')
     children.send(body)
 
@@ -83,31 +80,14 @@ module.exports = {
       children.kill()
     })
   },
+  // * Temas no evaluable
+  temasNoEvaluables ({ body }, res) {
+    const children = fork('./controllers/temas_no_evaluables.js')
+    children.send(body)
 
-
-  diplomas({ body }, res){
-    const children = fork(__dirname + '/../controllers/diplomas.js')
-    children.send(body)
-    children.on('message', (data) => {
-      res.send(data)
-      children.kill()
-    })
-  },
-  supervisores_avance_curricula({ body }, res){
-    const children = fork(__dirname + '/../controllers/supervisores_avance_curricula.js')
-    children.send(body)
-    children.on('message', (data) => {
-      res.send(data)
-      children.kill()
-    })
-  },
-  supervisores_notas({ body }, res){
-    const children = fork(__dirname + '/../controllers/supervisores_notas.js')
-    children.send(body)
     children.on('message', (data) => {
       res.send(data)
       children.kill()
     })
   }
-  */
 }

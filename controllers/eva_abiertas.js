@@ -7,91 +7,212 @@ require('../error')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
-const { getCriteriosPorUsuario, getHeadersEstaticos } = require('../helper/Criterios')
-const { getUsers } = require('../helper/Usuarios')
+const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
+const { getUserCriterionValues, loadUsersCriteriaValues,
+  addActiveUsersCondition
+} = require('../helper/Usuarios')
 const moment = require('moment')
+const { pluck } = require('../helper/Helper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
 
-const Headers = [
-  'ULTIMA SESION',
-  'ESCUELA',
-  'CURSO',
-  'TEMA',
-  'TAG',
-  'PREGUNTA',
-  'RESPUESTA'
+const headers = [
+  'Última sesión',
+  'Escuela',
+  'Curso',
+  'Tema',
+  'Pregunta',
+  'Respuesta'
 ]
-createHeaders(Headers, getHeadersEstaticos)
 
-async function exportarEvaluacionesAbiertas({ modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end }) {
-  let WhereEvaAbierta = '1'
-  escuelas[0] ? WhereEvaAbierta += ` AND categoria_id in (${escuelas})` : ''
-  cursos[0] ? WhereEvaAbierta += ` AND curso_id in (${cursos}) ` : ''
+async function exportarEvaluacionesAbiertas ({
+  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end
+}) {
+  // Generate Excel file header
 
-  start && end ? WhereEvaAbierta += ` AND (created_at BETWEEN "${start}" AND "${end}")` : ''
-  start && !end ? WhereEvaAbierta += ` AND created_at >= '${start}'` : ''
-  !start && end ? WhereEvaAbierta += ` AND created_at <= '${end}'` : ''
+  const headersEstaticos = await getGenericHeaders(workspaceId)
+  await createHeaders(headersEstaticos.concat(headers))
 
-  const Usuarios = await getUsers(modulos, UsuariosActivos, UsuariosInactivos)
-  const Escuelas = await con('categorias')
-  const Modulos = await con('ab_config')
-  const Cursos = await con('cursos')
-  const Temas = temas ? await con('posteos').whereIn('id', temas) : await con('posteos')
-  const Preguntas = await con('preguntas')
-  const Tags = await con('tags')
-  const TagsRelations = await con('tag_relationships')
-  const EvaAbiertas = await con('ev_abiertas').whereRaw(WhereEvaAbierta)
+  // Load workspace criteria
 
-  for (const eva of EvaAbiertas) {
-    const CellRow = []
-    const usuario = Usuarios.find(obj => obj.id === eva.usuario_id) || ''
-    const modulo = Modulos.find(obj => obj.id === usuario.config_id)
-    const escuela = Escuelas.find(obj => obj.id === eva.categoria_id) || ''
-    const curso = Cursos.find(obj => obj.id === eva.curso_id) || ''
-    const tema = Temas.find(obj => obj.id === eva.posteo_id) || ''
-    const subTag = TagsRelations.find(obj => obj.element_id === tema.id) || ''
-    const tag = Tags.find(obj => (obj.id = subTag.tag_id)) || ''
-    const CriteriosUsuario = await getCriteriosPorUsuario(usuario.id)
-    let m_ultima_sesion = moment(usuario.ultima_sesion).format('DD/MM/YYYY H:mm:ss'); 
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
-    if (tema && usuario) {
-      CellRow.push(modulo.etapa)
-      CellRow.push(usuario.nombre)
-      CellRow.push(usuario.apellido_paterno)
-      CellRow.push(usuario.apellido_materno)
-      CellRow.push(usuario.dni)
-      CellRow.push((usuario.email) ? usuario.email : 'Email no registrado')
-      CellRow.push(usuario.estado == 1 ? 'Activo' : 'Inactivo')
-      CriteriosUsuario.forEach(obj => CellRow.push(obj.nombre || '-'))
-      CellRow.push( (m_ultima_sesion!='Invalid date') ? m_ultima_sesion : '-')
-      CellRow.push(escuela ? escuela.nombre : '-')
-      CellRow.push(curso ? curso.nombre : '-')
-      CellRow.push(tema ? tema.nombre : '-')
-      CellRow.push(tag ? tag.nombre : '-')
+  // When no modules are provided, get its ids using its parent id
 
-      const rptas = JSON.parse(eva.usu_rptas)
-      rptas.forEach((rpta, index) => {
-        if (rpta) {
-          const pgtas = Preguntas.find(obj => obj.id === rpta.id)
-          // NewJSON[`Pregunta ${index + 1}`] = pgtas.pregunta;
-          // NewJSON[`Respuesta ${index + 1}`] = rpta.respuesta;
-          CellRow.push(pgtas ? strippedString(pgtas.pregunta) : '-')
-          CellRow.push(rpta ? strippedString(rpta.respuesta) : '-')
-        }
-      })
-      worksheet.addRow(CellRow).commit()
-    }
+  if (modulos.length === 0) {
+    modulos = await getSuboworkspacesIds(workspaceId)
   }
-  // }
 
-  if (worksheet._rowZero > 1)
+  // Load users with answers
+
+  const users = await loadUsersQuestions(
+    workspaceId, modulos, UsuariosActivos, UsuariosInactivos,
+    escuelas, cursos, temas, start, end
+  )
+  const usersIds = pluck(users, 'id')
+
+  // Load workspace user criteria
+
+  const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+
+  const questions = await loadQuestions(modulos)
+
+  // Add users to Excel rows
+
+  for (const user of users) {
+    const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
+
+    const cellRow = []
+
+    // Add default values
+
+    cellRow.push(user.name)
+    cellRow.push(user.lastname)
+    cellRow.push(user.surname)
+    cellRow.push(user.document)
+    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+
+    // Add user's criterion values
+
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
+    // Add report values
+
+    cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
+    cellRow.push(user.school_name ?? '-')
+    cellRow.push(user.course_name ?? '-')
+    cellRow.push(user.topic_name ?? '-')
+
+    const answers = JSON.parse(user.answers)
+    answers.forEach((answer, index) => {
+      if (answer) {
+        const question = questions.find(q => q.id === answer.preg_id)
+        cellRow.push(question ? strippedString(question.pregunta) : '-')
+        cellRow.push(answer ? strippedString(answer.opc) : '-')
+      }
+    })
+    worksheet.addRow(cellRow).commit()
+  }
+
+  if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: 'EvaluacionAbierta' }))
     })
-  else {
+  } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
 }
 
 const strippedString = (value) => {
   return value.replace(/(<([^>]+)>)/gi, '')
+}
+
+async function loadUsersQuestions (
+  workspaceId, modulesIds, activeUsers, inactiveUsers,
+  schoolsIds, coursesIds, topicsIds, start, end
+) {
+
+  // Load evaluation types
+
+  const questionTypes = await con('taxonomies')
+    .where('group', 'question')
+    .where('code', 'written-answer')
+  const type = questionTypes[0]
+
+  let query = `
+    select 
+        u.*, 
+        group_concat(s.name separator ', ') school_name,
+        c.name course_name,
+        t.name topic_name,
+        q.pregunta,
+        q.id pregunta_id,
+        st.answers
+            
+      from users u
+        inner join summary_topics st on u.id = st.user_id
+        inner join topics t on t.id = st.topic_id
+        inner join summary_courses sc on u.id = sc.user_id
+        inner join courses c on sc.course_id = c.id
+        inner join course_school cs on c.id = cs.course_id
+        inner join schools s on cs.school_id = s.id 
+        inner join school_workspace sw on s.id = sw.school_id
+        inner join questions q on t.id = q.topic_id
+      
+      where 
+        u.subworkspace_id in (${modulesIds.join()}) and
+        sw.workspace_id = ${workspaceId} and
+        q.type_id = ${type.id}
+  `
+
+  // Add condition for schools ids
+
+  if (schoolsIds.length > 0) {
+    query += ` and s.id in (${schoolsIds.join()})`
+  }
+
+  // Add condition for courses ids
+
+  if (coursesIds.length > 0) {
+    query += ` and c.id in (${coursesIds.join()})`
+  }
+
+  // Add condition for topics ids
+
+  if (topicsIds.length > 0) {
+    query += ` and t.id in (${topicsIds.join()})`
+  }
+
+  if (start && end) {
+    query += ` and (
+      st.updated_at between '${start}' and '${end}'
+    )`
+  }
+
+  // Add user conditions and group sentence
+
+  query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
+  query += ' group by u.id, t.id, st.id'
+
+  // Execute query
+
+  const [rows] = await con.raw(query)
+  return rows
+}
+
+/**
+ * Load questions with written answers
+ * @param modulesIds
+ * @returns {Promise<*>}
+ */
+async function loadQuestions (modulesIds) {
+
+  // Load evaluation types
+
+  const questionTypes = await con('taxonomies')
+    .where('group', 'question')
+    .where('code', 'written-answer')
+  const type = questionTypes[0]
+
+  const query = `
+    select *
+    from
+        questions
+    where
+        questions.type_id = :typeId
+      and
+        topic_id in (
+            select t.id 
+            from topics t 
+                inner join summary_topics st on st.topic_id = t.id
+                inner join users u on st.user_id = u.id
+            where
+                u.subworkspace_id in (${modulesIds.join()})
+            group by t.id
+        )
+  `
+
+  const [rows] = await con.raw(query, { typeId: type.id })
+  return rows
 }

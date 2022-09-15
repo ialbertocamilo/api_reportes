@@ -33,10 +33,6 @@ router.get('/schools/:workspaceId', async (req, res) => {
 
 
 
-
-
-
-
 router.get('/cargar_grupos', async (req, res) => {
   const { mod, esc } = req.query
   const datos = await tablas.cargarGrupos(mod, esc)

@@ -7,14 +7,15 @@ require('../error')
 const _ = require('lodash')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
-const { getHeadersEstaticos, getWorkspaceCriteria } = require('../helper/Criterios')
+const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
 const { pluck } = require('../helper/Helper')
-const { loadUsersCriteriaValues, getUserCriterionValues } = require('../helper/Usuarios')
+const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
-  loadEvaluationTypes
+  loadEvaluationTypes, getCourseStatusName, getTopicStatusName,
+  loadCoursesStatuses
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
@@ -47,7 +48,7 @@ async function exportarUsuariosDW ({
 }) {
   // Generate Excel file header
 
-  const headersEstaticos = await getHeadersEstaticos(workspaceId)
+  const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   if (validador) {
@@ -68,9 +69,13 @@ async function exportarUsuariosDW ({
     modulos = await getSuboworkspacesIds(workspaceId)
   }
 
+  // Load user topic statuses
+
+  const userTopicsStatuses = await loadTopicsStatuses()
+
   // Load user course statuses
 
-  const topicsStatuses = await loadTopicsStatuses()
+  const userCourseStatuses = await loadCoursesStatuses()
 
   // Load evaluation types
 
@@ -79,7 +84,7 @@ async function exportarUsuariosDW ({
   // Load users from database and generate ids array
 
   const users = await loadUsersWithCoursesAndTopics(
-    workspaceId, topicsStatuses,
+    workspaceId, userTopicsStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
     temasActivos, temasInactivos, start, end
@@ -97,12 +102,10 @@ async function exportarUsuariosDW ({
 
     const cellRow = []
 
-    cellRow.push(user.subworkspace_name)
     cellRow.push(user.name)
     cellRow.push(user.lastname)
     cellRow.push(user.surname)
     cellRow.push(user.document)
-    cellRow.push(user.email || 'Email no registrado')
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
 
     // Add user's criterion values
@@ -117,12 +120,12 @@ async function exportarUsuariosDW ({
     cellRow.push(user.school_name)
     cellRow.push(user.course_name)
 
-    cellRow.push('')// resultadoCurso)
+    cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id))
 
     cellRow.push(user.course_restarts || '-')
     cellRow.push(user.topic_name)
 
-    cellRow.push('')// resultadoTema)
+    cellRow.push(getTopicStatusName(userTopicsStatuses, user.topic_status_id))
     cellRow.push(user.topic_active === 1 ? 'ACTIVO' : 'INACTIVO')
 
     cellRow.push(user.topic_grade || '-')
@@ -133,8 +136,10 @@ async function exportarUsuariosDW ({
     cellRow.push(getEvaluationTypeName(evaluationTypes, user.type_evaluation_id))
 
     cellRow.push(user.topic_views || '-')
-    cellRow.push('') // NotaMinima.value || '-')
+    cellRow.push(user.minimum_grade || '-')
     cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('L') : '-')
+
+    // Add row to sheet
 
     worksheet.addRow(cellRow).commit()
   }
@@ -180,7 +185,6 @@ async function loadUsersWithCoursesAndTopics (
   let query = `
     select 
         u.*, 
-        w.name subworkspace_name,
         group_concat(s.name separator ', ') school_name,
         c.name course_name,
         c.active course_active,
@@ -198,7 +202,8 @@ async function loadUsersWithCoursesAndTopics (
         st.restarts topic_restarts,
         st.views topic_views,
         st.status_id topic_status_id,
-        st.last_time_evaluated_at topic_last_time_evaluated_at
+        st.last_time_evaluated_at topic_last_time_evaluated_at,
+        json_extract(w.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
     from users u
         inner join workspaces w on u.subworkspace_id = w.id
         inner join summary_topics st on u.id = st.user_id
@@ -211,8 +216,6 @@ async function loadUsersWithCoursesAndTopics (
     where 
       u.subworkspace_id in (${modulesIds.join()}) and
       sw.workspace_id = ${workspaceId}
-    group by
-        u.id, t.id, st.id
   `
 
   // Add condition for schools ids
@@ -267,20 +270,17 @@ async function loadUsersWithCoursesAndTopics (
     query += ' and (' + statusConditions.join(' or ') + ')'
   }
 
+  if (start || end) {
+
+  }
+
+  // Add user conditions and group sentence
+
+  query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
+  query += ' group by u.id, t.id, st.id'
+
   // Execute query
 
-  if (modulesIds && activeUsers && inactiveUsers) {
-    const [rows] = await con.raw(query)
-    return rows
-  } else if (modulesIds && activeUsers && !inactiveUsers) {
-    const [rows] = await con.raw(`${query} and u.active = 1`)
-    return rows
-  } else if (modulesIds && !activeUsers && inactiveUsers) {
-    const [rows] = await con.raw(`${query} and u.active = 0`)
-    return rows
-  } else if (modulesIds && !activeUsers && !inactiveUsers) {
-    return []
-  } else if (!modulesIds) {
-    return []
-  }
+  const [rows] = await con.raw(query)
+  return rows
 }

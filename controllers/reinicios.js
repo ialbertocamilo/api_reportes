@@ -6,74 +6,145 @@ require('../error')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
-const { getCriteriosPorUsuario, getHeadersEstaticos } = require('../helper/Criterios')
+const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
+const { getUserCriterionValues, loadUsersCriteriaValues } = require('../helper/Usuarios')
+const { pluck } = require('../helper/Helper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
 
-const Headers = [
-  'ULTIMA SESION',
-  'ESCUELA',
-  'CURSO',
-  'TEMA',
-  'TIPO REINICIO',
-  'REINICIOS',
-  'ADMIN RESPONSABLE',
-  'FECHA',
+const headers = [
+  'Última sesión',
+  'Escuela',
+  'Curso',
+  'Tema',
+  'Reinicios',
+  'Admin. reponsable',
+  'Fecha'
 ]
-createHeaders(Headers, getHeadersEstaticos)
 
-async function Reinicios({ admin, tipo, start, end }) {
-  let WhereReinicios = '1'
+async function Reinicios ({ workspaceId, admin, start, end }) {
+  // Generate Excel file header
 
-  admin && admin !== 'ALL' ? WhereReinicios += ` AND admin_id = ${admin}` : ''
-  tipo && tipo !== 'ALL' ? WhereReinicios += ` AND tipo = '${tipo}'` : ''
+  const headersEstaticos = await getGenericHeaders(workspaceId)
+  await createHeaders(headersEstaticos.concat(headers))
 
-  start && end ? WhereReinicios += ` AND (created_at BETWEEN "${start}" AND "${end}")` : ''
-  start && !end ? WhereReinicios += ` AND created_at >= '${start}'` : ''
-  !start && end ? WhereReinicios += ` AND created_at <= '${end}'` : ''
+  // Load workspace criteria
 
-  const Reinicios = await con('reinicios').whereRaw(WhereReinicios)
-  const Cursos = await con('cursos')
-  const Temas = await con('posteos')
-  const Users = await con('users')
-  const Modulos = await con('ab_config')
-  const Usuarios = await con('usuarios')
-  const Escuelas = await con('categorias')
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
-  for (const reinicio of Reinicios) {
-    const CellRow = []
-    const admin = Users.find(obj => obj.id === reinicio.admin_id)
-    const curso = Cursos.find(obj => obj.id === reinicio.curso_id) || ''
-    const tema = Temas.find(obj => obj.id === reinicio.posteo_id) || ''
-    const usuario = Usuarios.find(obj => obj.id === reinicio.usuario_id)
-    const modulo = Modulos.find(obj => obj.id === usuario.config_id)
-    const escuela = Escuelas.find(obj => obj.id === curso.categoria_id) || ''
+  // Get modules ids
 
-    const CriteriosUsuario = await getCriteriosPorUsuario(usuario.id)
-    let m_ultima_sesion = moment(usuario.ultima_sesion).format('DD/MM/YYYY HH:mm:ss'); 
+  const modulos = await getSuboworkspacesIds(workspaceId)
 
-    CellRow.push(modulo.etapa)
-    CellRow.push(usuario.nombre)
-    CellRow.push(usuario.apellido_paterno)
-    CellRow.push(usuario.apellido_materno)
-    CellRow.push(usuario.dni)
-    CellRow.push((usuario.email) ? usuario.email : 'Email no registrado')
-    CellRow.push(usuario.estado == 1 ? 'Activo' : 'Inactivo')
-    CriteriosUsuario.forEach(obj => CellRow.push(obj.nombre || '-'))
-    CellRow.push( (m_ultima_sesion!='Invalid date') ? m_ultima_sesion : '-')
-    CellRow.push(escuela.nombre || '-')
-    CellRow.push(curso.nombre || '-')
-    CellRow.push(tema.nombre || '-')
-    CellRow.push(reinicio.tipo)
-    CellRow.push(reinicio.acumulado)
-    CellRow.push(admin.name)
-    CellRow.push(reinicio.created_at)
-    worksheet.addRow(CellRow).commit()
+  // Load users from database and generate ids array
+
+  const users = await loadUsersWithRestarts(
+    workspaceId, modulos, admin, start, end
+  )
+  const usersIds = pluck(users, 'id')
+
+  // Load workspace user criteria
+  const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+
+  for (const user of users) {
+    const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
+
+    const cellRow = []
+
+    // Add default values
+
+    cellRow.push(user.name)
+    cellRow.push(user.lastname)
+    cellRow.push(user.surname)
+    cellRow.push(user.document)
+    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+
+    // Add user's criterion values
+
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
+    // Add course values
+
+    cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
+    cellRow.push(user.school_name)
+    cellRow.push(user.course_name)
+    cellRow.push(user.topic_name)
+    cellRow.push(user.topic_restarts ?? 0)
+    cellRow.push(user.admin_name)
+    cellRow.push(moment(user.summary_topic_updated).format('DD/MM/YYYY'))
+
+    // Add row to sheet
+
+    worksheet.addRow(cellRow).commit()
   }
 
-  if (worksheet._rowZero > 1)
+  if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: 'Reinicios' }))
     })
-  else {
+  } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
+}
+
+/**
+ * Load users with its courses and schools
+ * @param workspaceId
+ * @param modulesIds
+ * @param adminId
+ * @param start
+ * @param end
+ * @returns {Promise<*[]|*>}
+ */
+async function loadUsersWithRestarts (
+  workspaceId, modulesIds, adminId, start, end
+) {
+  // Base query
+
+  let query = `
+    select 
+        u.*,
+        group_concat(s.name separator ', ') school_name,
+        c.name course_name,
+        t.name topic_name,
+        st.restarts topic_restarts,
+        admins.name admin_name,
+        st.updated_at summary_topic_updated
+    from users u
+       inner join workspaces w on u.subworkspace_id = w.id
+       inner join summary_topics st on u.id = st.user_id
+       inner join topics t on t.id = st.topic_id
+       inner join summary_courses sc on u.id = sc.user_id
+       inner join courses c on sc.course_id = c.id
+       inner join course_school cs on c.id = cs.course_id
+       inner join schools s on cs.school_id = s.id
+       inner join school_workspace sw on s.id = sw.school_id
+       left join users admins on st.restarter_id = admins.id
+    where  
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} 
+  `
+
+  if (adminId) {
+    if (adminId !== 'ALL') {
+      query += ` and st.restarter_id = ${adminId}`
+    }
+  }
+
+  if (start && end) {
+    query += ` and (
+      st.updated_at between '${start}' and '${end}'
+    )`
+  }
+
+  // Group results
+
+  query += '  group by u.id, t.id, st.id'
+
+  // Execute query
+
+  const [rows] = await con.raw(query)
+
+  return rows
 }

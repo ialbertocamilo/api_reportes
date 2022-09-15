@@ -6,18 +6,18 @@ process.on('message', (requestData) => {
 require('../error')
 const moment = require('moment')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
-const { con } = require('../db')
 const { response } = require('../response')
-const { getHeadersEstaticos, getWorkspaceCriteria } = require('../helper/Criterios')
-const { loadUsersCriteriaValues, getUserCriterionValues } = require('../helper/Usuarios')
+const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
+const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const { getCourseStatusName, getCourseStatusId, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
+const { con } = require('../db')
 
 // Headers for Excel file
 
 const headers = [
-  'ULTIMA SESION',
+  'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
   'VISITAS',
@@ -39,7 +39,7 @@ async function generateConsolidatedCoursesReport ({
 }) {
   // Generate Excel file header
 
-  const headersEstaticos = await getHeadersEstaticos(workspaceId)
+  const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load workspace criteria
@@ -79,12 +79,10 @@ async function generateConsolidatedCoursesReport ({
 
     // Add default values
 
-    cellRow.push(user.subworkspace_name)
     cellRow.push(user.name)
     cellRow.push(user.lastname)
     cellRow.push(user.surname)
     cellRow.push(user.document)
-    cellRow.push(user.email || 'Email no registrado')
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
 
     // Add user's criterion values
@@ -105,6 +103,9 @@ async function generateConsolidatedCoursesReport ({
     cellRow.push(user.assigned)
     cellRow.push(user.assigned + user.completed + user.reviewed || 0)
     cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%') // resumen_curso ? resumen_curso.porcentaje + '%' : '0%')
+
+    // Add row to sheet
+
     worksheet.addRow(cellRow).commit()
   }
 
@@ -119,6 +120,7 @@ async function generateConsolidatedCoursesReport ({
 
 /**
  * Load users with its courses and schools
+ * @param workspaceId
  * @param userCourseStatuses
  * @param {array} modulesIds
  * @param {boolean} activeUsers include active users
@@ -141,7 +143,6 @@ async function loadUsersWithCourses (
   let query = `
     select 
         u.*, 
-        w.name subworkspace_name,
         group_concat(s.name separator ', ') school_name,
         c.name course_name,
         c.active course_active,
@@ -154,8 +155,7 @@ async function loadUsersWithCourses (
         sc.completed,
         sc.reviewed,
         sc.advanced_percentage
-    from users u 
-        inner join workspaces w on u.subworkspace_id = w.id
+    from users u
         inner join summary_courses sc on u.id = sc.user_id
         inner join courses c on sc.course_id = c.id
         inner join course_school cs on c.id = cs.course_id
@@ -164,8 +164,6 @@ async function loadUsersWithCourses (
     where 
       u.subworkspace_id in (${modulesIds.join()}) and
       sw.workspace_id = ${workspaceId}
-    group by 
-        u.id, c.id, sc.id
   `
 
   // Add condition for schools ids
@@ -200,21 +198,13 @@ async function loadUsersWithCourses (
     query += ' and (' + statusConditions.join(' or ') + ')'
   }
 
+  // Add user conditions and group sentence
+
+  query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
+  query += ' group by u.id, c.id, sc.id'
+
   // Execute query
 
-  if (modulesIds && activeUsers && inactiveUsers) {
-    const [rows] = await con.raw(query)
-    return rows
-  } else if (modulesIds && activeUsers && !inactiveUsers) {
-    const [rows] = await con.raw(`${query} and u.active = 1`)
-    return rows
-  } else if (modulesIds && !activeUsers && inactiveUsers) {
-    const [rows] = await con.raw(`${query} and u.active = 0`)
-    return rows
-  } else if (modulesIds && !activeUsers && !inactiveUsers) {
-    return []
-  } else if (!modulesIds) {
-    return []
-  }
+  const [rows] = await con.raw(query)
+  return rows
 }
-

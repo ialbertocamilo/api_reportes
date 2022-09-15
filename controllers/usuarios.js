@@ -16,8 +16,7 @@ const defaultHeaders = [
   'NOMBRE',
   'APELLIDO PATERNO',
   'APELLIDO MATERNO',
-  'DNI',
-  'EMAIL',
+  'DOCUMENTO',
   'ESTADO(USUARIO)',
   'ULTIMA SESIÓN'
 ]
@@ -51,7 +50,6 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
     cellRow.push(user.lastname)
     cellRow.push(user.surname)
     cellRow.push(user.document)
-    cellRow.push(user.email ? user.email : 'Email no registrado')
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
@@ -59,6 +57,8 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
 
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriteriaValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
+    // Add row to sheet
 
     worksheet.addRow(cellRow).commit()
   }

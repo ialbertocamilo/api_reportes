@@ -8,7 +8,7 @@ const sequelize = require('../sequelize.js')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
-const {  getHeadersEstaticos } = require('../helper/Criterios')
+const {  getGenericHeaders } = require('../helper/Criterios')
 const moment = require('moment')
 const UsuarioCurso = require('../models/UsuarioCurso')
 const Curso = require('../models/Curso')
@@ -40,7 +40,7 @@ async function ConsolidadoCursos({ usuario_supervisor_id,escuelas, cursos, estad
   ]
   const ConfigGeneral = await con('config_general')
   ConfigGeneral[0].reporte_promedio_base_100 ? Headers.splice(5, 0, 'NOTA PROMEDIO (B100)') : ''
-  createHeaders(Headers, getHeadersEstaticos)
+  createHeaders(Headers, getGenericHeaders)
 
   let cursos_required_id = cursos;
   if(escuelas.length == 0 && cursos.length == 0){

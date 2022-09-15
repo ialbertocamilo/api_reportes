@@ -13,15 +13,9 @@ router.post('/usuarios', handler.usuarios)
 router.post('/consolidado_cursos', handler.consolidadoCursos)
 router.post('/consolidado_temas', handler.consolidadoTemas)
 router.post('/avance_curricula', handler.avanceCurricula)
-
-/*
 router.post('/visitas', handler.visitas)
-router.post('/evaluaciones_abiertas', handler.evaluacionesAbiertas)
 router.post('/reinicios', handler.reinicios)
+router.post('/evaluaciones_abiertas', handler.evaluacionesAbiertas)
+router.post('/temas_no_evaluables', handler.temasNoEvaluables)
 
-
-router.post('/diplomas', handler.diplomas)
-router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
-router.post('/supervisores_notas', handler.supervisores_notas)
-*/
 module.exports = router

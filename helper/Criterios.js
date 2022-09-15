@@ -10,6 +10,7 @@ exports.getWorkspaceCriteria = async (workspaceId) => {
                 inner join workspaces w on w.id = cw.workspace_id
         where 
             w.id = :workspaceId and 
+            c.show_in_reports = 1 and
             w.active = 1 and
             c.active = 1
     `,
@@ -19,10 +20,10 @@ exports.getWorkspaceCriteria = async (workspaceId) => {
   return rows
 }
 
-exports.getHeadersEstaticos = async (workspaceId) => {
+exports.getGenericHeaders = async (workspaceId) => {
   const headers = [
-    'MODULO', 'NOMBRE', 'APELLIDO PATERNO', 'APELLIDO MATERNO',
-    'DOCUMENT', 'EMAIL', 'ESTADO(USUARIO)'
+    'Nombre', 'Apellido Paterno', 'Apellido Materno',
+    'Documento', 'Estado (Usuario)'
   ]
 
   const workspaceCriteria = await exports.getWorkspaceCriteria(workspaceId)
