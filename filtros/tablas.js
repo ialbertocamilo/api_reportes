@@ -90,10 +90,26 @@ module.exports = {
     `, { workspaceId }
     )
     return rows
+  },
+  async loadWorkspaceJobPositions (workspaceId) {
+    const [rows] = await con.raw(`
+      select
+        distinct(cv.value_text) name,
+            c.id criterion_id
+        from
+            criterion_values cv
+            inner join criteria c on c.id = cv.criterion_id
+            inner join criterion_workspace cw on cw.criterion_id = c.id
+            inner join workspaces w on w.id = cw.workspace_id
+        where
+        c.code = 'position_name' and
+        w.id = :workspaceId
+        order by name
+    `, { workspaceId }
+    )
+    return rows
   }
   ,
-
-
 
 
 

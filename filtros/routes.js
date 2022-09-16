@@ -27,6 +27,11 @@ router.get('/schools/:workspaceId', async (req, res) => {
   res.json(datos)
 })
 
+router.get('/job-positions/:workspaceId', async (req, res) => {
+
+  const datos = await tablas.loadWorkspaceJobPositions(req.params.workspaceId)
+  res.json(datos)
+})
 
 
 

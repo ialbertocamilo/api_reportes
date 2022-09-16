@@ -17,5 +17,7 @@ router.post('/visitas', handler.visitas)
 router.post('/reinicios', handler.reinicios)
 router.post('/evaluaciones_abiertas', handler.evaluacionesAbiertas)
 router.post('/temas_no_evaluables', handler.temasNoEvaluables)
+router.post('/ranking', handler.ranking)
+router.post('/user_uploads', handler.userUploads)
 
 module.exports = router

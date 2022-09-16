@@ -90,7 +90,7 @@ async function generateConsolidatedCoursesReport ({
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
-    // Add course values
+    // Add additional report values
 
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
     cellRow.push(user.school_name)

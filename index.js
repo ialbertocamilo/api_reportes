@@ -30,7 +30,7 @@ const rutaReportes = require('./routes/routes.route.js')
 app.use('/exportar', rutaReportes)
 app.use('/filtros', rutaFiltros)
 
-app.get(`/${CARPETA_DESCARGA}/:filename`, (req, res) => {
+app.get('/reports/:filename', (req, res) => {
   const file = CARPETA_DESCARGA + `/${req.params.filename}`
   res.download(file)
 })
