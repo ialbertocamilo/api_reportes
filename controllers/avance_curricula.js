@@ -101,6 +101,8 @@ async function loadUsersWithProgress (
         su.courses_completed
     from users u
         inner join summary_users su on u.id = su.user_id
+    where
+        u.subworkspace_id in (${modulesIds.join()})
   `
 
   // Add user conditions and group sentence

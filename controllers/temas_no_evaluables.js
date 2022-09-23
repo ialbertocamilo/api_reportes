@@ -155,14 +155,14 @@ async function loadUsersWithTopics (
     query += ` and t.id in (${topicsIds.join()})`
   }
 
-  if (!activeTopics || !inactiveTopics) {
-    if (activeTopics) {
-      query += ' and t.active = 1'
-    }
-    if (!inactiveTopics) {
-      query += ' and t.active = 0'
-    }
-  }
+  // if (!activeTopics || !inactiveTopics) {
+  //   if (activeTopics) {
+  //     query += ' and t.active = 1'
+  //   }
+  //   if (!inactiveTopics) {
+  //     query += ' and t.active = 0'
+  //   }
+  // }
 
   if (start && end) {
     query += ` and (
