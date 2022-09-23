@@ -76,7 +76,6 @@ async function exportarEvaluacionesAbiertas ({
 
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
-
     // Add report values
 
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
@@ -84,14 +83,19 @@ async function exportarEvaluacionesAbiertas ({
     cellRow.push(user.course_name || '-')
     cellRow.push(user.topic_name || '-')
 
-    const answers = JSON.parse(user.answers)
-    answers.forEach((answer, index) => {
-      if (answer) {
-        const question = questions.find(q => q.id === answer.preg_id)
-        cellRow.push(question ? strippedString(question.pregunta) : '-')
-        cellRow.push(answer ? strippedString(answer.opc) : '-')
+    try {
+      const answers = JSON.parse(user.answers)
+      if (answers) {
+        answers.forEach((answer, index) => {
+          if (answer) {
+            const question = questions.find(q => q.id === answer.preg_id)
+            cellRow.push(question ? strippedString(question.pregunta) : '-')
+            cellRow.push(answer ? strippedString(answer.opc) : '-')
+          }
+        })
       }
-    })
+    } catch (ex) {}
+
     worksheet.addRow(cellRow).commit()
   }
 
@@ -134,7 +138,7 @@ async function loadUsersQuestions (
         inner join summary_topics st on u.id = st.user_id
         inner join topics t on t.id = st.topic_id
         inner join summary_courses sc on u.id = sc.user_id
-        inner join courses c on sc.course_id = c.id
+        inner join courses c on t.course_id = c.id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id 
         inner join school_workspace sw on s.id = sw.school_id
