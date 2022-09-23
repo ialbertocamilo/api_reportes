@@ -7,7 +7,8 @@ const moment = require('moment')
 moment.locale('es')
 const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
-const { loadEvaluationTypes, getEvaluationTypeName } = require('../helper/CoursesTopicsHelper')
+const { loadEvaluationTypes } = require('../helper/CoursesTopicsHelper')
+const { strippedString } = require('../helper/Helper')
 
 async function notasUsuario ({ document }) {
   // Load user from database
@@ -38,8 +39,6 @@ async function notasUsuario ({ document }) {
     process.exit()
   }
 
-
-
   // Load evaluation types
 
   const evaluationTypes = await loadEvaluationTypes()
@@ -55,21 +54,24 @@ async function notasUsuario ({ document }) {
     // Load user summary topics from database
 
     const [userSummaryTopics] = await con.raw(`
-       select st.*, t.name as topic_name, t.type_evaluation_id
+       select st.*, 
+              t.name as topic_name, 
+              t.id as topic_id, 
+              t.type_evaluation_id
        from summary_topics st
                inner join topics t on st.topic_id = t.id
-       where st.user_id = :userId and t.course_id = :courseId
+       where st.user_id = :userId and 
+             t.course_id = :courseId
        `,
     { userId: user.id, courseId: course_id }
     )
 
     for (const summaryTopic of userSummaryTopics) {
       const topicObj = {}
-      const evaluationType = getEvaluationTypeName(evaluationTypes, summaryTopic.type_evaluation_id)
+      // const evaluationType = getEvaluationTypeName(evaluationTypes, summaryTopic.type_evaluation_id)
       topicObj.tema = summaryTopic.topic_name
-      topicObj.sistema_calificacion = evaluationType || '-'
-      topicObj.puntaje = ''// summaryTopic.grade ? parseInt(summaryTopic.grade) : '-'
       topicObj.nota = summaryTopic.grade ? parseFloat(summaryTopic.grade).toFixed(2) : '-'
+      topicObj.puntaje = ''// summaryTopic.grade ? parseInt(summaryTopic.grade) : '-'
       topicObj.correctas = summaryTopic.correct_answers || '-'
       topicObj.incorrectas = summaryTopic.failed_answers || '-'
       topicObj.visitas = summaryTopic.views || '-'
@@ -77,6 +79,31 @@ async function notasUsuario ({ document }) {
       topicObj.ultima_evaluacion = summaryTopic.last_time_evaluated_at
         ? moment(summaryTopic.last_time_evaluated_at).format('L')
         : '-'
+
+      const [questions] = await con.raw(`
+        select
+            *
+        from
+            questions
+        where
+            topic_id = :topicId
+      `,
+      { topicId: summaryTopic.topic_id }
+      )
+
+      // Retrieves questions with its user's answers
+
+      const questionsAnswers = []
+      const usersAnswers = summaryTopic.answers
+      questions.forEach(q => {
+        questionsAnswers.push({
+          pregunta: strippedString(q.pregunta),
+          respuesta_usuario: getUserAnswerText(q.id, q.rptas_json, usersAnswers),
+          respuesta_ok: getQuestionCorrectAnswerText(q.rptas_json, q.rpta_ok)
+        })
+      })
+
+      topicObj.prueba = questionsAnswers
 
       topicsArray.push(topicObj)
     }
@@ -86,6 +113,7 @@ async function notasUsuario ({ document }) {
     courseObj.visitas = summaryCourse.views
     courseObj.reinicios = summaryCourse.restarts ? summaryCourse.restarts : '-'
     courseObj.temas = topicsArray
+    courseObj.resultado = +summaryCourse.advance_percentage === 100 ? 'Completado' : 'En desarrollo'
 
     courseResults.push(courseObj)
   }
@@ -101,4 +129,59 @@ async function notasUsuario ({ document }) {
       user, module: modules[0]
     }
   })
+}
+
+/**
+ * Get correct answer text from question answers
+ * @param answers
+ * @param correctAnswer
+ * @returns {string}
+ */
+function getQuestionCorrectAnswerText (answers, correctAnswer) {
+  try {
+    answers = JSON.parse(answers)
+  } catch (ex) {
+    return '-'
+  }
+
+  let correctAnswerText = '-'
+  for (const [key, value] of Object.entries(answers)) {
+    if (+key === +correctAnswer) {
+      correctAnswerText = value
+    }
+  }
+
+  return correctAnswerText
+}
+
+/**
+ * Get user answer text from question answers
+ * @param questionId
+ * @param questionAnswers
+ * @param userAnswers
+ * @returns {string}
+ */
+function getUserAnswerText (questionId, questionAnswers, userAnswers) {
+  console.log(questionAnswers)
+  console.log(userAnswers)
+  try {
+    questionAnswers = JSON.parse(questionAnswers)
+  } catch (ex) {
+    return '-'
+  }
+
+  if (!userAnswers) return '-'
+
+  let userAnswerText = '-'
+  const userAnswer = userAnswers.find(ua => +ua.preg_id === +questionId)
+
+  for (const [answerId, value] of Object.entries(questionAnswers)) {
+    if (userAnswer) {
+      if (+answerId === +userAnswer.opc) {
+        userAnswerText = value
+      }
+    }
+  }
+
+  return userAnswerText
 }

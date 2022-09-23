@@ -7,3 +7,12 @@
 exports.pluck = (collection, key) => {
   return collection.map(obj => obj[key])
 }
+
+/**
+ * Remove HTML tags from string
+ * @param value
+ * @returns {*}
+ */
+exports.strippedString = (value) => {
+  return value.replace(/(<([^>]+)>)/gi, '')
+}

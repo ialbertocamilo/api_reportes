@@ -70,7 +70,7 @@ async function Reinicios ({ workspaceId, admin, start, end }) {
     cellRow.push(user.school_name)
     cellRow.push(user.course_name)
     cellRow.push(user.topic_name)
-    cellRow.push(user.topic_restarts ?? 0)
+    cellRow.push(user.topic_restarts || 0)
     cellRow.push(user.admin_name)
     cellRow.push(moment(user.summary_topic_updated).format('DD/MM/YYYY'))
 

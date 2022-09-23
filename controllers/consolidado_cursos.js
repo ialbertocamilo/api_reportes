@@ -100,8 +100,8 @@ async function generateConsolidatedCoursesReport ({
     cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id))
     cellRow.push(user.course_active === 1 ? 'Activo' : 'Inactivo')
     cellRow.push(user.course_restarts || '-')
-    cellRow.push(user.assigned)
-    cellRow.push(user.assigned + user.completed + user.reviewed || 0)
+    cellRow.push(user.assigned || 0)
+    cellRow.push(user.completed || 0)
     cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%') // resumen_curso ? resumen_curso.porcentaje + '%' : '0%')
 
     // Add row to sheet
@@ -148,7 +148,7 @@ async function loadUsersWithCourses (
         c.active course_active,
         sc.views course_views,
         sc.passed course_passed,
-        sc.grade_average,
+        sc.grade_average, 
         sc.status_id course_status_id,
         sc.restarts course_restarts,
         sc.assigned,

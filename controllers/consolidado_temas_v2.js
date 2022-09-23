@@ -185,7 +185,7 @@ async function loadUsersWithCoursesAndTopics (
   let query = `
     select 
         u.*, 
-        group_concat(s.name separator ', ') school_name,
+        group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         c.active course_active,
         sc.status_id course_status_id,
@@ -209,7 +209,7 @@ async function loadUsersWithCoursesAndTopics (
         inner join summary_topics st on u.id = st.user_id
         inner join topics t on t.id = st.topic_id
         inner join summary_courses sc on u.id = sc.user_id
-        inner join courses c on sc.course_id = c.id
+        inner join courses c on t.course_id = c.id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id
         inner join school_workspace sw on s.id = sw.school_id
@@ -277,10 +277,11 @@ async function loadUsersWithCoursesAndTopics (
   // Add user conditions and group sentence
 
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
-  query += ' group by u.id, t.id, st.id'
+  query += ' group by u.id, st.topic_id'
 
   // Execute query
 
   const [rows] = await con.raw(query)
+
   return rows
 }

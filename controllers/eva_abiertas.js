@@ -80,9 +80,9 @@ async function exportarEvaluacionesAbiertas ({
     // Add report values
 
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
-    cellRow.push(user.school_name ?? '-')
-    cellRow.push(user.course_name ?? '-')
-    cellRow.push(user.topic_name ?? '-')
+    cellRow.push(user.school_name || '-')
+    cellRow.push(user.course_name || '-')
+    cellRow.push(user.topic_name || '-')
 
     const answers = JSON.parse(user.answers)
     answers.forEach((answer, index) => {

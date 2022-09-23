@@ -66,8 +66,8 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
 
     // Add additional values
 
-    cellRow.push(user.courses_assigned ?? '-')
-    cellRow.push(user.courses_completed ?? '-')
+    cellRow.push(user.courses_assigned || '-')
+    cellRow.push(user.courses_completed || '-')
     cellRow.push(user.porcentaje ? user.porcentaje + '%' : 0 + '%')
 
     worksheet.addRow(cellRow).commit()
