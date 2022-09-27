@@ -74,8 +74,7 @@ module.exports = {
     `, { courseId }
     )
     return rows
-  }
-  ,
+  },  
   /**
    * Load workspace's courses
    * @param workspaceId

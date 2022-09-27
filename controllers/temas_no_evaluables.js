@@ -13,10 +13,7 @@ const { loadTopicsStatuses, getTopicStatusName } = require('../helper/CoursesTop
 const { con } = require('../db')
 
 const headers = [
-  'Estado(Usuario)',
-  'Carrera(Usuario)',
-  'Ciclo actual(Usuario)',
-  'Modalidad',
+  'Tipo de curso',
   'Escuela',
   'Curso',
   'Tema',
@@ -113,7 +110,7 @@ async function loadUsersWithTopics (
   let query = `
     select
       u.*,
-      group_concat(s.name separator ', ') school_name,
+      group_concat(distinct(s.name) separator ', ') school_name,
       c.name course_name,
       t.name topic_name,
       tax.name course_type_name,
@@ -126,7 +123,7 @@ async function loadUsersWithTopics (
         inner join summary_topics st on u.id = st.user_id
         inner join topics t on t.id = st.topic_id
         inner join summary_courses sc on u.id = sc.user_id
-        inner join courses c on sc.course_id = c.id
+        inner join courses c on t.course_id = c.id
         inner join course_school cs on c.id = cs.course_id
         inner join taxonomies tax on  tax.id = c.type_id
         inner join schools s on cs.school_id = s.id
@@ -166,7 +163,7 @@ async function loadUsersWithTopics (
 
   if (start && end) {
     query += ` and (
-      st.updated_at between '${start}' and '${end}'
+      st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
   }
 

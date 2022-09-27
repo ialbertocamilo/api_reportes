@@ -127,7 +127,7 @@ async function loadUsersQuestions (
   let query = `
     select 
         u.*, 
-        group_concat(s.name separator ', ') school_name,
+        group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
         q.pregunta,
@@ -170,7 +170,7 @@ async function loadUsersQuestions (
 
   if (start && end) {
     query += ` and (
-      st.updated_at between '${start}' and '${end}'
+      st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
   }
 
@@ -180,7 +180,7 @@ async function loadUsersQuestions (
   query += ' group by u.id, t.id, st.id'
 
   // Execute query
-
+console.log(query)
   const [rows] = await con.raw(query)
   return rows
 }

@@ -143,7 +143,7 @@ async function loadUsersWithCourses (
   let query = `
     select 
         u.*, 
-        group_concat(s.name separator ', ') school_name,
+        group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         c.active course_active,
         sc.views course_views,
