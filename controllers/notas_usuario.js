@@ -151,7 +151,7 @@ function getQuestionCorrectAnswerText (answers, correctAnswer) {
     }
   }
 
-  return correctAnswerText
+  return strippedString(correctAnswerText)
 }
 
 /**
@@ -183,5 +183,5 @@ function getUserAnswerText (questionId, questionAnswers, userAnswers) {
     }
   }
 
-  return userAnswerText
+  return strippedString(userAnswerText)
 }
