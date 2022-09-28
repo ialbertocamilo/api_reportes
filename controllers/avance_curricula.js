@@ -68,7 +68,7 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
 
     cellRow.push(user.courses_assigned || '-')
     cellRow.push(user.courses_completed || '-')
-    cellRow.push(user.porcentaje ? user.porcentaje + '%' : 0 + '%')
+    cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : 0 + '%')
 
     worksheet.addRow(cellRow).commit()
   }
@@ -98,7 +98,8 @@ async function loadUsersWithProgress (
     select 
         u.*, 
         su.courses_assigned,
-        su.courses_completed
+        su.courses_completed,
+        su.advanced_percentage
     from users u
         inner join summary_users su on u.id = su.user_id
     where
