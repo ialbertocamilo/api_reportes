@@ -28,7 +28,7 @@ exports.getCourseStatusId = (userCourseStatuses, code) => {
  */
 exports.getEvaluationTypeName = (evaluationTypes, id) => {
   const evaluationType = evaluationTypes.find(et => et.id === id)
-  return (evaluationType) ? evaluationType.name : null
+  return (evaluationType) ? evaluationType.name : 'No evaluable'
 }
 
 /**

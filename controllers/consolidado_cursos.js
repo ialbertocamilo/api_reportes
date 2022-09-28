@@ -90,6 +90,10 @@ async function generateConsolidatedCoursesReport ({
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
+    // Calculate completed courses
+
+    const completed = (user.advanced_percentage * user.assigned) / 100
+
     // Add additional report values
 
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
@@ -101,8 +105,8 @@ async function generateConsolidatedCoursesReport ({
     cellRow.push(user.course_active === 1 ? 'Activo' : 'Inactivo')
     cellRow.push(user.course_restarts || '-')
     cellRow.push(user.assigned || 0)
-    cellRow.push(user.completed || 0)
-    cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%') // resumen_curso ? resumen_curso.porcentaje + '%' : '0%')
+    cellRow.push(Math.ceil(completed) || 0)
+    cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%')
 
     // Add row to sheet
 
