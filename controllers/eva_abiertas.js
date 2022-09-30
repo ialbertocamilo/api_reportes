@@ -89,9 +89,9 @@ async function exportarEvaluacionesAbiertas ({
       if (answers) {
         answers.forEach((answer, index) => {
           if (answer) {
-            const question = questions.find(q => q.id === answer.preg_id)
+            const question = questions.find(q => q.id === answer.id)
             cellRow.push(question ? strippedString(question.pregunta) : '-')
-            cellRow.push(answer ? strippedString(answer.opc) : '-')
+            cellRow.push(answer ? strippedString(answer.respuesta) : '-')
           }
         })
       }
