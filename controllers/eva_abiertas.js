@@ -76,6 +76,7 @@ async function exportarEvaluacionesAbiertas ({
 
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
     // Add report values
 
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
@@ -180,7 +181,7 @@ async function loadUsersQuestions (
   query += ' group by u.id, t.id, st.id'
 
   // Execute query
-console.log(query)
+
   const [rows] = await con.raw(query)
   return rows
 }

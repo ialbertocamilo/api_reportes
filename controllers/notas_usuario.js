@@ -162,8 +162,7 @@ function getQuestionCorrectAnswerText (answers, correctAnswer) {
  * @returns {string}
  */
 function getUserAnswerText (questionId, questionAnswers, userAnswers) {
-  console.log(questionAnswers)
-  console.log(userAnswers)
+
   try {
     questionAnswers = JSON.parse(questionAnswers)
   } catch (ex) {
