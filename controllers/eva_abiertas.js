@@ -85,7 +85,7 @@ async function exportarEvaluacionesAbiertas ({
     cellRow.push(user.topic_name || '-')
 
     try {
-      const answers = JSON.parse(user.answers)
+      const answers = user.answers // JSON.parse(user.answers)
       if (answers) {
         answers.forEach((answer, index) => {
           if (answer) {
