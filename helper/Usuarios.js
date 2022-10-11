@@ -1,5 +1,6 @@
 const { con } = require('../db')
 const moment = require('moment/moment')
+const { pluck } = require('./Helper')
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
 
@@ -150,4 +151,31 @@ exports.findUserByDocument = async (document) => {
     .select('*')
     .where('document', `${document}`)
     .then(([row]) => row)
+}
+
+/**
+ * Load users which have all the provided criterion values ids
+ *
+ * @param workspaceId
+ * @param criterionValuesIds
+ * @returns {Promise<*[]>}
+ */
+exports.loadUsersIdsWithCriterionValues = async (workspaceId, criterionValuesIds) => {
+  if (criterionValuesIds.length === 0) return []
+
+  const [users] = await con.raw(`
+    select 
+        u.id,
+        count(cvu.criterion_value_id) criterion_count
+    from users u
+        inner join criterion_value_user cvu on u.id = cvu.user_id
+        inner join workspaces w on u.subworkspace_id = w.id
+    where
+        w.parent_id = :workspaceId and
+        cvu.criterion_value_id in (${criterionValuesIds.join()}) 
+    group by u.id
+    having criterion_count = :criterionCount
+  `, { workspaceId, criterionCount: criterionValuesIds.length })
+
+  return pluck(users, 'id')
 }

@@ -20,4 +20,7 @@ router.post('/temas_no_evaluables', handler.temasNoEvaluables)
 router.post('/ranking', handler.ranking)
 router.post('/user_uploads', handler.userUploads)
 
+router.post('/supervisores_notas', handler.supervisores_notas)
+router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
+
 module.exports = router

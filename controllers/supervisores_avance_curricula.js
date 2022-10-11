@@ -1,64 +1,119 @@
 process.on('message', requestData => {
-    AvanceCurricula(requestData)
+  supervisoresAvanceCurricula(requestData)
 })
-  require('../error')
-  const { con } = require('../db')
-  const { response } = require('../response')
-  const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
-  const Supervisor = require('../models/Supervisor')
-  async function AvanceCurricula ({ usuario_supervisor_id  }) {
-    let headers = [
-        'Módulo',
-        'DNI',
-        'EMAIL',
-        'Apellidos y Nombres',
-        'Estado(Usuario)',
-    ]
-    const Modulos = await con('ab_config')
-    
-    const usuariosXSupervisor = await Supervisor.usuariosXSupervisor(usuario_supervisor_id)
-    const ResumenGeneral = await con('resumen_general')
-    const TipoCriterios = await con('tipo_criterios')
-    const CriteriosUsuarios = await con.raw(`SELECT uc.usuario_id, c.nombre, tc.id as tipo_criterio_id
-      from criterios as c
-      INNER JOIN usuario_criterios as uc on c.id=uc.criterio_id
-      INNER JOIN tipo_criterios as tc on c.tipo_criterio_id=tc.id Order by tc.id ASC`).then(([rows]) => rows)
-    TipoCriterios.forEach(el => headers.push(el.nombre))
-    headers.push('Cursos asignados')
-    headers.push('Cursos completados')
-    headers.push('Avance')
-    let Rows = 0
-    createHeaders(headers)
-    for (const usuario of usuariosXSupervisor) {
-      Rows++
-      const CellRow = []
-      const modulo = Modulos.find((obj) => obj.id === usuario.config_id) || ''
-      const resumen = ResumenGeneral.find(obj => obj.usuario_id === usuario.id) || ''
-      const criteriosUsuario = CriteriosUsuarios.filter(obj => obj.usuario_id === usuario.id)
-      CellRow.push(modulo.etapa)
-      CellRow.push(usuario.dni)
-      CellRow.push((usuario.email) ? usuario.email : 'Email no registrado')
-      CellRow.push(usuario.nombre)
-      CellRow.push(usuario.estado == 0 ? 'Inactivo' : 'Activo')
-      for (const tipoCriterio of TipoCriterios) {
-        const UsuarioTipoCriterio = criteriosUsuario.find(obj => obj.tipo_criterio_id == tipoCriterio.id)
-        CellRow.push(UsuarioTipoCriterio ? UsuarioTipoCriterio.nombre : '-')
-      }
-      CellRow.push((resumen) ? resumen.cur_asignados : '-')
-      CellRow.push((resumen) ? resumen.tot_completados : '-')
-      CellRow.push((resumen) ? resumen.porcentaje+'%' : 0+'%') //Columna modificada para porcentaje
-      if (Rows === 1e6) {
-        worksheet = workbook.addWorksheet('Hoja 2', { properties: { defaultColWidth: 18 } })
-        createHeaders(worksheet, headers)
-      }
-      worksheet.addRow(CellRow).commit()
-    }
-    if (worksheet._rowZero > 1){
-        workbook.commit().then(() => {
-         process.send(response({ createAt, modulo: 'avance_curricula' }))
-        })
-    }
-    else {
-        process.send({ alert: 'No se encontraron resultados' })
-    }
+require('../error')
+const { con } = require('../db')
+const { response } = require('../response')
+const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
+const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
+const { pluck } = require('../helper/Helper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
+const { loadSupervisorSegmentCriterionValuesIds } = require('../helper/Segment')
+const {
+  loadUsersCriteriaValues,
+  getUserCriterionValues, loadUsersIdsWithCriterionValues
+} = require('../helper/Usuarios')
+
+// Headers for Excel file
+
+const headers = [
+  'Cursos asignados',
+  'Cursos completados',
+  'Avance'
+]
+
+async function supervisoresAvanceCurricula ({ workspaceId, supervisorId }) {
+
+  // Generate Excel file header
+
+  const headersEstaticos = await getGenericHeaders(workspaceId)
+  await createHeaders(headersEstaticos.concat(headers))
+
+  // Load workspace criteria
+
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+
+  // Load workspace user criteria
+
+  const modulos = await getSuboworkspacesIds(workspaceId)
+
+  // Load user ids which matches supervisor segmentation
+
+  const supervisorCriterionValuesIds = await loadSupervisorSegmentCriterionValuesIds(supervisorId)
+  const usersIds = await loadUsersIdsWithCriterionValues(workspaceId, supervisorCriterionValuesIds)
+
+  // Load users from database and generate ids array
+
+  const users = await loadUsersWithProgress(modulos, usersIds)
+  const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+
+  // Add data to Excel rows
+
+  for (const user of users) {
+    const cellRow = []
+
+    // Add default values
+
+    cellRow.push(user.name)
+    cellRow.push(user.lastname)
+    cellRow.push(user.surname)
+    cellRow.push(user.document)
+    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+
+    // Add user's criterion values
+
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
+    // Add additional values
+
+    cellRow.push(user.courses_assigned || '-')
+    cellRow.push(user.courses_completed || '-')
+    cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : 0 + '%')
+
+    worksheet.addRow(cellRow).commit()
   }
+
+  if (worksheet._rowZero > 1) {
+    workbook.commit().then(() => {
+      process.send(response({ createAt, modulo: 'avance_curricula' }))
+    })
+  } else {
+    process.send({ alert: 'No se encontraron resultados' })
+  }
+}
+
+/**
+ * Load users with its courses and schools
+ * @param {array} modulesIds
+ * @param usersIds
+ * @returns {Promise<*[]|*>}
+ */
+async function loadUsersWithProgress (modulesIds, usersIds) {
+  if (usersIds.length === 0) return []
+
+  // Base query
+
+  let query = `
+    select 
+        u.*, 
+        su.courses_assigned,
+        su.courses_completed,
+        su.advanced_percentage
+    from users u
+        inner join summary_users su on u.id = su.user_id
+    where
+        u.id in (${usersIds.join()}) and
+        u.subworkspace_id in (${modulesIds.join()})
+  `
+
+  // Add group sentence
+
+  query += ' group by u.id'
+
+  // Execute query
+
+  const [rows] = await con.raw(query)
+  return rows
+}

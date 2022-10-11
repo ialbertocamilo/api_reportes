@@ -1,252 +1,219 @@
 'use strict'
 process.on('message', (requestData) => {
-  ConsolidadoCursos(requestData)
+  supervisoresNotas(requestData)
 })
 const _ = require('lodash')
 require('../error')
-const sequelize = require('../sequelize.js')
+require('../sequelize.js')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
-const {  getGenericHeaders } = require('../helper/Criterios')
+const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
-const UsuarioCurso = require('../models/UsuarioCurso')
-const Curso = require('../models/Curso')
-const Categoria = require('../models/Categoria')
-const Tema = require('../models/Tema')
-const Visita = require('../models/Visita')
-const Reinicio = require('../models/Reinicio')
-const TipoCriterios = require('../models/TipoCriterios')
-const ResumenCurso = require('../models/ResumenCurso')
-const UsuarioCriterios = require('../models/UsuarioCriterios')
-const Criterios = require('../models/Criterios')
-const Supervisor = require('../models/Supervisor')
 
-async function ConsolidadoCursos({ usuario_supervisor_id,escuelas, cursos, estados }) {
+const { loadCoursesStatuses, getCourseStatusName, getCourseStatusId } = require('../helper/CoursesTopicsHelper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
+const { pluck } = require('../helper/Helper')
+const {
+  loadUsersCriteriaValues,
+  getUserCriterionValues, loadUsersIdsWithCriterionValues
+} = require('../helper/Usuarios')
+const { loadSupervisorSegmentCriterionValuesIds } = require('../helper/Segment')
 
-  let Headers = [
-    'ULTIMA SESION',
-    'ESCUELA',
-    'CURSO',
-    'VISITAS',
-    'NOTA PROMEDIO CAL20', // 4
-    'NOTA PROMEDIO CAL100', // 4
-    'RESULTADO CURSO',
-    'ESTADO CURSO',
-    'REINICIOS CURSOS',
-    'TEMAS ASIGNADOS',
-    'TEMAS COMPLETADOS',
-    'AVANCE (%)'
-  ]
-  const ConfigGeneral = await con('config_general')
-  ConfigGeneral[0].reporte_promedio_base_100 ? Headers.splice(5, 0, 'NOTA PROMEDIO (B100)') : ''
-  createHeaders(Headers, getGenericHeaders)
+// Headers for Excel file
 
-  let cursos_required_id = cursos;
-  if(escuelas.length == 0 && cursos.length == 0){
-    const cursos_r = await Curso.findAll({
-      attributes:['id'],
-      where:{
-        estado:1
-      }
-    });
-    cursos_required_id = pluck(cursos_r,'id');
+const headers = [
+  'ULTIMA SESIÓN',
+  'ESCUELA',
+  'CURSO',
+  'VISITAS',
+  'NOTA PROMEDIO',
+  'RESULTADO CURSO',
+  'ESTADO CURSO',
+  'REINICIOS CURSOS',
+  'TEMAS ASIGNADOS',
+  'TEMAS COMPLETADOS',
+  'AVANCE (%)'
+]
+
+async function supervisoresNotas ({
+  workspaceId, supervisorId, escuelas, cursos,
+  aprobados,
+  desaprobados,
+  desarrollo,
+  encuestaPendiente
+}) {
+  // Generate Excel file header
+
+  const headersEstaticos = await getGenericHeaders(workspaceId)
+  await createHeaders(headersEstaticos.concat(headers))
+
+  // Load user ids which matches supervisor segmentation
+
+  const supervisorCriterionValuesIds = await loadSupervisorSegmentCriterionValuesIds(supervisorId)
+  const usersIds = await loadUsersIdsWithCriterionValues(workspaceId, supervisorCriterionValuesIds)
+
+  // Load workspace criteria
+
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+
+  // Load user course statuses
+
+  const userCourseStatuses = await loadCoursesStatuses()
+
+  // Load users from database and generate ids array
+
+  const users = await loadUsersWithCourses(
+    workspaceId, usersIds, userCourseStatuses,
+    escuelas, cursos,
+    aprobados,
+    desaprobados,
+    desarrollo,
+    encuestaPendiente
+  )
+
+  // Load workspace user criteria
+  const modulos = await getSuboworkspacesIds(workspaceId)
+  const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+
+  // Add users to Excel rows
+
+  for (const user of users) {
+    const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
+
+    const cellRow = []
+
+    // Add default values
+
+    cellRow.push(user.name)
+    cellRow.push(user.lastname)
+    cellRow.push(user.surname)
+    cellRow.push(user.document)
+    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+
+    // Add user's criterion values
+
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+
+    // Calculate completed courses
+
+    const completed = (user.advanced_percentage * user.assigned) / 100
+
+    // Add additional report values
+
+    cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
+    cellRow.push(user.school_name)
+    cellRow.push(user.course_name)
+    cellRow.push(user.course_views || '-')
+    cellRow.push(user.course_passed > 0 ? user.grade_average : '-')
+    cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id))
+    cellRow.push(user.course_active === 1 ? 'Activo' : 'Inactivo')
+    cellRow.push(user.course_restarts || '-')
+    cellRow.push(user.assigned || 0)
+    cellRow.push(Math.round(completed) || 0)
+    cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%')
+
+    // Add row to sheet
+
+    worksheet.addRow(cellRow).commit()
   }
-  if(escuelas.length>0 && cursos.length == 0){
-    const cursos_r = await Curso.findAll({
-      attributes:['id'],
-      where: {
-        categoria_id:escuelas,
-        estado:1
-      }
-    });
-    cursos_required_id = pluck(cursos_r,'id');
-  }
 
-  const Usuarios = await Supervisor.usuariosXSupervisor(usuario_supervisor_id);
-  const usuarios_required_id = pluck(Usuarios,'id');
-  let visitas =  await Visita.findAll({
-                    attributes: ['usuario_id','curso_id',[sequelize.literal('SUM(sumatoria)'), 'sumatoria']],
-                    where:{
-                      usuario_id :usuarios_required_id
-                    },
-                    group: ['curso_id', 'usuario_id'],
-                  })
-  visitas = groupArrayOfObjects(visitas,'usuario_id');
-  const reinicios = await Reinicio.findAll({
-                      attributes: ['usuario_id','curso_id','acumulado'],
-                      where:{
-                        usuario_id :usuarios_required_id,
-                        tipo: 'por_curso'
-                      }
-                    })
-  let where_resumen_x_curso = {};
-  where_resumen_x_curso.usuario_id = usuarios_required_id;
-  where_resumen_x_curso.curso_id = cursos_required_id;
-  // if(estados.length>0){
-  //   where_resumen_x_curso.estado = estados;
-  // }
-  let  resumenes_curso = await ResumenCurso.findAll({
-                      attributes:['usuario_id','estado','curso_id','asignados','porcentaje','aprobados','nota_prom',[sequelize.literal('aprobados+realizados+revisados'), 'sum_completados']],
-                      where:where_resumen_x_curso
-                    });
-  resumenes_curso = groupArrayOfObjects(resumenes_curso,'usuario_id');
- 
-  const cursos_required = await Curso.findAll({
-                              attributes:['id','nombre','estado'],
-                              where:{
-                                id:cursos_required_id
-                              },
-                              include:[
-                                {
-                                  required:false,
-                                  model:Tema,
-                                  attributes:['id'],
-                                    where:{
-                                      estado:1
-                                  }
-                                },
-                                {
-                                  required:false,
-                                  model:Categoria,
-                                  attributes: ['id','nombre'],
-                                }
-                              ]
-                            });
-  const tipo_criterios = await TipoCriterios.findAll({
-                          attributes:['id'],
-                          where:{
-                            en_reportes:1
-                          }
-                        })
-  const usuarios_criterios = await UsuarioCriterios.findAll({
-                              attributes:['usuario_id'],
-                              where:{
-                                usuario_id:usuarios_required_id
-                              },
-                              include: {
-                                required:true,
-                                model:Criterios,
-                                attributes: ['nombre','tipo_criterio_id'],
-                                where:{
-                                  tipo_criterio_id:pluck(tipo_criterios,'id')
-                                }
-                              }
-                            })
-    let UsuarioCursos = await UsuarioCurso.findAll({
-                          attributes:['usuario_id','curso_id'],
-                          where:{
-                            usuario_id:usuarios_required_id,
-                            curso_id: cursos_required_id,
-                            estado:1
-                          },
-                        })
-    UsuarioCursos = groupArrayOfObjects(UsuarioCursos,'usuario_id');
-    const Modulos = await con('ab_config')
-   
-    for (const usuario of _.uniq(Usuarios, 'id')) {
-       const modulo = Modulos.find((obj) => obj.id === usuario.config_id)
-        const CriteriosUsuario = usuarios_criterios.filter(obj => obj.usuario_id == usuario.id);
-        const m_ultima_sesion = moment(usuario.ultima_sesion).format('DD/MM/YYYY H:mm:ss');
-        const usuario_visitas = visitas[usuario.id] || [];
-        const usuario_reinicios = reinicios.filter(obj => obj.usuario_id == usuario.id)
-        const resumenes_x_usuario = resumenes_curso[usuario.id]  || [];
-        const usuario_cursos_x_usuario = UsuarioCursos[usuario.id] || [];
-        for (const usuario_curso of usuario_cursos_x_usuario) {
-            const resumen_curso = resumenes_x_usuario.find(obj => obj.curso_id == usuario_curso.curso_id) || {estado:'pendiente'};
-            const resultadoCurso = verificarEstadoCurso(resumen_curso.estado)
-            const curso = cursos_required.find(c => c.id === usuario_curso.curso_id)
-            const visitasCurso = usuario_visitas.find(obj => obj.curso_id == usuario_curso.curso_id && obj.usuario_id == usuario.id) || ''
-            const reinicio = usuario_reinicios.find(obj => obj.curso_id === curso.id) || '-'
-            const CellRow = []
-            if(estados.length==0 || estados.find(e=>e==resumen_curso.estado)){
-              CellRow.push(modulo.etapa)
-              CellRow.push(usuario.nombre)
-              CellRow.push(usuario.apellido_paterno)
-              CellRow.push(usuario.apellido_materno)
-              CellRow.push(usuario.dni)
-              CellRow.push((usuario.email) ? usuario.email : 'Email no registrado')
-              CellRow.push(usuario.estado == 1 ? 'Activo' : 'Inactivo')
-              for (const tipoCriterio of tipo_criterios) {
-                let UsuarioTipoCriterio = CriteriosUsuario.find(obj => obj.criterio.tipo_criterio_id == tipoCriterio.id)
-                CellRow.push(UsuarioTipoCriterio ? UsuarioTipoCriterio.criterio.nombre : '-')
-              }
-              // CriteriosUsuario.forEach(obj => CellRow.push(obj.criterio.nombre || '-'))
-              CellRow.push( (m_ultima_sesion!='Invalid date') ? m_ultima_sesion : '-')
-              CellRow.push(curso.categoria ? curso.categoria.nombre : 'No se encontro la Escuela')
-              CellRow.push(curso ? curso.nombre : 'No se encontro el Curso')
-              CellRow.push(visitasCurso.sumatoria || '-')
-              CellRow.push(resumen_curso.aprobados > 0 ? resumen_curso.nota_prom : '-')
-              CellRow.push(resumen_curso.aprobados > 0 && resumen_curso.nota_prom ? resumen_curso.nota_prom*5 : '-')
-              if (ConfigGeneral[0].reporte_promedio_base_100) {
-                let NotaB100 = ConfigGeneral[0].reporte_promedio_base_100 && resumen_curso.aprobados > 0 ? resumen_curso.nota_prom * 5 : '-' //B100
-                CellRow.push(NotaB100)
-              }
-              CellRow.push(resultadoCurso)
-              CellRow.push(curso.estado == 1 ? 'Activo' : 'Inactivo')
-              CellRow.push(reinicio.acumulado || '-')
-              CellRow.push((resumen_curso) ? resumen_curso.asignados : curso.temas.length )
-              CellRow.push((resumen_curso) ? resumen_curso.sum_completados : 0)
-              CellRow.push((resumen_curso && resumen_curso.porcentaje) ? resumen_curso.porcentaje+'%' : '0%')
-              worksheet.addRow(CellRow).commit()
-            }
-        }
-    }
-  if (worksheet._rowZero > 1)
+  if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: 'ConsolidadoCursos' }))
     })
-  else {
+  } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
 }
-function pluck(array, key) {
-    return array.map(function(obj) {
-        return obj[key];
-    });
-}
 
-function groupArrayOfObjects(list, key) {
-  return list.reduce(function(rv, x) {
-    (rv[x[key]] = rv[x[key]] || []).push(x);
-    return rv;
-  }, {});
-};
+/**
+ * Load users with its courses and schools
+ * @param workspaceId
+ * @param usersIds
+ * @param schoolsIds
+ * @param coursesIds
+ * @param userCourseStatuses
+ * @param aprobados
+ * @param desaprobados
+ * @param desarrollo
+ * @param encuestaPendiente
+ * @returns {Promise<*>}
+ */
+async function loadUsersWithCourses (
+  workspaceId, usersIds, userCourseStatuses,
+  schoolsIds, coursesIds, aprobados, desaprobados, desarrollo, encuestaPendiente
+) {
+  if (usersIds.length === 0) return []
 
-function verificarEstadoCurso(cursoEstado) {
-  switch (cursoEstado) {
-    case 'aprobado':
-      // if (completados)
-      return 'COMPLETADO'
-      break
-    case 'desaprobado':
-      // if (desarollo)
-      return 'DESAPROBADO'
-      break
-    case 'desarrollo':
-      // if (desarollo)
-      return 'DESARROLLO'
-      break
-    case 'enc_pend':
-      // if (encuesta_pendiente)
-      return 'ENCUESTA PENDIENTE'
-      break
-    default:
-      // if (pendientes)
-      return 'PENDIENTE'
-      break
-    // Pendientes
+  // Base query
+
+  let query = `
+    select 
+        u.*, 
+        group_concat(distinct(s.name) separator ', ') school_name,
+        c.name course_name,
+        c.active course_active,
+        sc.views course_views,
+        sc.passed course_passed,
+        sc.grade_average, 
+        sc.status_id course_status_id,
+        sc.restarts course_restarts,
+        sc.assigned,
+        sc.completed,
+        sc.reviewed,
+        sc.advanced_percentage
+    from users u
+        inner join summary_courses sc on u.id = sc.user_id
+        inner join courses c on sc.course_id = c.id
+        inner join course_school cs on c.id = cs.course_id
+        inner join schools s on cs.school_id = s.id 
+        inner join school_workspace sw on s.id = sw.school_id
+    where 
+      u.id in (${usersIds.join()}) and
+      sw.workspace_id = ${workspaceId}
+  `
+
+  // Add condition for schools ids
+
+  if (schoolsIds.length > 0) {
+    query += ` and s.id in (${schoolsIds.join()})`
   }
-}
 
-function ValidarNotasVisitas(visitas, nota) {
-  if (parseInt(nota)) {
-    if (parseInt(visitas)) {
-      return true
-    } else {
-      return false
-    }
-  } else {
-    return true
+  // Add condition for courses ids
+
+  if (coursesIds.length > 0) {
+    query += ` and c.id in (${coursesIds.join()})`
   }
+
+  // Get statuses ids
+
+  const aprobadoId = getCourseStatusId(userCourseStatuses, 'aprobado')
+  const desaprobadoId = getCourseStatusId(userCourseStatuses, 'desaprobado')
+  const desarrolloId = getCourseStatusId(userCourseStatuses, 'desarrollo')
+  const encuestaPendienteId = getCourseStatusId(userCourseStatuses, 'enc_pend')
+
+  // Add condition for statuses
+
+  if (aprobados || desaprobados || desarrollo || encuestaPendiente) {
+    const statusConditions = []
+
+    if (aprobados) { statusConditions.push(`sc.status_id = ${aprobadoId}`) }
+    if (desaprobados) { statusConditions.push(`sc.status_id = ${desaprobadoId}`) }
+    if (desarrollo) { statusConditions.push(`sc.status_id = ${desarrolloId}`) }
+    if (encuestaPendiente) { statusConditions.push(`sc.status_id = ${encuestaPendienteId}`) }
+
+    query += ' and (' + statusConditions.join(' or ') + ')'
+  }
+
+  // Add user conditions and group sentence
+
+  query += ' group by u.id, c.id, sc.id'
+
+  // Execute query
+
+  const [rows] = await con.raw(query)
+  return rows
 }

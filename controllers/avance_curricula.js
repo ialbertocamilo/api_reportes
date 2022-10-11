@@ -19,7 +19,6 @@ const headers = [
 ]
 
 async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, validacion }) {
-
   // Generate Excel file header
 
   const headersEstaticos = await getGenericHeaders(workspaceId)

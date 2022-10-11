@@ -21,7 +21,6 @@ app.use(function (req, res, next) {
   next()
 })
 
-
 // Routes
 const rutaFiltros = require('./filtros/routes')
 const rutaReportes = require('./routes/routes.route.js')
