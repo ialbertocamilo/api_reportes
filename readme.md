@@ -1,6 +1,6 @@
 # Reportes para San Pablo
 
-Api para el entorno de reportes del gestor del [Grupo San Pablo](https://gestiona.DOMINIO/)
+Servicio de APIs para reportes em gestor y en app Cursalab v2.
 
 ###Requerimientos
 
