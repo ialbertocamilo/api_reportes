@@ -58,8 +58,22 @@ module.exports = {
     `, { schoolId }
     )
     return rows
-  }
-  ,
+  },
+  /**
+   * Load courses from several schools
+   * @param schoolsId
+   * @returns {Promise<*>}
+   */
+  async loadCoursesFromSchools (schoolsId) {
+    const [rows] = await con.raw(`
+      select
+        c.*
+      from courses c inner join course_school cs on c.id = cs.course_id
+      where cs.school_id in (:schoolIds)
+    `, { schoolIds: schoolsId }
+    )
+    return rows
+  },
   /**
    * Load course's topics
    * @param courseId

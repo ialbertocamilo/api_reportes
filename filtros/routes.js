@@ -9,9 +9,14 @@ router.get('/datosiniciales/:workspaceId', async (req, res) => {
   res.json(datos)
 })
 
-router.get('/courses/:workspaceId', async (req, res) => {
+router.get('/courses/:schoolId', async (req, res) => {
 
-  const datos = await tablas.loadSchoolCourses(req.params.workspaceId)
+  const datos = await tablas.loadSchoolCourses(req.params.schoolId)
+  res.json(datos)
+})
+
+router.post('/schools/courses', async (req, res) => {
+  const datos = await tablas.loadCoursesFromSchools(req.body.schoolsIds)
   res.json(datos)
 })
 
