@@ -54,7 +54,8 @@ module.exports = {
       select
         c.*
       from courses c inner join course_school cs on c.id = cs.course_id
-      where cs.school_id = :schoolId
+      where cs.school_id = :schoolId and 
+            c.active = 1
     `, { schoolId }
     )
     return rows
@@ -69,7 +70,8 @@ module.exports = {
       select
         c.*
       from courses c inner join course_school cs on c.id = cs.course_id
-      where cs.school_id in (:schoolIds)
+      where cs.school_id in (:schoolIds) and
+          c.active = 1
     `, { schoolIds: schoolsId }
     )
     return rows
@@ -88,7 +90,7 @@ module.exports = {
     `, { courseId }
     )
     return rows
-  },  
+  },
   /**
    * Load workspace's courses
    * @param workspaceId
@@ -99,7 +101,7 @@ module.exports = {
       select
         s.*
       from schools s inner join school_workspace sw on s.id = sw.school_id
-      where sw.workspace_id = :workspaceId
+      where sw.workspace_id = :workspaceId and s.active = 1
     `, { workspaceId }
     )
     return rows
@@ -125,6 +127,9 @@ module.exports = {
   ,
 
 
+
+
+  
 
   /*
    * Primarios
