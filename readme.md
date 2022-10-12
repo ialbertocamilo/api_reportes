@@ -12,9 +12,10 @@ _Esta api sirve a el modulo de reportes desde el uso de los filtros, hasta la ge
 
 ###### https://api.reportes.DOMINIO/api/node/exportar/
 
-_Tambien se integra dentro una carpeta para las nuevas implementaciones que se usan en el test_
+## Ramas
 
-https://test.api.reportes.DOMINIO/api/node/exportar/notas_usuario
+main -> para producción
+testing -> para testing
 
 ### Primeros pasos 📋
 
