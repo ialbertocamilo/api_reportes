@@ -123,13 +123,21 @@ module.exports = {
     `, { workspaceId }
     )
     return rows
-  }
-  ,
+  },
+  /**
+   * Load checklist from specific course
+   * @param courseId
+   * @returns {Promise<*>}
+   */
+  async loadCourseChecklists (courseId) {
+    const [rows] = await con.raw(``, {})
+
+    return rows
+  },
 
 
 
 
-  
 
   /*
    * Primarios

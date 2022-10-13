@@ -15,6 +15,12 @@ router.get('/courses/:schoolId', async (req, res) => {
   res.json(datos)
 })
 
+router.get('/courses/checklist/:courseId', async (req, res) => {
+
+  const datos = await tablas.loadCourseChecklists(req.params.courseId)
+  res.json(datos)
+})
+
 router.post('/schools/courses', async (req, res) => {
   const datos = await tablas.loadCoursesFromSchools(req.body.schoolsIds)
   res.json(datos)
