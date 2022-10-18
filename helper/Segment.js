@@ -8,7 +8,7 @@ const { pluck } = require('./Helper')
  * @param supervisorId
  * @returns {Promise<void>}
  */
-exports.loadSupervisorSegmentCriterionValuesIds = async (supervisorId) => {
+async function loadSupervisorSegmentCriterionValues (supervisorId) {
   // Load taxonomy for supervisors
 
   const [taxonomies] = await con.raw(`
@@ -33,7 +33,8 @@ exports.loadSupervisorSegmentCriterionValuesIds = async (supervisorId) => {
     where
         s.model_id = :supervisorId and
         s.code_id = :supervisorTaxonomyId and
-        s.active = 1
+        s.active = 1 and
+        sv.deleted_at is null
   `
   const [segmentValues] = await con.raw(
     query,
@@ -42,5 +43,71 @@ exports.loadSupervisorSegmentCriterionValuesIds = async (supervisorId) => {
       supervisorTaxonomyId: supervisorTaxonomy.id
     })
 
-  return pluck(segmentValues, 'criterion_value_id')
+  return segmentValues
+}
+
+exports.loadSupervisorSegmentUsersIds = async (workspaceId, supervisorId) => {
+  const criterionValues = await loadSupervisorSegmentCriterionValues(supervisorId)
+
+  if (criterionValues.length === 0) return []
+
+  // Generate conditions
+
+  let criterionIds = []
+  let previousCriterionId = null
+  let WHERE = []
+  criterionValues.forEach(value => {
+    const criterionId = value.criterion_id
+
+    let criterionValuesIds
+    if (criterionId !== previousCriterionId) {
+      if (!criterionIds.includes(criterionId)) {
+        criterionIds.push(criterionId)
+      }
+      previousCriterionId = criterionId
+
+      criterionValuesIds = criterionValues.filter(cv => cv.criterion_id === criterionId)
+      criterionValuesIds = pluck(criterionValuesIds, 'criterion_value_id')
+
+      WHERE.push(`(
+        scv.criterion_id = ${criterionId} and
+        scv.criterion_value_id in (${criterionValuesIds.join()})
+      )`)
+    }
+  })
+
+  // When no condition was generated, stop method execution
+
+  if (WHERE.length === 0) return []
+
+  WHERE = WHERE.join(' or ')
+  const criterionCount = criterionIds.length
+  criterionIds = criterionIds.join()
+
+  const query = `
+      select
+      user_id
+      from (
+          -- Users' criterion values
+        select
+            cvu.user_id,
+            cvu.criterion_value_id,
+            cv.criterion_id
+        from
+        criterion_value_user cvu
+        inner join criterion_values cv on cv.id = cvu.criterion_value_id
+        
+        where cv.criterion_id in (${criterionIds})
+      ) scv
+        where
+        ${WHERE}
+
+      group by
+        user_id
+      
+      having count(user_id) = ${criterionCount}
+  `
+  const [rows] = await con.raw(query)
+
+  return pluck(rows, 'user_id')
 }

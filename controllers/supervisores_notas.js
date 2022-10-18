@@ -18,7 +18,7 @@ const {
   loadUsersCriteriaValues,
   getUserCriterionValues, loadUsersIdsWithCriterionValues
 } = require('../helper/Usuarios')
-const { loadSupervisorSegmentCriterionValuesIds } = require('../helper/Segment')
+const { loadSupervisorSegmentCriterionValues, loadSupervisorSegmentUsersIds } = require('../helper/Segment')
 
 // Headers for Excel file
 
@@ -50,8 +50,7 @@ async function supervisoresNotas ({
 
   // Load user ids which matches supervisor segmentation
 
-  const supervisorCriterionValuesIds = await loadSupervisorSegmentCriterionValuesIds(supervisorId)
-  const usersIds = await loadUsersIdsWithCriterionValues(workspaceId, supervisorCriterionValuesIds)
+  const usersIds = await loadSupervisorSegmentUsersIds(workspaceId, supervisorId)
 
   // Load workspace criteria
 
