@@ -130,7 +130,20 @@ module.exports = {
    * @returns {Promise<*>}
    */
   async loadCourseChecklists (courseId) {
-    const [rows] = await con.raw(``, {})
+    const [rows] = await con.raw(`
+      select
+        c.id,
+        c.title
+      
+      from
+          checklist_relationships cr 
+            inner join checklists c on c.id = cr.checklist_id
+      where
+          cr.course_id = :courseId and
+          c.active = 1
+      
+      group by c.id
+    `, { courseId })
 
     return rows
   },

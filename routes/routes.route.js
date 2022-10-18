@@ -23,7 +23,7 @@ router.post('/user_uploads', handler.userUploads)
 router.post('/supervisores_notas', handler.supervisores_notas)
 router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
 
-router.post('/checklist_general')
-router.post('/checklist_detallado')
+router.post('/checklist_general', handler.checklist_general)
+router.post('/checklist_detallado', handler.checklist_detallado)
 
 module.exports = router

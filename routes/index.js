@@ -124,5 +124,21 @@ module.exports = {
       res.send(data)
       children.kill()
     })
+  },
+  checklist_general ({ body }, res) {
+    const children = fork('./controllers/checklist_general.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+  checklist_detallado ({ body }, res) {
+    const children = fork('./controllers/checklist_detallado.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
   }
 }
