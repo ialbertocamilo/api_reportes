@@ -46,7 +46,7 @@ async function loadSupervisorSegmentCriterionValues (supervisorId) {
   return segmentValues
 }
 
-exports.loadSupervisorSegmentUsersIds = async (workspaceId, supervisorId) => {
+exports.loadSupervisorSegmentUsersIds = async (modulos, supervisorId) => {
   const criterionValues = await loadSupervisorSegmentCriterionValues(supervisorId)
 
   if (criterionValues.length === 0) return []
@@ -86,7 +86,7 @@ exports.loadSupervisorSegmentUsersIds = async (workspaceId, supervisorId) => {
 
   const query = `
       select
-      user_id
+        user_id
       from (
           -- Users' criterion values
         select
@@ -96,10 +96,13 @@ exports.loadSupervisorSegmentUsersIds = async (workspaceId, supervisorId) => {
         from
         criterion_value_user cvu
         inner join criterion_values cv on cv.id = cvu.criterion_value_id
+        inner join users u on u.id = cvu.user_id
         
-        where cv.criterion_id in (${criterionIds})
+        where 
+            cv.criterion_id in (${criterionIds}) and
+            u.subworkspace_id in (${modulos.join()})
       ) scv
-        where
+      where
         ${WHERE}
 
       group by

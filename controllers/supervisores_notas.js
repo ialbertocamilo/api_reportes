@@ -49,8 +49,8 @@ async function supervisoresNotas ({
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load user ids which matches supervisor segmentation
-
-  const usersIds = await loadSupervisorSegmentUsersIds(workspaceId, supervisorId)
+  const modulos = await getSuboworkspacesIds(workspaceId)
+  const usersIds = await loadSupervisorSegmentUsersIds(modulos, supervisorId)
 
   // Load workspace criteria
 
@@ -73,7 +73,6 @@ async function supervisoresNotas ({
   )
 
   // Load workspace user criteria
-  const modulos = await getSuboworkspacesIds(workspaceId)
   const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
 
   // Add users to Excel rows

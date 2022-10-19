@@ -8,10 +8,9 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
-const { loadSupervisorSegmentCriterionValues, loadSupervisorSegmentUsersIds } = require('../helper/Segment')
+const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
 const {
-  loadUsersCriteriaValues,
-  getUserCriterionValues, loadUsersIdsWithCriterionValues
+  loadUsersCriteriaValues, getUserCriterionValues
 } = require('../helper/Usuarios')
 
 // Headers for Excel file
@@ -40,7 +39,7 @@ async function supervisoresAvanceCurricula ({ workspaceId, supervisorId }) {
 
   // Load user ids which matches supervisor segmentation
 
-  const usersIds = await loadSupervisorSegmentUsersIds(workspaceId, supervisorId)
+  const usersIds = await loadSupervisorSegmentUsersIds(modulos, supervisorId)
 
   // Load users from database and generate ids array
 
