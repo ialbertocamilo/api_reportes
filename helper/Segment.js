@@ -69,10 +69,12 @@ exports.loadSupervisorSegmentUsersIds = async (modulos, supervisorId) => {
       criterionValuesIds = criterionValues.filter(cv => cv.criterion_id === criterionId)
       criterionValuesIds = pluck(criterionValuesIds, 'criterion_value_id')
 
-      WHERE.push(`(
-        scv.criterion_id = ${criterionId} and
-        scv.criterion_value_id in (${criterionValuesIds.join()})
-      )`)
+      if (criterionValuesIds.length > 0) {
+        WHERE.push(`(
+          scv.criterion_id = ${criterionId} and
+          scv.criterion_value_id in (${criterionValuesIds.join()})
+        )`)
+      }
     }
   })
 
