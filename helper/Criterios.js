@@ -1,6 +1,8 @@
 const { con } = require('../db')
+const { logtime } = require('./Helper')
 
 exports.getWorkspaceCriteria = async (workspaceId) => {
+  logtime('method: getWorkspaceCriteria')
   const [rows] = await con.raw(`
         select 
             c.*

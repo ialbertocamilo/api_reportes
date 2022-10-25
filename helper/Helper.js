@@ -33,3 +33,15 @@ exports.pluckUnique = (collection, key) => {
 exports.strippedString = (value) => {
   return value.replace(/(<([^>]+)>)/gi, '')
 }
+
+exports.logtime = (message) => {
+  const now = new Date()
+  const seconds = Math.floor(now.getTime() / 1000)
+  const timestamp = now
+    .toISOString()
+    .substring(11)
+    .replace(/T/, ' ')
+    .replace(/\..+/, '')
+
+  console.log(`Seconds:${seconds - 1666736790} Time:${timestamp} |`, message)
+}

@@ -1,9 +1,9 @@
 const { con } = require('../db')
 const moment = require('moment/moment')
-const { pluck } = require('./Helper')
+const { pluck, logtime } = require('./Helper')
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
-
+  logtime('method: getUsers')
   if (modulesIds && activeUsers && inactiveUsers) {
     return con('users')
       .whereIn('subworkspace_id', modulesIds)
@@ -39,6 +39,7 @@ exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers) => {
  * @returns {Promise<*>}
  */
 exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
+  logtime('method: loadUsersCriteriaValues')
   let query = `
     select 
         cvu.user_id, 

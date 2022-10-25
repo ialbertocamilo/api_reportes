@@ -1,8 +1,10 @@
 const { fork } = require('child_process')
+const { logtime } = require('../helper/Helper')
 
 module.exports = {
   // * Usuarios
   usuarios (req, res) {
+    logtime('Start report: Usuarios')
     const children = fork('./controllers/usuarios.js')
     children.send(req.body)
 

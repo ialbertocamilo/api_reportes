@@ -9,7 +9,7 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
 const { getUsers, loadUsersCriteriaValues, getUserCriterionValues } = require('../helper/Usuarios')
 const { getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 const defaultHeaders = [
@@ -41,7 +41,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
   await createHeaders(defaultHeaders)
 
   // Generate rows for Excel file
-
+  logtime('Start file generation')
   for (const user of users) {
     const cellRow = []
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
@@ -62,6 +62,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
 
     worksheet.addRow(cellRow).commit()
   }
+  logtime('End file generation')
 
   // Generate Excel file
 
