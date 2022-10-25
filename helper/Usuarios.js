@@ -56,9 +56,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
             inner join criterion_values cv on cv.id = cvu.criterion_value_id
             inner join criteria c on c.id = cv.criterion_id
     where
-        -- this line is added to avoid errors with WHERE 
-        -- clause when no conditions are provided
-        u.id > 0 
+      c.show_in_reports = 1
     `
 
   // When module ids array has been provided, add condition to filter them
