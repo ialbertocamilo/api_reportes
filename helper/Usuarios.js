@@ -100,7 +100,6 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
   // Iterate criterion names to find its values
   logtime('start user criteria')
   criterionNames.forEach(name => {
-
     const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
 
     userValues.forEach(userCriterionValue => {
