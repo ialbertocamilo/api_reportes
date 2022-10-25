@@ -18,7 +18,8 @@ async function loadSupervisorSegmentCriterionValues (supervisorId) {
         \`group\` = 'segment' and
         code = 'user-supervise' and
         type = 'code' and
-        active = 1
+        active = 1 and 
+        deleted_at is null
   `)
 
   if (!taxonomies[0]) return []
@@ -34,6 +35,7 @@ async function loadSupervisorSegmentCriterionValues (supervisorId) {
         s.model_id = :supervisorId and
         s.code_id = :supervisorTaxonomyId and
         s.active = 1 and
+        s.deleted_at is null and
         sv.deleted_at is null
   `
   const [segmentValues] = await con.raw(
