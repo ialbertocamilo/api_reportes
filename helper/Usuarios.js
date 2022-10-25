@@ -89,30 +89,32 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
  * if a value for criterion name is not found, add an empty value
  * @param userId
  * @param criterionNames
- * @param userCriterionValues
+ * @param usersCriterionValues
  * @returns {*[]}
  */
-exports.getUserCriterionValues = (userId, criterionNames, userCriterionValues) => {
+exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) => {
 
   const result = []
   const found = []
 
   // Iterate criterion names to find its values
-
+  logtime('start user criteria')
   criterionNames.forEach(name => {
-    userCriterionValues.forEach(userCriterionValue => {
-      if (userCriterionValue.criterion_name === name &&
-          userCriterionValue.user_id === userId) {
+
+    const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
+
+    userValues.forEach(userCriterionValue => {
+      if (userCriterionValue.criterion_name === name) {
         // Get criterion value
 
         let value
         if (userCriterionValue.value_text) value = userCriterionValue.value_text
-        if (userCriterionValue.value_datetime) value = moment(userCriterionValue.value_datetime).format('DD/MM/YYYY H:mm:ss')
-        if (userCriterionValue.value_date) value = moment(userCriterionValue.value_date).format('DD/MM/YYYY')
-        if (userCriterionValue.value_boolean === 1) value = 'Sí'
-        if (userCriterionValue.value_boolean === 0 && value === '-') value = 'No'
-        if (userCriterionValue.value_decimal !== null) value = userCriterionValue.value_decimal
-        if (userCriterionValue.value_integer !== null) value = userCriterionValue.value_integer
+        //if (userCriterionValue.value_datetime) value = moment(userCriterionValue.value_datetime).format('DD/MM/YYYY H:mm:ss')
+        // if (userCriterionValue.value_date) value = moment(userCriterionValue.value_date).format('DD/MM/YYYY')
+        // if (userCriterionValue.value_boolean === 1) value = 'Sí'
+        // if (userCriterionValue.value_boolean === 0 && value === '-') value = 'No'
+        // if (userCriterionValue.value_decimal !== null) value = userCriterionValue.value_decimal
+        // if (userCriterionValue.value_integer !== null) value = userCriterionValue.value_integer
 
         // Since value for name was found, added to found array
 
@@ -136,6 +138,7 @@ exports.getUserCriterionValues = (userId, criterionNames, userCriterionValues) =
       })
     }
   })
+  logtime('end user criteria')
 
   return result
 }

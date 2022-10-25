@@ -55,8 +55,8 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
 
     // Add user's criterion values
 
-    // const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriteriaValues)
-    // userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriteriaValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Add row to sheet
 
