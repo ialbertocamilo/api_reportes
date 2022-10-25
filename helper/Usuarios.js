@@ -161,6 +161,7 @@ exports.findUserByDocument = async (document) => {
  * @returns {Promise<*[]>}
  */
 exports.loadUsersIdsWithCriterionValues = async (workspaceId, criterionValuesIds) => {
+  criterionValuesIds = criterionValuesIds.filter(i => !!i)
   if (criterionValuesIds.length === 0) return []
 
   const [users] = await con.raw(`
