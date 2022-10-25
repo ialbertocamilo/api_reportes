@@ -93,15 +93,13 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
  * @returns {*[]}
  */
 exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) => {
-
+  logtime('start user criteria')
   const result = []
   const found = []
 
   // Iterate criterion names to find its values
-  logtime('start user criteria')
+  const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
   criterionNames.forEach(name => {
-    const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
-
     userValues.forEach(userCriterionValue => {
       if (userCriterionValue.criterion_name === name) {
         // Get criterion value
