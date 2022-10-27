@@ -93,7 +93,6 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
  * @returns {*[]}
  */
 exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) => {
-  logtime('start user criteria')
   const result = []
   const found = []
 
@@ -135,7 +134,6 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
       })
     }
   })
-  logtime('end user criteria')
 
   return result
 }
