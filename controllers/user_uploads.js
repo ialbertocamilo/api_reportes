@@ -22,7 +22,7 @@ const headers = [
 ]
 
 async function userUploads ({
-  workspaceId, UsuariosActivos, UsuariosInactivos
+  workspaceId, UsuariosActivos, UsuariosInactivos, baseUrl
 }) {
   // Generate Excel file header
 
@@ -71,7 +71,7 @@ async function userUploads ({
     // Add additional report values
 
     cellRow.push(user.link)
-    cellRow.push(user.file)
+    cellRow.push(generateFileUrl(baseUrl, user.file))
     cellRow.push(user.description)
     cellRow.push(moment(user.created_at).format('DD/MM/YYYY H:mm:ss'))
 
@@ -118,4 +118,23 @@ async function loadUsersUploads (
 
   const [rows] = await con.raw(query)
   return rows
+}
+
+/**
+ * Generate file's absolute path
+ *
+ * @param baseUrl
+ * @param fileUrl
+ * @returns {string}
+ */
+function generateFileUrl (baseUrl, fileUrl) {
+  // Remove trailing slash
+
+  baseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : ''
+
+  // Remove slash from the begining and the end
+
+  fileUrl = fileUrl ? fileUrl.replace(/^\/|\/$/g, '') : ''
+
+  return `${baseUrl}/${fileUrl}`
 }
