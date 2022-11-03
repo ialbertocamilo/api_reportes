@@ -71,7 +71,7 @@ module.exports = {
         c.*
       from courses c inner join course_school cs on c.id = cs.course_id
       where cs.school_id in (:schoolIds) and
-          c.active = 1 and c.deleted_at is not null
+          c.active = 1 and c.deleted_at is null
     `, { schoolIds: schoolsId }
     )
     return rows
