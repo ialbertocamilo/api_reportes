@@ -92,7 +92,8 @@ async function generateConsolidatedCoursesReport ({
 
     // Calculate completed courses
 
-    const completed = (user.advanced_percentage * user.assigned) / 100
+    // const completed = (user.advanced_percentage * user.assigned) / 100
+    const completed = user.passed + user.taken + user.reviewed;
 
     // Add additional report values
 
