@@ -97,7 +97,15 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
   const found = []
 
   // Iterate criterion names to find its values
-  const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
+  let userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
+  let userValuesCriteriosWithCiclos = userValues.filter(ucv => ucv.criterion_name === 'Ciclo');
+  userValues = userValues.filter(ucv => ucv.criterion_name != 'Ciclo');
+
+  if(userValuesCriteriosWithCiclos.length >0){
+    const ciclos_name = pluck(userValuesCriteriosWithCiclos,'value_text').join(", ")
+    userValuesCriteriosWithCiclos[0].value_text = ciclos_name
+    userValues.push(userValuesCriteriosWithCiclos[0])
+  }
   criterionNames.forEach(name => {
     userValues.forEach(userCriterionValue => {
       if (userCriterionValue.criterion_name === name) {
