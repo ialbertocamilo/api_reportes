@@ -60,8 +60,8 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
 
     // Add user's criterion values
 
-    // const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
-    // userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Add additional values
 
