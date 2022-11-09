@@ -45,7 +45,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
         cvu.user_id, 
         cv.criterion_id,
         c.name criterion_name,
-        cv.value_text,
+        GROUP_CONCAT(cv.value_text SEPARATOR ', ') value_text,
         cv.value_datetime,
         cv.value_date,
         cv.value_boolean,
@@ -78,7 +78,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
 
   // Add sorting order
 
-  query += ' order by cv.id'
+  query += 'group by u.id,cv.criterion_id order by cv.id'
 
   const [rows] = await con.raw(query)
   return rows
@@ -98,6 +98,14 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
 
   // Iterate criterion names to find its values
   const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
+  // let userValuesCriteriosWithCiclos = userValues.filter(ucv => ucv.criterion_name === 'Ciclo');
+  // userValues = userValues.filter(ucv => ucv.criterion_name != 'Ciclo');
+
+  // if(userValuesCriteriosWithCiclos.length >0){
+  //   const ciclos_name = pluck(userValuesCriteriosWithCiclos,'value_text').join(", ")
+  //   userValuesCriteriosWithCiclos[0].value_text = ciclos_name
+  //   userValues.push(userValuesCriteriosWithCiclos[0])
+  // }
   criterionNames.forEach(name => {
     userValues.forEach(userCriterionValue => {
       if (userCriterionValue.criterion_name === name) {

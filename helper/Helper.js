@@ -31,7 +31,11 @@ exports.pluckUnique = (collection, key) => {
  * @returns {*}
  */
 exports.strippedString = (value) => {
-  return value.replace(/(<([^>]+)>)/gi, '')
+  try {
+    return value.replace(/(<([^>]+)>)/gi, '')
+  } catch (error) {
+    return value;    
+  }
 }
 
 exports.logtime = (message) => {

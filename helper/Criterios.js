@@ -15,6 +15,7 @@ exports.getWorkspaceCriteria = async (workspaceId) => {
             c.show_in_reports = 1 and
             w.active = 1 and
             c.active = 1
+          group by c.id
     `,
   { workspaceId }
   )
@@ -27,7 +28,6 @@ exports.getGenericHeaders = async (workspaceId) => {
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ]
-
   const workspaceCriteria = await exports.getWorkspaceCriteria(workspaceId)
   workspaceCriteria.forEach(el => headers.push(el.name))
   return headers
