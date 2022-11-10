@@ -7,7 +7,7 @@ require('../error')
 const moment = require('moment')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
-const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
+const { getGenericHeadersNotasXCurso, getWorkspaceCriteria } = require('../helper/Criterios')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const { getCourseStatusName, getCourseStatusId, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
 const { pluck } = require('../helper/Helper')
@@ -39,12 +39,12 @@ async function generateConsolidatedCoursesReport ({
 }) {
   // Generate Excel file header
 
-  const headersEstaticos = await getGenericHeaders(workspaceId)
+  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId,[1,5,13,4,40,41])
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId,[1,5,13,4,40,41])
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
   // Load user course statuses
@@ -84,7 +84,7 @@ async function generateConsolidatedCoursesReport ({
     cellRow.push(user.surname)
     cellRow.push(user.document)
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
-
+    cellRow.push(user.email)
     // Add user's criterion values
 
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
