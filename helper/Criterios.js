@@ -12,7 +12,7 @@ exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
                 inner join workspaces w on w.id = cw.workspace_id
         where 
             w.id = :workspaceId and 
-            ${criteria_id.length>0 && `c.id in ${criteria_id.toString()}`}
+            ${criteria_id.length>0 && `c.id in (${criteria_id.toString()})`}
             c.show_in_reports = 1 and
             w.active = 1 and
             c.active = 1
