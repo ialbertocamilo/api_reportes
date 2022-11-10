@@ -208,7 +208,7 @@ async function loadUsersWithCoursesAndTopics (
         inner join workspaces w on u.subworkspace_id = w.id
         inner join summary_topics st on u.id = st.user_id
         inner join topics t on t.id = st.topic_id
-        inner join summary_courses sc on u.id = sc.user_id
+        inner join summary_courses sc on u.id = sc.user_id and sc.course_id = t.course_id
         inner join courses c on t.course_id = c.id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id
