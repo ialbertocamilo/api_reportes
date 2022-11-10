@@ -68,7 +68,7 @@ async function generateConsolidatedCoursesReport ({
 
   // Load workspace user criteria
 
-  const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+  // const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
 
   // Add users to Excel rows
 
@@ -87,8 +87,8 @@ async function generateConsolidatedCoursesReport ({
 
     // Add user's criterion values
 
-    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
-    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+    // const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    // userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Calculate completed courses
 
