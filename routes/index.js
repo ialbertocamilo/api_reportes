@@ -153,4 +153,13 @@ module.exports = {
       children.kill()
     })
   },
+
+  vademecum ({ body }, res) {
+    const children = fork('./controllers/vademecum.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
 }

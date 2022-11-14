@@ -1,5 +1,5 @@
 const { Model, 
-        DataTypes: { INTEGER } 
+        DataTypes: { INTEGER, STRING } 
        } = require('sequelize');
 
 const sequelize = require('../sequelize.js');
@@ -7,13 +7,15 @@ const sequelize = require('../sequelize.js');
 /* models */
 const User = require('./User');
 const Videoteca = require('./Videoteca');
+const Vademecum = require('./Vademecum');
 const CriterionValueUser = require('./CriterionValueUser');
 
 class UserAction extends Model {
 }
 
 UserAction.init({
-    score: INTEGER
+    score: INTEGER,
+    model_type: STRING
 },{
     sequelize,
     modelName: 'user_actions',
@@ -29,6 +31,10 @@ UserAction.belongsTo(User, {
 });
 
 UserAction.belongsTo(Videoteca, {
+    foreignKey: 'model_id'
+});
+
+UserAction.belongsTo(Vademecum, {
     foreignKey: 'model_id'
 });
 

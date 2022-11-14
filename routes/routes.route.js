@@ -27,5 +27,6 @@ router.post('/checklist_general', handler.checklist_general)
 router.post('/checklist_detallado', handler.checklist_detallado)
 
 router.post('/videoteca', handler.videoteca)
+router.post('/vademecum', handler.vademecum)
 
 module.exports = router

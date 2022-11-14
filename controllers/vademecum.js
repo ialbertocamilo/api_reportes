@@ -1,12 +1,13 @@
 'use strict'
 process.on('message', (requestData) => {
-  exportarVideoteca(requestData)
+  exportarVademecum(requestData)
 });
 
 require('../error');
 const moment = require('moment');
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
 const { response } = require('../response');
+const { Op } = require('sequelize');
 
 /* helpers */
 const { getSuboworkspacesIds } = require('../helper/Workspace');
@@ -16,7 +17,7 @@ const { getCriterianUserByCode } = require('../helper/Criterian');
 /* models */
 const UserAction = require('../models/UserAction');
 const User = require('../models/User');
-const Videoteca = require('../models/Videoteca');
+const Vademecum = require('../models/Vademecum');
 const CriterionValueUser = require('../models/CriterionValueUser');
 const Workspace = require('../models/Workspace');
 
@@ -26,42 +27,44 @@ const defaultHeaders = [
   'GRUPO',
   'DNI, APELLIDOS Y NOMBRES, GENERO',
   'CARRERA',
-  'VIDEOTECA',
+  'VADEMECUM',
   'VISITAS',
   'ÚLTIMA VISITA'
 ];
 
-async function exportarVideoteca ({ workspaceId }) {
+async function exportarVademecum ({ workspaceId, vademecumsSelected }) {
 
   /* BOTICA ONLY FOR FP */
   if(workspaceId === 25) {
-    const anotherHeaders = [ 'MÓDULO', 'GRUPO - SISTEMA', 'GRUPO', 
-                             'BOTICA', // only for FP
+    const anotherHeaders = [ 'MÓDULO','GRUPO - SISTEMA', 'GRUPO', 'BOTICA',
                              'DNI, APELLIDOS Y NOMBRES, GENERO',
-                             'CARRERA', 'VIDEOTECA', 'VISITAS', 'ÚLTIMA VISITA'];
+                             'CARRERA', 'VADEMECUM', 'VISITAS', 'ÚLTIMA VISITA'];
     await createHeaders(anotherHeaders);
   } else await createHeaders(defaultHeaders);
 
-  // data users by workspace
+  // data users by vademecums
   const users = await UserAction.findAll({
       where: {
-        model_type: "App\\Models\\Videoteca"
+        model_type: "App\\Models\\Vademecum"
       },
-      include:[ { model: User, 
+      include:[ { 
+                  model: User, 
                   include:[ { model: Workspace } ] 
                 },
-                { model: Videoteca,
-                  where: { workspace_id: workspaceId } } ]
+                { model: Vademecum,
+                  where: { 
+                    id: { [Op.in] : vademecumsSelected }  
+                  }
+                } ]
   });
-
-  logtime('Start file generation')
+  logtime('Start file generation');
 
   for (const row of users) {
     
     const cellRow = [];
 
     // parse and set data
-    const { updated_at, user, videoteca } = row;
+    const { updated_at, user, vademecum } = row;
     const lastVisit = moment(updated_at).format('DD/MM/YYYY H:mm:ss');
 
     const partName = `${user.document}, ${user.surname} ${user.lastname} ${user.name}`;
@@ -87,7 +90,7 @@ async function exportarVideoteca ({ workspaceId }) {
 
     cellRow.push(`${partName}, ${gender}`); // documento, apellidos y nombres, genero
     cellRow.push(career); // carrera
-    cellRow.push(videoteca.title); // videoteca.title
+    cellRow.push(vademecum.name); // videoteca.title
     cellRow.push(row.score); // visitas
     cellRow.push(lastVisit); // ultima visita
 
@@ -97,21 +100,11 @@ async function exportarVideoteca ({ workspaceId }) {
 
   // Generate Excel file
 
-  if (worksheet._rowZero > 1) {
+ if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'Videoteca' }));
-      //process.send({ alert: 'Results funded', test_array, workspaceId });
+      process.send(response({ createAt, modulo: 'Vademecum' }));
     });
   } else {
     process.send({ alert: 'No se encontraron resultados' });
   }
 }
-
-/*
-    const result = { modulo: workspace.name,
-                     usuario: ,
-                     videoteca: videoteca.title,
-                     visitas: row.score,
-                     ultima_visita: lastVisit, 
-                     test: { gender, grupo, career } }; */
-    
