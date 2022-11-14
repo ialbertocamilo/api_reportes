@@ -1,7 +1,7 @@
 const { con } = require('../db')
 const knex = require('../db').con
 module.exports = {
-  async datosIniciales (workspaceId) {
+  async datosIniciales(workspaceId) {
     const modules = await this.cargarModulos(workspaceId)
     const admins = await this.cargarAdmins(workspaceId)
     return {
@@ -16,20 +16,20 @@ module.exports = {
    * @param workspaceId
    * @returns {Promise<*>}
    */
-  async cargarModulos (workspaceId) {
+  async cargarModulos(workspaceId) {
     const [rows] = await con.raw(`
         select id, name, slug
         from workspaces 
         where 
             parent_id = :workspaceId and active = 1
     `,
-    { workspaceId }
+      { workspaceId }
     )
 
     return rows
   },
 
-  async cargarAdmins (workspaceId) {
+  async cargarAdmins(workspaceId) {
     const adminRoleId = 3
     const [rows] = await con.raw(`
         select
@@ -41,7 +41,7 @@ module.exports = {
             u.active = 1 and
             ar.scope = :workspaceId
       `,
-    { workspaceId, adminRoleId })
+      { workspaceId, adminRoleId })
     return rows
   },
   /**
@@ -49,7 +49,7 @@ module.exports = {
    * @param schoolId
    * @returns {Promise<*>}
    */
-  async loadSchoolCourses (schoolId) {
+  async loadSchoolCourses(schoolId) {
     const [rows] = await con.raw(`
       select
         c.*
@@ -65,7 +65,7 @@ module.exports = {
    * @param schoolsId
    * @returns {Promise<*>}
    */
-  async loadCoursesFromSchools (schoolsId) {
+  async loadCoursesFromSchools(schoolsId) {
     const [rows] = await con.raw(`
       select
         c.*
@@ -81,7 +81,7 @@ module.exports = {
    * @param courseId
    * @returns {Promise<*>}
    */
-  async loadCourseTopics (courseId) {
+  async loadCourseTopics(courseId) {
     const [rows] = await con.raw(`
       select
         *
@@ -96,7 +96,7 @@ module.exports = {
    * @param workspaceId
    * @returns {Promise<*>}
    */
-  async loadWorkspaceSchools (workspaceId) {
+  async loadWorkspaceSchools(workspaceId) {
     const [rows] = await con.raw(`
       select
         s.*
@@ -106,7 +106,7 @@ module.exports = {
     )
     return rows
   },
-  async loadWorkspaceJobPositions (workspaceId) {
+  async loadWorkspaceJobPositions(workspaceId) {
     const [rows] = await con.raw(`
       select
         distinct(cv.value_text) name,
@@ -129,7 +129,7 @@ module.exports = {
    * @param courseId
    * @returns {Promise<*>}
    */
-  async loadCourseChecklists (courseId) {
+  async loadCourseChecklists(courseId) {
     const [rows] = await con.raw(`
       select
         c.id,
@@ -180,7 +180,7 @@ module.exports = {
     return rows
   },
 
-  async cambiaEscuelaCargaCurso (mod, esc) {
+  async cambiaEscuelaCargaCurso(mod, esc) {
     // ! Query Antiguo >>>
     // const [rows] = await con.raw(`SELECT c.id, c.nombre FROM cursos AS c
     //     INNER JOIN posteos AS p ON p.curso_id = c.id
@@ -356,4 +356,51 @@ module.exports = {
     temas[0].forEach(obj => obj.nombre = obj.codigo + ' - ' + obj.nombre)
     return temas[0]
   },
+
+  async loadSubworkspaceById(subworkspaceId) {
+    const [rows] = await con.raw(`
+      SELECT
+       *
+      FROM workspaces
+      WHERE 
+        parent_id is not null
+        AND id = :subworkspaceId
+        AND deleted_at is null 
+    `, { subworkspaceId });
+    return rows[0];
+  },
+
+  async loadCriterionValuesByParentId(criterionValuesParentId, criterionCode) {
+    const temp = criterionValuesParentId.join(",");
+    let query_string = `
+    SELECT
+      criterion_values.id, 
+      criterion_values.value_text as name
+    FROM
+      criterion_values 
+    WHERE
+      EXISTS ( SELECT * FROM criteria WHERE criterion_values.criterion_id = criteria.id AND code = :criterionCode AND criteria.deleted_at IS NULL ) 
+      AND EXISTS (
+      SELECT
+        * 
+      FROM
+        criterion_values AS laravel_reserved_0
+        INNER JOIN criterion_value_relationship ON laravel_reserved_0.id = criterion_value_relationship.criterion_value_parent_id 
+      WHERE
+        criterion_values.id = criterion_value_relationship.criterion_value_id 
+        AND id IN (`;
+
+    criterionValuesParentId.forEach(cv => query_string += `${cv},`);
+    query_string = query_string.slice(0, -1);
+
+    query_string += `) 
+        AND laravel_reserved_0.deleted_at IS NULL 
+      ) 
+      AND criterion_values.deleted_at IS NULL
+    `;
+
+    const [rows] = await con.raw(`${query_string}`, { criterionCode })
+    return rows;
+  }
+
 }
