@@ -21,24 +21,26 @@ const CriterionValueUser = require('../models/CriterionValueUser');
 const Workspace = require('../models/Workspace');
 
 const defaultHeaders = [
-  'MÓDULO',
-  'GRUPO - SISTEMA',
-  'GRUPO',
-  'DNI, APELLIDOS Y NOMBRES, GENERO',
-  'CARRERA',
-  'VIDEOTECA',
-  'VISITAS',
-  'ÚLTIMA VISITA'
+  'Módulo',
+  'Dni', 
+  'Apellidos y Nombres', 
+  'Género',
+  'Videoteca',
+  'Visitas',
+  'Última Visita'
 ];
 
 async function exportarVideoteca ({ workspaceId }) {
 
   /* BOTICA ONLY FOR FP */
   if(workspaceId === 25) {
-    const anotherHeaders = [ 'MÓDULO', 'GRUPO - SISTEMA', 'GRUPO', 
-                             'BOTICA', // only for FP
-                             'DNI, APELLIDOS Y NOMBRES, GENERO',
-                             'CARRERA', 'VIDEOTECA', 'VISITAS', 'ÚLTIMA VISITA'];
+    const anotherHeaders = [ 'Módulo', 
+                             'Grupo - Sistema', 'Grupo', 'Botica', // FP
+                             'Dni', 
+                             'Apellidos y Nombres', 
+                             'Género',
+                             'Carrera', // FP 
+                             'Videoteca', 'Visitas', 'Última Visita' ];
     await createHeaders(anotherHeaders);
   } else await createHeaders(defaultHeaders);
 
@@ -64,29 +66,39 @@ async function exportarVideoteca ({ workspaceId }) {
     const { updated_at, user, videoteca: _videoteca } = row;
     const lastVisit = moment(updated_at).format('DD/MM/YYYY H:mm:ss');
 
-    const partName = `${user.document}, ${user.surname} ${user.lastname} ${user.name}`;
+    const fullName = `${user.surname || ''} ${user.lastname || ''} ${user.name || ''}`;
     const { workspace } = user;
 
-
-    // get data by user id
-    const gender = await getCriterianUserByCode(user.id, 'gender') || 'SIN GÉNERO';
-    const grupo = await getCriterianUserByCode(user.id, 'grupo') || 'SIN GRUPO';
-    const career = await getCriterianUserByCode(user.id, 'career') || 'SIN CARRERA';
-    
-    const partCreated = moment(updated_at).format('DDMMYYYY');
-    const grupoSystem = `${workspace.codigo_matricula}-${partCreated}`;
+    const gender = await getCriterianUserByCode(user.id, 'gender') || '-';
 
     cellRow.push(workspace.name); //modulo
-    cellRow.push(grupoSystem); //grupo - sistema
-    cellRow.push(grupo); //grupo
+    
     /* BOTICA ONLY FOR FP */
     if(workspaceId === 25) {
-      const botica = await getCriterianUserByCode(user.id, 'botica') || 'SIN BOTICA';
-      cellRow.push(botica); //botica
+      
+      const botica = await getCriterianUserByCode(user.id, 'botica') || '-';
+      const grupo = await getCriterianUserByCode(user.id, 'grupo') || '-';
+      
+      const partCreated = moment(updated_at).format('DDMMYYYY');
+      const grupoSystem = `${workspace.codigo_matricula}-${partCreated}`;
+      
+      cellRow.push(grupoSystem); // grupo - sistema
+      cellRow.push(grupo); // grupo
+      cellRow.push(botica); // botica
     }
+    /* BOTICA ONLY FOR FP */
 
-    cellRow.push(`${partName}, ${gender}`); // documento, apellidos y nombres, genero
-    cellRow.push(career); // carrera
+    cellRow.push(user.document); // documento
+    cellRow.push(fullName); // apellidos y nombres
+    cellRow.push(gender); // genero
+    
+    /* BOTICA ONLY FOR FP */
+    if(workspaceId === 25) {
+      const career = await getCriterianUserByCode(user.id, 'career') || '-';
+      cellRow.push(career); // carrera
+    }
+    /* BOTICA ONLY FOR FP */
+
     cellRow.push(_videoteca.title); // _vademecum.title
     cellRow.push(row.score); // visitas
     cellRow.push(lastVisit); // ultima visita

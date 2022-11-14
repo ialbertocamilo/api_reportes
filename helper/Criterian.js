@@ -22,7 +22,7 @@ exports.getCriterianUserByCode = async (UserId, UserCode, Instance = false ) => 
 		if(_criterianValues) return _criterianValues.value_text;
 		return _criterianValues; 
 
-	} else criterianValues
+	} else criterianValues;
 
 	/*return (Instance) ? criterianValues : criterianValues?.criterion_values[0]?.value_text;*/
 }
