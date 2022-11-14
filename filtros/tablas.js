@@ -2,11 +2,15 @@ const { con } = require('../db')
 const knex = require('../db').con
 module.exports = {
   async datosIniciales (workspaceId) {
-    const modules = await this.cargarModulos(workspaceId)
-    const admins = await this.cargarAdmins(workspaceId)
+
+    const modules = await this.cargarModulos(workspaceId);
+    const admins = await this.cargarAdmins(workspaceId);
+    const vademecums = await this.cargarVademecums(workspaceId);
+
     return {
       modules,
-      admins
+      admins,
+      vademecums
     }
   },
 
@@ -44,6 +48,35 @@ module.exports = {
     { workspaceId, adminRoleId })
     return rows
   },
+
+  async cargarVademecums (workspaceId) {
+
+    const [subrows] = await con.raw(`select 
+                                      criterion_value_id 
+                                    from 
+                                      workspaces 
+                                    where 
+                                      parent_id = :workspaceId`,{ workspaceId });
+    let ids = [];
+    for(const val of subrows){
+      ids.push(val.criterion_value_id);
+    }
+
+    const [rows] = await con.raw(`
+          select 
+            v.id, v.name 
+          from 
+            vademecum  as v 
+          inner join 
+            vademecum_module as vm 
+            on vm.vademecum_id = v.id
+          
+          where vm.module_id in(:ids) 
+          group by v.id`,{ ids });
+
+    return rows;
+  },
+
   /**
    * Load workspace's courses
    * @param schoolId
