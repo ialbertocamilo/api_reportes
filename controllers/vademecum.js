@@ -64,7 +64,7 @@ async function exportarVademecum ({ workspaceId, vademecumsSelected }) {
     const cellRow = [];
 
     // parse and set data
-    const { updated_at, user, vademecum } = row;
+    const { updated_at, user, vademecum: _vademecum } = row;
     const lastVisit = moment(updated_at).format('DD/MM/YYYY H:mm:ss');
 
     const partName = `${user.document}, ${user.surname} ${user.lastname} ${user.name}`;
@@ -72,9 +72,9 @@ async function exportarVademecum ({ workspaceId, vademecumsSelected }) {
 
 
     // get data by user id
-    const gender = await getCriterianUserByCode(user.id, 'gender') ?? 'SIN GENERO';
-    const grupo = await getCriterianUserByCode(user.id, 'grupo') ?? 'SIN GRUPO';
-    const career = await getCriterianUserByCode(user.id, 'career') ?? 'SIN CARRERA';
+    const gender = await getCriterianUserByCode(user.id, 'gender') || 'SIN GÉNERO';
+    const grupo = await getCriterianUserByCode(user.id, 'grupo') || 'SIN GRUPO';
+    const career = await getCriterianUserByCode(user.id, 'career') || 'SIN CARRERA';
     
     const partCreated = moment(updated_at).format('DDMMYYYY');
     const grupoSystem = `${workspace.codigo_matricula}-${partCreated}`;
@@ -84,13 +84,13 @@ async function exportarVademecum ({ workspaceId, vademecumsSelected }) {
     cellRow.push(grupo); //grupo
     /* BOTICA ONLY FOR FP */
     if(workspaceId === 25) {
-      const botica = await getCriterianUserByCode(user.id, 'botica') ?? 'SIN BOTICA';
+      const botica = await getCriterianUserByCode(user.id, 'botica') || 'SIN BOTICA';
       cellRow.push(botica); //botica
     }
 
     cellRow.push(`${partName}, ${gender}`); // documento, apellidos y nombres, genero
     cellRow.push(career); // carrera
-    cellRow.push(vademecum.name); // videoteca.title
+    cellRow.push(_vademecum.name); // _vademecum.name
     cellRow.push(row.score); // visitas
     cellRow.push(lastVisit); // ultima visita
 
