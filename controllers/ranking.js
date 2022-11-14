@@ -107,7 +107,7 @@ async function loadUsersRanking(
 ) {
   let query = `
     select
-      COUNT(cvu.user_id) as temp,
+      COUNT(u.id) as temp,
       u.*,
       su.score,
       su.courses_completed,
@@ -152,7 +152,7 @@ async function loadUsersRanking(
   // Add user conditions and group sentence
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
   query += `
-    GROUP BY cvu.user_id`;
+    GROUP BY u.id`;
   if (areas.length > 0) {
 
     let having_count = sedes.length > 0 ? 2 : 1;
