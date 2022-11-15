@@ -18,6 +18,7 @@ const defaultHeaders = [
   'APELLIDO MATERNO',
   'DOCUMENTO',
   'ESTADO(USUARIO)',
+  'EMAIL',
   'ULTIMA SESIÓN'
 ]
 
@@ -50,6 +51,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
     cellRow.push(user.lastname)
     cellRow.push(user.surname)
     cellRow.push(user.document)
+    cellRow.push(user.email)
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
