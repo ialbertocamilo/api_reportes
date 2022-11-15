@@ -7,7 +7,7 @@ module.exports = {
     return {
       modules,
       admins,
-      vademecums
+      // vademecums
     }
   },
 
