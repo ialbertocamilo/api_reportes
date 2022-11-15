@@ -51,8 +51,8 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
     cellRow.push(user.lastname)
     cellRow.push(user.surname)
     cellRow.push(user.document)
-    cellRow.push(user.email)
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+    cellRow.push(user.email)
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
     // Add user's criterion values
