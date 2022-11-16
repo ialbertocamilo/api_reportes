@@ -4,6 +4,7 @@ const { Model,
 const sequelize = require('../sequelize.js');
 
 /* models */
+const SchoolWorkspace = require('./SchoolWorkspace');
 
 class Schools extends Model {
 }
@@ -20,6 +21,8 @@ Schools.init({
     updatedAt: 'updated_at'
 });
 
-
+Schools.hasOne(SchoolWorkspace, {
+    foreignKey: 'school_id'
+});
 
 module.exports = Schools;

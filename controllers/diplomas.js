@@ -12,6 +12,9 @@ const { Op } = require('sequelize');
 
 /* helpers */
 const { logtime } = require('../helper/Helper');
+const { getSchoolStatesWorkspace, 
+        getSchoolCoursesStates, 
+        BuildQueryAtDate } = require('../helper/Diplomas');
 
 /* models */
 const SummaryCourse = require('../models/SummaryCourse');
@@ -23,7 +26,7 @@ const School = require('../models/School');
 const Taxonomie = require('../models/Taxonomie');
 
 const defaultHeaders = [
-    'Empresa', //modulo user
+    'Módulo', //modulo user
     'Apellidos y Nombres',
     'Dni',
     'Estado (usuario)', //active user
@@ -36,7 +39,7 @@ const defaultHeaders = [
     'Estado (curso)',
     
     'Fecha en la que obtuvo el diploma', // issue DD/MM/YYYY
-    'Aceptación del usuario', // accepted DD/MM/YYYY
+    'Fecha de aceptación del usuario', // accepted DD/MM/YYYY
     'Link ver diploma',
     'Link descarga diploma'
 ];
@@ -47,15 +50,22 @@ async function exportarDiplomas({ data, states }) {
             estados_escuela, 
             estados_curso } = states;
 
-    const { modules, date,
-            course: course_id,
-            school: school_id } = data;
+    const { workspaceId, modules, date, 
+            course: course_ids,
+            school: school_ids } = data;
+
+    // === schools and courses ===
+    const stackSchools = !(school_ids.length) ? await getSchoolStatesWorkspace(workspaceId, estados_escuela) : 
+                                                school_ids;
+    const stackCourses = !(course_ids.length) ? await getSchoolCoursesStates(stackSchools, estados_curso) :
+                                                course_ids;
+    // === schools and courses === 
+
+    // === check date range === 
+    const queryAtDate = BuildQueryAtDate(date);
 
     const summaries = await SummaryCourse.findAll({
-        where: sequelize.where(
-                sequelize.fn('date', 
-                    sequelize.col('certification_issued_at')), '=', date
-                ),
+        ...queryAtDate,
         include:[   
                     {
                         // users
@@ -76,7 +86,9 @@ async function exportarDiplomas({ data, states }) {
                         // courses
                         model: Course,
                         where: {
-                            id: course_id,
+                            id: {
+                                [Op.in]: stackCourses
+                            },
                             active: {
                                 [Op.in]: estados_curso
                             }
@@ -89,6 +101,9 @@ async function exportarDiplomas({ data, states }) {
                                     { 
                                         model: School,
                                         where:{
+                                            id: {
+                                                [Op.in]: stackSchools
+                                            },
                                             active: {
                                                 [Op.in]: estados_escuela
                                             }
@@ -104,15 +119,16 @@ async function exportarDiplomas({ data, states }) {
                     }  
                 ]
     });
-
+    
     await createHeaders(defaultHeaders)
 
-    /*Custom filters*/
+    //Custom filters
     const transformDate = (datetime) => {
-        return datetime ? moment(datetime).format('DD/MM/YYYY H:mm:ss') : '-';
+        return datetime ? moment(datetime).format('DD/MM/YYYY') : '-';
+        // return datetime ? moment(datetime).format('DD/MM/YYYY H:mm:ss') : '-';
     };
     const transformActive = (state) => state ? 'Activo' : 'Inactivo' ;
-    /*Custom filters*/
+    //Custom filters
 
     for (const summarie of summaries) {
         
@@ -149,12 +165,11 @@ async function exportarDiplomas({ data, states }) {
         cellRow.push(certification_issued); //fecha de emision
         cellRow.push(certification_accepted); //fecha de acceptacion
    
-        cellRow.push(`${config.URL_TEST}/tools/ver_diploma/escuela/`); //link de visualizacion
-        cellRow.push(`${config.URL_TEST}/tools/ver_diploma/escuela/`); //link de descarga
+        cellRow.push(`${config.URL_TEST}/tools/ver_diploma/${user.id}/${course.id}`); //link de visualizacion
+        cellRow.push(`${config.URL_TEST}/tools/dnc/${user.id}/${course.id}`); //link de descarga
  
         worksheet.addRow(cellRow).commit();
     }
-
 
     if (worksheet._rowZero > 1){
         workbook.commit().then(() => {
@@ -162,8 +177,8 @@ async function exportarDiplomas({ data, states }) {
         });
         //process.send({ modulo: 'Diplomas response_if', summaries });
     } else {
-        //process.send({ modulo: 'Diplomas response_else',summaries, requestData });
         process.send({ alert: 'No se encontraron resultados' });
+        //process.send({ modulo: 'Diplomas response_else', summaries });
     }
 }
   

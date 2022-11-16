@@ -6,7 +6,6 @@ const sequelize = require('../sequelize.js');
 /* models */
 const User = require('./User');
 const Course = require('./Course');
-const CourseSchool = require('./CourseSchool');
 
 class SummaryCourse extends Model {
 }

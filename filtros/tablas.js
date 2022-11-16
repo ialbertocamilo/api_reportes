@@ -177,7 +177,6 @@ module.exports = {
 
     return rows
   },
-
   async loadSchoolsStatesByWorkspaceId (data) {
     const { workspaceId, active, inactive } = data;
     const SqlState = (active && inactive) ? '' : 
@@ -197,7 +196,7 @@ module.exports = {
     return rows;
   },
   async loadSchoolCoursesStatesById (data) {
-    const { schoolId, active, inactive } = data;
+    const { schoolIds, active, inactive } = data;
     const SqlState = (active && inactive) ? '' : 
                      `and c.active = ${active ? 1 : 0}`;
 
@@ -208,9 +207,9 @@ module.exports = {
       inner join course_school as cs
         on c.id = cs.course_id
       where 
-        cs.school_id = :schoolId 
+        cs.school_id in(:schoolIds)
         ${SqlState}
-    `, { schoolId });
+    `, { schoolIds });
 
     return rows;
   },
