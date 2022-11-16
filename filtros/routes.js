@@ -132,4 +132,20 @@ router.post('/CambiaCursoCargaTemas', async (req, res) => {
   res.json(datos)
 })
 
+router.get(`/sub-workspace/:subworkspaceId/criterion-values/:criterionCode`, async (req, res) => {
+  const { subworkspaceId, criterionCode } = req.params;
+  const { criterion_value_id } = await tablas.loadSubworkspaceById(subworkspaceId);
+  const datos = await tablas.loadCriterionValuesByParentId([criterion_value_id], criterionCode)
+  res.json(datos)
+});
+
+router.post(`/criterion-values/:criterionCode`, async (req, res) => {
+  const { criterionCode } = req.params;
+  const { parentsIds } = req.body;
+  const datos = await tablas.loadCriterionValuesByParentId(parentsIds, criterionCode)
+  res.json(datos)
+});
+
+
+
 module.exports = router
