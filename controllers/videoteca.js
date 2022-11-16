@@ -39,7 +39,7 @@ async function exportarVideoteca ({ workspaceId }) {
                              'Dni', 
                              'Apellidos y Nombres', 
                              'Género',
-                             'Carrera', // FP 
+                             'Carrera (Usuario)', // FP 
                              'Videoteca', 'Visitas', 'Última Visita' ];
     await createHeaders(anotherHeaders);
   } else await createHeaders(defaultHeaders);
@@ -118,12 +118,3 @@ async function exportarVideoteca ({ workspaceId }) {
     process.send({ alert: 'No se encontraron resultados' });
   }
 }
-
-/*
-    const result = { modulo: workspace.name,
-                     usuario: ,
-                     videoteca: videoteca.title,
-                     visitas: row.score,
-                     ultima_visita: lastVisit, 
-                     test: { gender, grupo, career } }; */
-    

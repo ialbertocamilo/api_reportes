@@ -1,247 +1,169 @@
 process.on('message', (requestData) => {
-    Diplomas(requestData)
-  })
-  const moment = require('moment')
-  require('../error')
-  const config = require('../config.js')
+    exportarDiplomas(requestData);
+});
 
-  const { response } = require('../response')
-  const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
-  const _ = require('lodash')
-  const Diploma = require("../models/Diploma");
-  const Curso = require("../models/Curso");
-  const Categoria = require("../models/Categoria");
-  const Modulo = require("../models/Modulo");
-  const Usuario = require('../models/Usuario')
-  const UsuarioCurso = require('../models/UsuarioCurso')
+require('../error');
+const config = require('../config.js')
+const moment = require('moment');
+const { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
+const { response } = require('../response');
+const sequelize = require('../sequelize.js');
+const { Op } = require('sequelize');
 
-  const Headers = [
-    'EMPRESA',
-    'NOMBRE',
-    'APELLIDO PATERNO',
-    'APELLIDO MATERNO',
-    'DNI',
-    'ESTADO (usuario)',
-    'TIPO DIPLOMA',
-    'ESCUELA',
-    'ESTADO (escuela)',
-    'DENTRO DE CURRÍCULA',
-    'CURSO',
-    'ESTADO (curso)',
-    'FECHA EN LA QUE OBTUVO EL DIPLOMA',
-    'ACEPTACIÓN DEL USUARIO',
-    'LINK VER DIPLOMA',
-    'LINK DESCARGA DIPLOMA',
-  ]
-  createHeaders(Headers)
-  async function Diplomas({ modulos_id , categorias_id, cursos_id, tipo_check_diploma,UsuariosActivos, UsuariosInactivos,tipo_diploma }) {
-      // Datos necesarios
-    let Rows = 0
-    // const usuario_cursos = await UsuarioCurso.findAll({
-    //     attributes: ['id','curso_id','usuario_id'],
-    //     where: {
-    //         estado:1
-    //     },
-    //     include: [{ 
-    //         model:Curso,
-    //         required: false,
-    //         attributes: ['id','categoria_id'],
-    //     }]
-    // });
-    //INCLUDES PARA DIPLOMAS X CURSO Y X CATEGORIA
-    let estado_usuarios = [];
-    (UsuariosActivos) && estado_usuarios.push(1); 
-    (UsuariosInactivos) && estado_usuarios.push(0); 
-    const include_usuario = {
-        model:Usuario,
-        required: true,
-        attributes: ['id','nombre','apellido_paterno','apellido_materno','config_id','dni','estado'],
-        where:{
-            rol:'default',
-            estado: (estado_usuarios.length > 0 ) ? estado_usuarios : [1,0],
-        },
-        include:[{
-            model:Modulo,
-            required:true,
-            attributes: ['id','etapa'],
-        }]
+/* helpers */
+const { logtime } = require('../helper/Helper');
+
+/* models */
+const SummaryCourse = require('../models/SummaryCourse');
+const User = require('../models/User');
+const Workspace = require('../models/Workspace');
+const Course = require('../models/Course');
+const CourseSchool = require('../models/CourseSchool');
+const School = require('../models/School');
+const Taxonomie = require('../models/Taxonomie');
+
+const defaultHeaders = [
+    'Empresa', //modulo user
+    'Apellidos y Nombres',
+    'Dni',
+    'Estado (usuario)', //active user
+
+    'Escuela', // school 
+    'Estado (escuela)',// school estado active
+    
+    'Tipo de curso', // tipo de curso
+    'Curso',
+    'Estado (curso)',
+    
+    'Fecha en la que obtuvo el diploma', // issue DD/MM/YYYY
+    'Aceptación del usuario', // accepted DD/MM/YYYY
+    'Link ver diploma',
+    'Link descarga diploma'
+];
+
+async function exportarDiplomas({ data, states }) {
+    
+    const { estados_usuario, 
+            estados_escuela, 
+            estados_curso } = states;
+
+    const { modules, date,
+            course: course_id,
+            school: school_id } = data;
+
+    const summaries = await SummaryCourse.findAll({
+        where: sequelize.where(
+                sequelize.fn('date', 
+                    sequelize.col('certification_issued_at')), '=', date
+                ),
+        include:[   
+                    {
+                        // users
+                        model: User, 
+                        where: {
+                            subworkspace_id: {
+                                [Op.in]: modules
+                            },
+                            active:{
+                                [Op.in]: estados_usuario
+                            }
+                        },
+                        include: [ 
+                            { model: Workspace } 
+                        ]
+                    },
+                    {
+                        // courses
+                        model: Course,
+                        where: {
+                            id: course_id,
+                            active: {
+                                [Op.in]: estados_curso
+                            }
+                        },
+                        include: [ 
+                            { 
+                                model: CourseSchool,
+                                // schools
+                                include: [ 
+                                    { 
+                                        model: School,
+                                        where:{
+                                            active: {
+                                                [Op.in]: estados_escuela
+                                            }
+                                        }
+                                    } 
+                                ]
+                            },
+                            {
+                                // taxonomies
+                                model: Taxonomie
+                            }
+                        ]
+                    }  
+                ]
+    });
+
+    await createHeaders(defaultHeaders)
+
+    /*Custom filters*/
+    const transformDate = (datetime) => {
+        return datetime ? moment(datetime).format('DD/MM/YYYY H:mm:ss') : '-';
     };
-    //DIPLOMAS X CURSO 
-    if(tipo_diploma.length==0 || tipo_diploma.find((e)=>e =='curso')){
-        let where_cursos = {};
-        if(cursos_id.length>0){
-            where_cursos.id = cursos_id ;
-        }else if(categorias_id.length>0){
-            where_cursos.categoria_id = categorias_id ;
-        }else{
-            where_cursos.config_id = modulos_id ;
-        }
-        where_cursos.estado=1;
-        let cursos = await Curso.findAll({
-            where: where_cursos,
-            attributes:['id']
-        })
-        let p_cursos_id = pluck(cursos,'id');
-        // console.time('Primera consulta');
-        let diplomas_x_curso = await Diploma.findAll({
-                        include: [{ 
-                            model:Curso,
-                            required: true,
-                            attributes: ['id','nombre','config_id','estado'],
-                            include: [{
-                                    model:Categoria,
-                                    required:true,
-                                    attributes: ['id','nombre','estado'],
-                                }
-                            ],
-                            // where:where_cursos
-                         },
-                         include_usuario,
-                        ],
-                        attributes: ['id', 'usuario_id','curso_id','fecha_emision','check_apb'],
-                        where:{
-                            curso_id : p_cursos_id,
-                            check_apb : (tipo_check_diploma.length>0) ? tipo_check_diploma : [0,1]
-                        }
-                    })
-        // console.timeEnd('Primera consulta');
-        // diplomas_x_curso.forEach(async (diploma)=>{
-        for (const diploma of diplomas_x_curso) {
-            Rows++
-            const CellRow = [];
-            const fecha_generado = moment(diploma.fecha_emision).format('DD/MM/YYYY'); 
-            // console.time('entra');
-            const dentro_curricula = await getUsuarioCurso('curso',diploma.usuario_id,diploma.curso_id)  || null; 
-            // const dentro_curricula = (uc);
-            // // const dentro_curricula = usuario_cursos.findIndex((c)=> (c.usuario_id ==diploma.usuario_id  &&  c.curso_id == diploma.curso_id)) || null;
-            // console.timeEnd('entra');
-            CellRow.push(diploma.usuario.modulo.etapa)
-            CellRow.push(diploma.usuario.nombre)
-            CellRow.push(diploma.usuario.apellido_paterno)
-            CellRow.push(diploma.usuario.apellido_materno)
-            CellRow.push(diploma.usuario.dni)
-            CellRow.push(diploma.usuario.estado ? 'ACTIVO' : 'INACTIVO')
-            CellRow.push('Por curso')
-            CellRow.push(diploma.curso.categoria.nombre)
-            CellRow.push(diploma.curso.categoria.estado ? 'ACTIVO' : 'INACTIVO')
-            CellRow.push(dentro_curricula.length>0 ? 'SÍ' : 'NO')
-            CellRow.push(diploma.curso.nombre)
-            CellRow.push(diploma.curso.estado ? 'ACTIVO' : 'INACTIVO')
-            CellRow.push( (fecha_generado!='Invalid date') ? fecha_generado : '-')
-            CellRow.push(diploma.check_apb ? 'ACEPTADO' : 'PENDIENTE')
-            CellRow.push(`${config.URL_TEST}/tools/ver_diploma/${diploma.usuario_id}/${diploma.curso_id}`)
-            CellRow.push(`${config.URL_TEST}/tools/dnc/${diploma.usuario_id}/${diploma.curso_id}`)
-            // CellRow.push( {
-            //     text: 'Ver',
-            //     hyperlink: `${config.URL_TEST}/tools/ver_diploma/${diploma.usuario_id}/${diploma.curso_id}`,
-            //     tooltip:`${config.URL_TEST}/tools/ver_diploma/${diploma.usuario_id}/${diploma.curso_id}`,
-            // })
-            // CellRow.push( {
-            //     text: 'Descargar',
-            //     hyperlink: `${config.URL_TEST}/tools/dnc/${diploma.usuario_id}/${diploma.curso_id}`,
-            //     tooltip: `${config.URL_TEST}/tools/dnc/${diploma.usuario_id}/${diploma.curso_id}`
-            // })
-            if (Rows === 1e6) {
-                worksheet = workbook.addWorksheet('Hoja 2', { properties: { defaultColWidth: 18 } })
-                createHeaders(worksheet, headers)
-            }
-            worksheet.addRow(CellRow).commit()
-        }
-        // })
+    const transformActive = (state) => state ? 'Activo' : 'Inactivo' ;
+    /*Custom filters*/
+
+    for (const summarie of summaries) {
+        
+        const cellRow = [];
+
+        // user
+        const { user, course } = summarie;
+
+        const fullName = `${user.surname || ''} ${user.lastname || ''} ${user.name || ''}`;
+        const { workspace } = user;
+        const userActive = transformActive(user.active);
+
+        cellRow.push(workspace.name); // modulo - user
+        cellRow.push(fullName); // apellidos y nombres
+        cellRow.push(user.document); // dni
+        cellRow.push(userActive); // estado - user
+
+        const { school } = course.course_school;
+        const schoolActive = transformActive(school.active);
+        cellRow.push(school.name); // escuela
+        cellRow.push(schoolActive); // estado - escuela
+
+        const typeCourse = course.taxonomy;
+        cellRow.push(typeCourse.name); // tipo curso
+        const courseActive = transformActive(course.active);
+        cellRow.push(course.name); // curso
+        cellRow.push(courseActive); // estado - curso
+
+
+        const { certification_issued_at, certification_accepted_at } = summarie;
+        const certification_issued = transformDate(certification_issued_at);
+        const certification_accepted = transformDate(certification_accepted_at);
+
+        cellRow.push(certification_issued); //fecha de emision
+        cellRow.push(certification_accepted); //fecha de acceptacion
+   
+        cellRow.push(`${config.URL_TEST}/tools/ver_diploma/escuela/`); //link de visualizacion
+        cellRow.push(`${config.URL_TEST}/tools/ver_diploma/escuela/`); //link de descarga
+ 
+        worksheet.addRow(cellRow).commit();
     }
-    if(tipo_diploma.length==0 || tipo_diploma.find((e)=>e =='escuela')){
-        //DIPLOMAS X CATEGORIA
-        let where_categoria={};
-        where_categoria.estado=1;
-        (categorias_id.length>0) ? where_categoria.id=categorias_id :  where_categoria.config_id=modulos_id ;
-        // console.time('Seunfa consulta');
-        const diplomas_x_categoria = await Diploma.findAll({
-                        attributes: ['id', 'usuario_id','categoria_id','fecha_emision','check_apb'],
-                        include: [{ 
-                            model:Categoria,
-                            required: true,
-                            attributes: ['id','nombre','config_id','estado','estado_diploma'],
-                            where:where_categoria
-                         },
-                         include_usuario
-                        ],
-                        where:{
-                            check_apb : (tipo_check_diploma.length>0) ? tipo_check_diploma : [0,1],
-                        }
-                    })
-        // diplomas_x_categoria.forEach(async(diploma)=>{
-        for (const diploma of diplomas_x_categoria) {    
-            Rows++
-            const CellRow = [];
-            // const dentro_curricula = usuario_cursos.findIndex(c=> c.usuario_id ==diploma.usuario_id  && c.curso.categoria_id == diploma.categoria_id) || null;
-            const estado_diploma = (diploma.categoria.estado_diploma) ? '(DIPLOMA ACTIVA)' : '(DIPLOMA INACTIVA)' ;
-            const dentro_curricula = await getUsuarioCurso('categoria',diploma.usuario_id,diploma.categoria_id) || null; 
-            // const dentro_curricula = (uc.length>0) || null ;
-            const fecha_generado = moment(diploma.fecha_emision).format('DD/MM/YYYY'); 
-            CellRow.push(diploma.usuario.modulo.etapa)
-            CellRow.push(diploma.usuario.nombre)
-            CellRow.push(diploma.usuario.apellido_paterno)
-            CellRow.push(diploma.usuario.apellido_materno)
-            CellRow.push(diploma.usuario.dni)
-            CellRow.push(diploma.usuario.estado ? 'ACTIVO' : 'INACTIVO')
-            CellRow.push('Por escuela')
-            CellRow.push(diploma.categoria.nombre)
-            CellRow.push(diploma.categoria.estado ? 'ACTIVO' : 'INACTIVO')
-            CellRow.push(dentro_curricula.length>0 ? `SÍ ${estado_diploma}` : `NO ${estado_diploma}`)
-            CellRow.push('-')
-            CellRow.push('-')
-            CellRow.push( (fecha_generado!='Invalid date') ? fecha_generado : '-')
-            CellRow.push(diploma.check_apb ? 'ACEPTADO' : 'PENDIENTE')
-            CellRow.push(`${config.URL}/tools/ver_diploma/escuela/${diploma.usuario_id}/${diploma.categoria_id}`)
-            CellRow.push(`${config.URL}/tools/dnc/escuela/${diploma.usuario_id}/${diploma.categoria_id}`)
-            if (Rows === 1e6) {
-                worksheet = workbook.addWorksheet('Hoja 2', { properties: { defaultColWidth: 18 } })
-                createHeaders(worksheet, headers)
-            }
-            worksheet.addRow(CellRow).commit()
-        // })
-        }
-    }
-    // console.timeEnd('Segundo recorrido');
-    if (worksheet._rowZero > 1)
-      workbook.commit().then(() => {
-        process.send(response({ createAt, modulo: 'Diplomas' }))
-      })
-    else {
-      process.send({ alert: 'No se encontraron resultados' })
-    }
-    function pluck(array, key) {
-        return array.map(function(obj) {
-            return obj[key];
+
+
+    if (worksheet._rowZero > 1){
+        workbook.commit().then(() => {
+            process.send(response({ createAt, modulo: 'Diplomas' }));
         });
+        //process.send({ modulo: 'Diplomas response_if', summaries });
+    } else {
+        //process.send({ modulo: 'Diplomas response_else',summaries, requestData });
+        process.send({ alert: 'No se encontraron resultados' });
     }
-    async function getUsuarioCurso(tipo,usuario_id,recurso_id){
-        if(tipo == 'curso'){
-            return await UsuarioCurso.findAll({
-                attributes: ['id'],
-                where: {
-                    estado:1,
-                    usuario_id:usuario_id,
-                    curso_id:recurso_id
-                },
-            });
-        }else{
-            return await UsuarioCurso.findAll({
-                attributes: ['id'],
-                where: {
-                    estado:1,
-                    usuario_id:usuario_id
-                },
-                include: [{ 
-                    model:Curso,
-                    required: true,
-                    attributes: ['id','categoria_id'],
-                    where:{
-                        categoria_id : recurso_id
-                    }
-                }]
-            });
-        }
-    }
-  }
+}
   

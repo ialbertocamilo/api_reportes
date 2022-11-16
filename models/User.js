@@ -1,4 +1,4 @@
-const { Model, DataTypes: { INTEGER, STRING } } = require('sequelize');
+const { Model, DataTypes: { INTEGER, STRING, BOOLEAN } } = require('sequelize');
 const sequelize = require('../sequelize.js');
 
 /* models */
@@ -13,6 +13,7 @@ User.init({
     name: STRING,
     lastname: STRING,
     surname: STRING,
+    active: BOOLEAN,
     document: STRING
 },{
     sequelize,

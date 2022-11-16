@@ -21,7 +21,4 @@ CriterionValueUser.init({
     timestamps: false
 });
 
-
-
-
 module.exports = CriterionValueUser;

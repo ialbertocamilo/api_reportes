@@ -46,9 +46,6 @@ router.get('/job-positions/:workspaceId', async (req, res) => {
 
 
 
-
-
-
 router.get('/cargar_grupos', async (req, res) => {
   const { mod, esc } = req.query
   const datos = await tablas.cargarGrupos(mod, esc)
@@ -67,6 +64,20 @@ router.get('/cargar_ciclos', async (req, res) => {
   res.json(datos)
 })
 
+
+
+router.post('/schools/states', async (req, res) => {
+  const { body } = req;
+  const datos = await tablas.loadSchoolsStatesByWorkspaceId(body);
+  return res.json(datos);
+})
+
+router.post('/school/courses/states', async (req, res) => {
+  const { body } = req;
+  const datos = await tablas.loadSchoolCoursesStatesById(body);
+  return res.json(datos);
+})
+
 //  Principales
 
 // * Modulos * //
@@ -75,6 +86,7 @@ router.post('/cambia_modulo_carga_escuela', async (req, res) => {
   const datos = await tablas.cambiaModuloCargaEscuela(mod)
   res.json(datos)
 })
+
 router.post('/cambiaModulosCargaEscuela', async (req, res) => {
   const datos = await tablas.cambiaModulosCargaEscuela(req.body.modulo)
   res.json(datos)
