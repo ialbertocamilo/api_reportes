@@ -154,6 +154,7 @@ module.exports = {
     })
   },
 
+  /* vademecum */
   vademecum ({ body }, res) {
     const children = fork('./controllers/vademecum.js')
     children.send(body)
@@ -162,4 +163,15 @@ module.exports = {
       children.kill()
     })
   },
+
+  /* diplomas */
+  diplomas ({ body }, res) {
+    const children = fork('./controllers/diplomas.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+
+  }
 }

@@ -177,10 +177,42 @@ module.exports = {
 
     return rows
   },
+  async loadSchoolsStatesByWorkspaceId (data) {
+    const { workspaceId, active, inactive } = data;
+    const SqlState = (active && inactive) ? '' : 
+                     `and s.active = ${active ? 1 : 0}`;
 
+    const [ rows ] = await con.raw(`
+      select
+        s.*
+      from schools as s 
+      inner join school_workspace as sw
+        on s.id = sw.school_id
+      where 
+        sw.workspace_id = :workspaceId 
+        ${SqlState}
+    `, { workspaceId });
 
+    return rows;
+  },
+  async loadSchoolCoursesStatesById (data) {
+    const { schoolIds, active, inactive } = data;
+    const SqlState = (active && inactive) ? '' : 
+                     `and c.active = ${active ? 1 : 0}`;
 
+    const [ rows ] = await con.raw(`
+      select
+        c.*
+      from courses as c 
+      inner join course_school as cs
+        on c.id = cs.course_id
+      where 
+        cs.school_id in(:schoolIds)
+        ${SqlState}
+    `, { schoolIds });
 
+    return rows;
+  },
 
   /*
    * Primarios
