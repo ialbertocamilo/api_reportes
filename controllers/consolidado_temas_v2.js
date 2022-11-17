@@ -137,7 +137,7 @@ async function exportarUsuariosDW ({
 
     cellRow.push(user.topic_views || '-')
     cellRow.push(user.minimum_grade || '-')
-    cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('L') : '-')
+    cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
 
     // Add row to sheet
 
