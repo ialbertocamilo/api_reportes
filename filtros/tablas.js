@@ -4,10 +4,12 @@ module.exports = {
   async datosIniciales(workspaceId) {
     const modules = await this.cargarModulos(workspaceId)
     const admins = await this.cargarAdmins(workspaceId)
+    const vademecums = await this.cargarVademecums(workspaceId)
+
     return {
       modules,
       admins,
-      // vademecums
+      vademecums
     }
   },
 
