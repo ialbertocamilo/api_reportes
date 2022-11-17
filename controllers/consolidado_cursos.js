@@ -161,7 +161,7 @@ async function loadUsersWithCourses (
         sc.assigned,
         sc.completed,
         sc.reviewed,
-        sc.advanced_percentage
+        sc.advanced_percentage,
         sc.last_time_evaluated_at
     from users u
         inner join summary_courses sc on u.id = sc.user_id
