@@ -37,7 +37,7 @@ async function generateSegmentationReport ({
     const users = await loadUsersSegmented(course.course_id)
     for (const user of users) {
         const cellRow = []
-        const user_status = (user.status_id) ? coursesStatuses.find(status=>status.id = user.status_id) : {name:'PENDIENTE'};
+        const user_status = (user.status_id) ? coursesStatuses.find(status=>status.id == user.status_id) : {name:'Pendiente'};
         cellRow.push(user.name)
         cellRow.push(user.lastname)
         cellRow.push(user.surname)
@@ -54,7 +54,7 @@ async function generateSegmentationReport ({
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'ConsolidadoCursos' }))
+      process.send(response({ createAt, modulo: 'SegmentaciónCursos' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })
