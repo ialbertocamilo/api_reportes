@@ -8,7 +8,7 @@ const moment = require('moment')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
 const {  loadUsersSegmented, loadCourses } = require('../helper/SegmentationHelper')
-const {  getCourseStatusId } = require('../helper/CoursesTopicsHelper')
+const {  loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
 
 const { con } = require('../db')
 
@@ -32,10 +32,12 @@ async function generateSegmentationReport ({
   await createHeaders(headers)
   //Load Courses
   const courses = await loadCourses({cursos,escuelas}); 
+  const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
     const users = await loadUsersSegmented(course.course_id)
     for (const user of users) {
         const cellRow = []
+        const user_status = (user.status_id) ? coursesStatuses.find(status=>status.id = user.status_id) : {name:'PENDIENTE'};
         cellRow.push(user.name)
         cellRow.push(user.lastname)
         cellRow.push(user.surname)
@@ -45,7 +47,7 @@ async function generateSegmentationReport ({
         cellRow.push(course.course_name)
         cellRow.push(user.grade_average || '-')
         cellRow.push(user.advanced_percentage ? user.advanced_percentage+'%' : '0%')
-        cellRow.push(user.status_id || 'Pendiente')
+        cellRow.push(user_status.name)
         worksheet.addRow(cellRow).commit()
     }
   }
