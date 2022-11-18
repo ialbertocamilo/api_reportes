@@ -23,6 +23,14 @@ module.exports = {
       children.kill()
     })
   },
+  segmentation({body},res){
+    const children = fork('./controllers/segmentation.js')
+    children.send(body)
+    children.on('message', datos => {
+      res.send(datos)
+      children.kill()
+    })
+  },
   // * Consolidado por curso
   consolidadoCursos ({ body }, res) {
     const children = fork('./controllers/consolidado_cursos.js')

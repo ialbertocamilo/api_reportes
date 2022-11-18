@@ -49,3 +49,23 @@ exports.logtime = (message) => {
 
   console.log(`Seconds:${seconds - 1666736790} Time:${timestamp} |`, message)
 }
+
+exports.groupArrayOfObjects = (list, key , type = 'get_object')=>{
+  const new_list = list.reduce((rv, x)=>{
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+  if(type == 'get_array'){
+    return Object.keys(new_list).map((key) => new_list[key]);
+  }
+  return new_list;
+};
+
+exports.uniqueElements = (list,key = 'id')=>{
+  return list.reduce((unique, o) => {
+      if(!unique.some(obj => obj[key] === o[key])) {
+        unique.push(o);
+      }
+      return unique;
+  },[])
+}
