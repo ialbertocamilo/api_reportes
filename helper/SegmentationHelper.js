@@ -23,7 +23,7 @@ exports.loadUsersSegmented = async (course_id) => {
             join_criterions_values_user += 
             `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
         });
-        const [rows] = await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.status_id from users
+        const [rows] = await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id from users
         LEFT OUTER join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id}
         ${join_criterions_values_user} 
         where users.active=1 
