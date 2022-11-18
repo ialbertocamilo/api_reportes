@@ -94,7 +94,10 @@ async function generateConsolidatedCoursesReport ({
     // Calculate completed courses
 
     // const completed = (user.advanced_percentage * user.assigned) / 100
-    const completed = user.passed + user.taken + user.reviewed;
+    const passed = user.course_passed || 0;
+    const taken = user.taken || 0;
+    const reviewed = user.reviewed || 0;
+    const completed = passed + taken + reviewed;
 
     // Add additional report values
 
@@ -163,6 +166,8 @@ async function loadUsersWithCourses (
         sc.reviewed,
         sc.advanced_percentage,
         sc.last_time_evaluated_at
+        sc.taken,
+        sc.advanced_percentage
     from users u
         inner join summary_courses sc on u.id = sc.user_id
         inner join courses c on sc.course_id = c.id
