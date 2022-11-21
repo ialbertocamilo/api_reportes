@@ -98,6 +98,9 @@ module.exports = {
    * @returns {Promise<*>}
    */
   async loadCoursesFromSchools(schoolsId) {
+    if(schoolsId.length == 0){
+      return []
+    }
     const [rows] = await con.raw(`
       select
         c.*
