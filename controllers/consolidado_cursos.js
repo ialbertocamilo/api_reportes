@@ -27,7 +27,8 @@ const headers = [
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
-  'AVANCE (%)'
+  'AVANCE (%)',
+  'ULTIMA EVALUACIÓN'
 ]
 
 async function generateConsolidatedCoursesReport ({
@@ -111,6 +112,7 @@ async function generateConsolidatedCoursesReport ({
     cellRow.push(user.assigned || 0)
     cellRow.push(Math.round(completed) || 0)
     cellRow.push(user.advanced_percentage ? user.advanced_percentage + '%' : '0%')
+    cellRow.push(user.last_time_evaluated_at ? moment(user.last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
 
     // Add row to sheet
 
@@ -163,7 +165,8 @@ async function loadUsersWithCourses (
         sc.completed,
         sc.reviewed,
         sc.taken,
-        sc.advanced_percentage
+        sc.advanced_percentage,
+        sc.last_time_evaluated_at
     from users u
         inner join summary_courses sc on u.id = sc.user_id
         inner join courses c on sc.course_id = c.id

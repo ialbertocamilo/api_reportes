@@ -150,5 +150,36 @@ module.exports = {
       res.send(data)
       children.kill()
     })
+  },
+
+  /* videoteca */
+  videoteca ({ body }, res) {
+    const children = fork('./controllers/videoteca.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+
+  /* vademecum */
+  vademecum ({ body }, res) {
+    const children = fork('./controllers/vademecum.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+
+  /* diplomas */
+  diplomas ({ body }, res) {
+    const children = fork('./controllers/diplomas.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+
   }
 }

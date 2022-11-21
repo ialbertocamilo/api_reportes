@@ -24,8 +24,8 @@ const headers = [
   'Ultima evaluación'
 ]
 
-async function ranking ({
-  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, jobPosition
+async function ranking({
+  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, areas, sedes
 }) {
   // Generate Excel file header
 
@@ -46,7 +46,7 @@ async function ranking ({
   // Load users from database and generate ids array
 
   const users = await loadUsersRanking(
-    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, jobPosition
+    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, areas, sedes
   )
   const usersIds = pluck(users, 'id')
 
@@ -102,11 +102,12 @@ async function ranking ({
  * Load users ranking from database
  * @returns {Promise<*>}
  */
-async function loadUsersRanking (
-  workspaceId, modulesIds, activeUsers, inactiveUsers, jobPosition
+async function loadUsersRanking(
+  workspaceId, modulesIds, activeUsers, inactiveUsers, areas, sedes
 ) {
   let query = `
     select
+      COUNT(u.id) as temp,
       u.*,
       su.score,
       su.courses_completed,
@@ -119,20 +120,49 @@ async function loadUsersRanking (
             `
 
   const workspaceCondition = ` where u.subworkspace_id in (${modulesIds.join()})`
-  if (jobPosition) {
+  if (areas.length > 0) {
     query += `inner join criterion_value_user cvu on cvu.user_id = u.id
               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
     query += workspaceCondition
-    query += ' and cv.value_text = :jobPosition'
+
+    // query += ' and cv.value_text = :jobPosition'
+    query += ` and 
+                  ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+
+    if (sedes.length > 0) {
+      query += `OR  cvu.criterion_value_id in (`;
+
+      sedes.forEach(cv2 => query += `${cv2},`);
+      query = query.slice(0, -1);
+
+      query += `)`;
+    }
+
+    query += `)`;
+
+
   } else {
     query += workspaceCondition
   }
-  // Add user conditions and group sentence
 
+  // Add user conditions and group sentence
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
+  query += `
+    GROUP BY u.id`;
+  if (areas.length > 0) {
+
+    let having_count = sedes.length > 0 ? 2 : 1;
+
+    query += ` HAVING temp = ${having_count}`;
+
+  }
 
   // Execute query
 
-  const [rows] = await con.raw(query, {jobPosition: jobPosition})
+  const [rows] = await con.raw(query)
   return rows
 }
