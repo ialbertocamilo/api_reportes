@@ -31,8 +31,9 @@ exports.loadUsersSegmented = async (course_id) => {
                 values.forEach((value,index) => {
                     const starts_at = moment(value.starts_at).format('YYYY-MM-DD');
                     const finishes_at = moment(value.finishes_at).format('YYYY-MM-DD');
-                    select_date += ` ${index>0 ? 'or' : ''} value_date between ${starts_at} and ${finishes_at} `;
+                    select_date += ` ${index>0 ? 'or' : ''} value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id}`;
                 });
+                select_date += ' and deleted_at is null';
                 join_criterions_values_user += 
                 `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
             }
@@ -46,7 +47,7 @@ exports.loadUsersSegmented = async (course_id) => {
             users = [...users,...rows]
         }
     }
-    return uniqueElements(users,'id');
+    return uniqueElements(users,'id');  
 }
 
 exports.loadCourses = async ({cursos,escuelas}) => {
