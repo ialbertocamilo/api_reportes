@@ -1,3 +1,4 @@
+const moment = require('moment');
 const { con } = require("../db")
 const {groupArrayOfObjects,uniqueElements,pluckUnique} = require('./Helper');
 
@@ -7,8 +8,10 @@ exports.loadUsersSegmented = async (course_id) => {
     // inner join `criterion_value_user` as `cvu46` on `users`.`id` = `cvu46`.`user_id` and `cvu46`.`criterion_value_id` in (?) 
     // where `active` = ?
     const segments = await con('segments_values as sv')
-                    .select('sv.criterion_id','sv.segment_id','sv.criterion_value_id')
+                    .select('sv.criterion_id','sv.starts_at','sv.finishes_at','sv.segment_id','sv.criterion_value_id','t.code')
                     .join('segments as sg','sg.id','sv.segment_id')
+                    .join('criteria as c','c.id','sv.criterion_id')
+                    .join('taxonomies as t','t.id','c.field_id')
                     .where('sg.model_type','App\\Models\\Course')
                     .where('sg.model_id',course_id)
                     .where('sg.deleted_at',null)
@@ -19,9 +22,21 @@ exports.loadUsersSegmented = async (course_id) => {
         const grouped = groupArrayOfObjects(segment,'criterion_id','get_array'); 
         let join_criterions_values_user = ''; 
         grouped.forEach((values,idx) => {
-            const criterios_id = pluckUnique(values,'criterion_value_id').toString();
-            join_criterions_values_user += 
-            `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
+            if(values[0].code != 'date'){
+                const criterios_id = pluckUnique(values,'criterion_value_id').toString();
+                join_criterions_values_user += 
+                `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
+            }else{
+                let select_date = 'select id from criterion_values where ';
+                values.forEach((value,index) => {
+                    const starts_at = moment(value.starts_at).format('YYYY-MM-DD');
+                    const finishes_at = moment(value.finishes_at).format('YYYY-MM-DD');
+                    select_date += ` ${index>0 ? 'or' : ''} value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id}`;
+                });
+                select_date += ' and deleted_at is null';
+                join_criterions_values_user += 
+                `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
+            }
         });
         const [rows] = await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id from users
         LEFT OUTER join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id}
@@ -32,7 +47,7 @@ exports.loadUsersSegmented = async (course_id) => {
             users = [...users,...rows]
         }
     }
-    return uniqueElements(users,'id');
+    return uniqueElements(users,'id');  
 }
 
 exports.loadCourses = async ({cursos,escuelas}) => {
