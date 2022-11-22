@@ -212,7 +212,7 @@ module.exports = {
       inner join course_school as cs
         on c.id = cs.course_id
       where 
-        c.deleted_at is null
+        c.deleted_at is null and
         cs.school_id in(:schoolIds)
         ${SqlState}
     `, { schoolIds });
