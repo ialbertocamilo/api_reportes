@@ -200,6 +200,7 @@ async function loadUsersWithCourses (
     query = query.slice(0, -1);
 
     query += `) `;
+    query += `) `;
   } else {
     query += workspaceCondition;
   } 

@@ -146,6 +146,7 @@ async function loadUsersWithTopics (
     query = query.slice(0, -1);
 
     query += `) `;
+    query += `) `;
   } else {
     query += workspaceCondition;
   } 
