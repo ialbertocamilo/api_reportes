@@ -19,13 +19,14 @@ const headers = [
   'Última sesión',
   'Escuela',
   'Curso',
+  'Tipo curso',
   'Tema',
   'Pregunta',
   'Respuesta'
 ]
 
 async function exportarEvaluacionesAbiertas ({
-  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end
+  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end, areas, tipocurso
 }) {
   // Generate Excel file header
 
@@ -47,7 +48,7 @@ async function exportarEvaluacionesAbiertas ({
 
   const users = await loadUsersQuestions(
     workspaceId, modulos, UsuariosActivos, UsuariosInactivos,
-    escuelas, cursos, temas, start, end
+    escuelas, cursos, temas, start, end, areas, tipocurso
   )
   const usersIds = pluck(users, 'id')
 
@@ -82,6 +83,7 @@ async function exportarEvaluacionesAbiertas ({
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
     cellRow.push(user.school_name || '-')
     cellRow.push(user.course_name || '-')
+    cellRow.push(user.course_type || '-')
     cellRow.push(user.topic_name || '-')
 
     try {
@@ -115,7 +117,7 @@ const strippedString = (value) => {
 
 async function loadUsersQuestions (
   workspaceId, modulesIds, activeUsers, inactiveUsers,
-  schoolsIds, coursesIds, topicsIds, start, end
+  schoolsIds, coursesIds, topicsIds, start, end, areas, tipocurso
 ) {
 
   // Load evaluation types
@@ -128,6 +130,7 @@ async function loadUsersQuestions (
   let query = `
     select 
         u.*, 
+        tax.name as course_type, 
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
@@ -140,16 +143,39 @@ async function loadUsersQuestions (
         inner join topics t on t.id = st.topic_id
         inner join summary_courses sc on u.id = sc.user_id
         inner join courses c on t.course_id = c.id
+        inner join taxonomies tax on tax.id = c.type_id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id 
         inner join school_workspace sw on s.id = sw.school_id
         inner join questions q on t.id = q.topic_id
-      
-      where 
-        u.subworkspace_id in (${modulesIds.join()}) and
-        sw.workspace_id = ${workspaceId} and
-        q.type_id = ${type.id}
   `
+
+  const workspaceCondition = ` where 
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} and 
+      q.type_id = ${type.id} `
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += workspaceCondition
+
+    // query += ' and cv.value_text = :jobPosition'
+    query += ` and 
+                  ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+  } else {
+    query += workspaceCondition;
+  } 
+
+  // Add type_course and dates at ('created_at')
+  if(tipocurso) query +=  ` and tax.code = 'free'` 
+  if(start) query += ` and date(st.created_at) >= '${start}'`
+  if(end) query += ` and date(st.created_at) <= '${end}'`
+
 
   // Add condition for schools ids
 

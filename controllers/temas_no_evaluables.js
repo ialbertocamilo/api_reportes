@@ -24,7 +24,7 @@ const headers = [
 
 async function exportTemasNoEvaluables ({
   workspaceId, modulos, UsuariosActivos, UsuariosInactivos,
-  escuelas, cursos, temas, temasActivos, temasInactivos, start, end
+  escuelas, cursos, temas, activeTopics, inactiveTopics, start, end, tipocurso, areas
 }) {
   // Generate Excel file header
 
@@ -46,7 +46,7 @@ async function exportTemasNoEvaluables ({
 
   const users = await loadUsersWithTopics(
     workspaceId, modulos, UsuariosActivos, UsuariosInactivos,
-    escuelas, cursos, temas, temasActivos, temasInactivos, start, end
+    escuelas, cursos, temas, activeTopics, inactiveTopics, start, end, tipocurso, areas
   )
   const usersIds = pluck(users, 'id')
 
@@ -105,7 +105,7 @@ async function exportTemasNoEvaluables ({
 async function loadUsersWithTopics (
   workspaceId, modulesIds, activeUsers, inactiveUsers,
   schoolsIds, coursesIds, topicsIds, activeTopics, inactiveTopics,
-  start, end
+  start, end, tipocurso, areas
 ) {
   let query = `
     select
@@ -128,11 +128,32 @@ async function loadUsersWithTopics (
         inner join taxonomies tax on  tax.id = c.type_id
         inner join schools s on cs.school_id = s.id
         inner join school_workspace sw on s.id = sw.school_id
-    where
-        u.subworkspace_id in (${modulesIds.join()}) and
-        sw.workspace_id = ${workspaceId} and
-        t.assessable = 0
   `
+ const workspaceCondition = ` where 
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} and 
+      t.assessable = 0 `
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += workspaceCondition
+
+    // query += ' and cv.value_text = :jobPosition'
+    query += ` and 
+                  ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+  } else {
+    query += workspaceCondition;
+  } 
+
+  // Add type_course and dates at ('created_at')
+  if(tipocurso) query +=  ` and tax.code = 'free'` 
+  if(start) query += ` and date(st.created_at) >= '${start}'`
+  if(end) query += ` and date(st.created_at) <= '${end}'`
 
   // Add condition for schools ids
 
@@ -152,20 +173,23 @@ async function loadUsersWithTopics (
     query += ` and t.id in (${topicsIds.join()})`
   }
 
-  // if (!activeTopics || !inactiveTopics) {
-  //   if (activeTopics) {
-  //     query += ' and t.active = 1'
-  //   }
-  //   if (!inactiveTopics) {
-  //     query += ' and t.active = 0'
-  //   }
-  // }
+    // Add condition to allow active topics only
 
-  if (start && end) {
+  if (activeTopics && !inactiveTopics) {
+    query += ' and t.active = 1'
+  }
+
+  // Add condition to allow inactive topics only
+
+  if (!activeTopics && inactiveTopics) {
+    query += ' and t.active = 0'
+  }
+
+  /*if (start && end) {
     query += ` and (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
-  }
+  }*/
 
   // Add user conditions and group sentence
 

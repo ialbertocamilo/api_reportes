@@ -273,7 +273,7 @@ async function loadUsersWithCoursesAndTopics (
   if (!activeTopics && inactiveTopics) {
     query += ' and t.active = 0'
   }
-    logtime(query);
+  //logtime(query);
 
   // Get statuses ids
 
