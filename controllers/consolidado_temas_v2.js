@@ -87,7 +87,7 @@ async function exportarUsuariosDW ({
     workspaceId, userTopicsStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
-    temasActivos, temasInactivos, start, end
+    temasActivos, temasInactivos, start, end,evaluationTypes
   )
   const usersIds = pluck(users, 'id')
 
@@ -178,10 +178,10 @@ async function loadUsersWithCoursesAndTopics (
   workspaceId, userTopicsStatuses,
   modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds, topicsIds,
   revisados, aprobados, desaprobados, realizados, porIniciar,
-  activeTopics, inactiveTopics, start, end
+  activeTopics, inactiveTopics, start, end,evaluationTypes
 ) {
   // Base query
-
+  const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
   let query = `
     select 
         u.*, 
@@ -215,7 +215,8 @@ async function loadUsersWithCoursesAndTopics (
         inner join school_workspace sw on s.id = sw.school_id
     where 
       u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId}
+      sw.workspace_id = ${workspaceId} and
+      t.type_evaluation_id = ${taxonomy.id}
   `
 
   // Add condition for schools ids
