@@ -50,7 +50,7 @@ const headers = [
 ];
 
 async function generateSegmentationReport({
-  modulos,
+  modulos = [],
   workspaceId,
   cursos,
   escuelas,
