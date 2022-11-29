@@ -76,7 +76,11 @@ exports.getTopicStatusName = (userTopicStatuses, statusId) => {
   return status ? status.name : null;
 };
 
-exports.loadCompatibles = async (course_id) => {
+/**
+ * Get the id of the supported courses
+ * @param course_id
+ */
+exports.loadCompatiblesId = async (course_id) => {
   const [rows] = await con.raw(
     `
         select 

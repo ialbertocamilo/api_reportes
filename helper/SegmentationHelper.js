@@ -59,7 +59,7 @@ exports.loadUsersSegmented = async (course_id) => {
       }
     });
     const [rows] =
-      await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id from users
+      await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at from users
         LEFT OUTER join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id}
         ${join_criterions_values_user} 
         where users.active=1 
@@ -72,10 +72,13 @@ exports.loadUsersSegmented = async (course_id) => {
 };
 
 exports.loadUsersSegmentedv2 = async (
-    course_id, 
-    start_date, end_date, 
-    modules, 
-    activeUsers, inactiveUsers) => {
+  course_id,
+  modules = [],
+  start_date = null,
+  end_date = null,
+  activeUsers = false,
+  inactiveUsers = false
+) => {
   // select `id` from `users`
   // inner join `criterion_value_user` as `cvu1` on `users`.`id` = `cvu1`.`user_id` and `cvu1`.`criterion_value_id` in (?)
   // inner join `criterion_value_user` as `cvu46` on `users`.`id` = `cvu46`.`user_id` and `cvu46`.`criterion_value_id` in (?)
@@ -111,7 +114,7 @@ exports.loadUsersSegmentedv2 = async (
           values,
           "criterion_value_id"
         ).toString();
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
+        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
       } else {
         let select_date = "select id from criterion_values where ";
         values.forEach((value, index) => {
@@ -124,15 +127,18 @@ exports.loadUsersSegmentedv2 = async (
           }`;
         });
         select_date += " and deleted_at is null";
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
+        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
       }
     });
 
-    // USERS FILTERS 
-    const queryJoin = start_date || end_date ? `LEFT OUTER` : `INNER`;
-    if (start_date)
-      start_date_query = ` and date(sc.created_at) >= '${start_date}'`;
-    if (end_date) end_date_query = ` and date(sc.created_at) <= '${end_date}'`;
+    // USERS FILTERS
+    const queryJoin = start_date || end_date ? `INNER` : `LEFT OUTER`;
+    const start_date_query = start_date
+      ? ` and date(sc.created_at) >= '${start_date}'`
+      : ``;
+    const end_date_query = end_date
+      ? ` and date(sc.created_at) <= '${end_date}'`
+      : ``;
 
     const modules_query =
       modules && modules.length > 0
@@ -141,14 +147,26 @@ exports.loadUsersSegmentedv2 = async (
 
     const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
     const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    console.log({
+      queryJoin,
+      start_date_query,
+      end_date_query,
+      modules_query,
+      user_active_query,
+      user_inactive_query,
+    });
 
     const [rows] = await con.raw(`
         select 
-            users.id, users.name,users.lastname,users.surname,users.email, users.document ,
-            sc.grade_average,sc.advanced_percentage,sc.status_id 
+            u.id, u.name,u.lastname,u.surname,u.email, u.document, u.active, u.last_login,
+
+            sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at,
+            sc.views as course_views, sc.passed as course_passed, sc.assigned, sc.completed,
+            sc.last_time_evaluated_at, sc.restarts, sc.taken, sc.reviewed
+
         from users u
         
-            ${queryJoin} join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id} ${start_date_query} ${end_date_query}
+            ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} ${start_date_query} ${end_date_query}
 
             inner join criterion_value_user cvu on cvu.user_id = u.id
             inner join criterion_values cv on cv.id = cvu.criterion_value_id
@@ -157,7 +175,7 @@ exports.loadUsersSegmentedv2 = async (
         ${join_criterions_values_user} 
 
         where 
-            users.deleted_at is null
+            u.deleted_at is null
             ${user_active_query} ${user_inactive_query}
             ${modules_query}
         `);
@@ -168,7 +186,7 @@ exports.loadUsersSegmentedv2 = async (
   return uniqueElements(users, "id");
 };
 
-exports.loadCourses = async ({ cursos, escuelas }) => {
+exports.loadCourses = async ({ cursos = [], escuelas = [] }) => {
   const where_courses =
     cursos.length == 0
       ? {
@@ -180,9 +198,16 @@ exports.loadCourses = async ({ cursos, escuelas }) => {
           value: cursos,
         };
   return await con("course_school as cs")
-    .select("cs.course_id", "c.name as course_name", "sc.name as school_name")
+    .select(
+      "cs.course_id",
+      "c.name as course_name",
+      "sc.name as school_name",
+      "c.active as course_active",
+      "t1.name as course_type"
+    )
     .join("courses as c", "c.id", "cs.course_id")
     .join("schools as sc", "sc.id", "cs.school_id")
+    .join("taxonomies as t1", "t1.id", "c.type_id")
     .whereIn(where_courses.label, where_courses.value)
     .where("c.active", 1)
     .where("c.deleted_at", null)

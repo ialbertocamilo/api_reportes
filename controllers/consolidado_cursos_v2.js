@@ -10,110 +10,210 @@ const { response } = require("../response");
 const {
   loadCourses,
   loadUsersSegmented,
+  loadUsersSegmentedv2,
 } = require("../helper/SegmentationHelper");
 const {
   loadCoursesStatuses,
-  loadCompatibles,
+  loadCompatiblesId,
+  getCourseStatusName,
 } = require("../helper/CoursesTopicsHelper");
 
-const { con } = require("../db");
 const { pluck } = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
+const {
+  getGenericHeadersNotasXCurso,
+  getWorkspaceCriteria,
+} = require("../helper/Criterios");
+const {
+  loadUsersCriteriaValues,
+  getUserCriterionValues,
+} = require("../helper/Usuarios");
+const { getSuboworkspacesIds } = require("../helper/Workspace");
 
 // Headers for Excel file
 
 const headers = [
-  "Nombre",
-  "Apellido Paterno",
-  "Apellido Materno",
-  "Documento",
-  "EMAIL",
+  "ULTIMA SESIÓN",
   "ESCUELA",
   "CURSO",
-  "PROMEDIO",
-  "AVANCE (%)",
+  "VISITAS",
+  "NOTA PROMEDIO",
   "RESULTADO CURSO",
+  "ESTADO CURSO",
+  "TIPO CURSO",
+  "REINICIOS CURSOS",
+  "TEMAS ASIGNADOS",
+  "TEMAS COMPLETADOS",
+  "AVANCE (%)",
+  "ULTIMA EVALUACIÓN",
   "ESTADO COMPATIBLE",
 ];
 
-async function generateSegmentationReport({ cursos, escuelas }) {
+async function generateSegmentationReport({
+  modulos,
+  workspaceId,
+  cursos,
+  escuelas,
+  start_date,
+  end_date,
+  activeUsers,
+  inactiveUsers,
+}) {
   // Generate Excel file header
-  await createHeaders(headers);
+  const headersEstaticos = await getGenericHeadersNotasXCurso(
+    workspaceId,
+    [1, 5, 13, 4, 40, 41]
+  );
+  await createHeaders(headersEstaticos.concat(headers));
+
+  // Load workspace criteria
+
+  const workspaceCriteria = await getWorkspaceCriteria(
+    workspaceId,
+    [1, 5, 13, 4, 40, 41]
+  );
+  const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
+
+  if (modulos.length === 0) {
+    modulos = await getSuboworkspacesIds(workspaceId);
+  }
+
   let users_to_export = [];
   //Load Courses
   const courses = await loadCourses({ cursos, escuelas });
   const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
-    const users = await loadUsersSegmented(course.course_id);
+    // const users = await loadUsersSegmented(course.course_id);
+    const users = await loadUsersSegmentedv2(
+      course.course_id,
+      modulos,
+      start_date,
+      end_date,
+      activeUsers,
+      inactiveUsers
+    );
+
+    console.log({ users_count: users.length });
+
+    const usersCriterionValues = await loadUsersCriteriaValues(
+      modulos,
+      pluck(users, "id")
+    );
+
     const users_null = users.filter((us) => us.grade_average == null);
     const users_not_null = users.filter((us) => us.grade_average != null);
     users_to_export = users_not_null;
 
-    const compatibles_courses = await loadCompatibles(course.course_id);
+    const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
-    if (users_null.length > 0) {
+    if (compatibles_courses.length > 0 && users_null.length > 0) {
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
         pluck(compatibles_courses, "id")
       );
 
-      users_null.forEach((user) => {
+      for (const user of users_null) {
+        if (user.created_at) {
+          users_to_export.push(user);
+          continue;
+        }
+
         const sc_compatible = sc_compatibles
           .filter(
             (row) =>
               row.user_id == user.id &&
               pluck_compatibles_courses.includes(row.course_id)
           )
-          .sort((row) => row.grade_average)[0];
-        if (sc_compatible) {
-          const { name, lastname, surname, document, email } = user;
-          const {
-            school_name,
-            course_name,
-            grade_average,
-            advanced_percentage,
-            status_id,
-          } = sc_compatible;
+          .sort()[0];
 
-          const temp = {
-            name,
-            lastname,
-            surname,
-            document,
-            email,
-
-            school_name,
-            course_name,
-            grade_average,
-            advanced_percentage,
-            status_id,
-            compatible: `Es compatible con el curso : ${course.course_name}.`,
-          };
-
-          users_to_export.push(temp);
+        if (!sc_compatible) {
+          users_to_export.push(user);
+          continue;
         }
-      });
+
+        const { name, lastname, surname, document, email, active, last_login } =
+          user;
+        const {
+          school_name,
+          course_name,
+          grade_average,
+          advanced_percentage,
+          status_id,
+        } = sc_compatible;
+
+        const temp = {
+          name,
+          lastname,
+          surname,
+          document,
+          email,
+          active,
+          last_login,
+
+          school_name,
+          course_name,
+          grade_average,
+          advanced_percentage,
+          status_id,
+          compatible: `Es compatible con el curso : ${course_name}.`,
+        };
+
+        users_to_export.push(temp);
+      }
     }
 
     for (const user of users_to_export) {
       const cellRow = [];
-      const user_status = user.status_id
-        ? coursesStatuses.find((status) => status.id == user.status_id)
-        : { name: "Pendiente" };
+      const lastLogin = moment(user.last_login).format("DD/MM/YYYY H:mm:ss");
+
       cellRow.push(user.name);
       cellRow.push(user.lastname);
       cellRow.push(user.surname);
       cellRow.push(user.document);
+      cellRow.push(user.active === 1 ? "Activo" : "Inactivo");
       cellRow.push(user.email);
 
-      cellRow.push(user.school_name || course.school_name);
-      cellRow.push(user.course_name || course.course_name);
-      cellRow.push(user.grade_average || user.grade_average || "-");
+      const userValues = getUserCriterionValues(
+        user.id,
+        workspaceCriteriaNames,
+        usersCriterionValues
+      );
+      userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+
+      // cellRow.push(course.school_name);
+      // cellRow.push(course.course_name);
+      // cellRow.push(user.grade_average || "-");
+      // cellRow.push(
+      //   user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
+      // );
+      // cellRow.push(user_status.name);
+
+      const passed = user.course_passed || 0;
+      const taken = user.taken || 0;
+      const reviewed = user.reviewed || 0;
+      const completed = passed + taken + reviewed;
+
+      cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
+      cellRow.push(course.school_name);
+      cellRow.push(course.course_name);
+      cellRow.push(user.course_views || "-");
+      cellRow.push(user.course_passed > 0 ? user.grade_average : "-");
+      cellRow.push(getCourseStatusName(coursesStatuses, user.course_status_id));
+      cellRow.push(course.course_active === 1 ? "Activo" : "Inactivo");
+      cellRow.push(course.course_type || "-");
+      cellRow.push(user.course_restarts || "-");
+      cellRow.push(user.assigned || 0);
+      cellRow.push(Math.round(completed) || 0);
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
       );
-      cellRow.push(user_status.name);
+      cellRow.push(
+        user.last_time_evaluated_at
+          ? moment(user.last_time_evaluated_at).format("DD/MM/YYYY H:mm:ss")
+          : "-"
+      );
       cellRow.push(user.compatible || `-`);
+
       worksheet.addRow(cellRow).commit();
     }
   }
