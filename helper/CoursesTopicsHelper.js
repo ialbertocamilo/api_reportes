@@ -80,8 +80,7 @@ exports.loadCompatibles = async (course_id) => {
   const [rows] = await con.raw(
     `
         select 
-            c_a.*,
-            c_b.*
+            c_b.id
         from 
             compatibilities comp
                 left outer join courses c_a on c_a.id = comp.course_a_id 
@@ -89,7 +88,7 @@ exports.loadCompatibles = async (course_id) => {
                 left outer join courses c_b on c_b.id = comp.course_b_id 
                             and c_b.active = 1
         where 
-            course_a_id.id = ${course_id} or course_b_id = ${course_id}
+          c_a.id = ${course_id} or c_b.id = ${course_id}
     `
   );
 

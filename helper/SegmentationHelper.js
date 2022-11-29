@@ -135,7 +135,7 @@ exports.loadUsersSegmentedv2 = async (
     if (end_date) end_date_query = ` and date(sc.created_at) <= '${end_date}'`;
 
     const modules_query =
-      modeules && modules.length > 0
+      modules && modules.length > 0
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 

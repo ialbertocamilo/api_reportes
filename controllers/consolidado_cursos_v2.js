@@ -8,10 +8,13 @@ const moment = require("moment");
 const { workbook, worksheet, createHeaders, createAt } = require("../exceljs");
 const { response } = require("../response");
 const {
-  loadUsersSegmented,
   loadCourses,
+  loadUsersSegmented,
 } = require("../helper/SegmentationHelper");
-const { loadCoursesStatuses, loadCompatibles } = require("../helper/CoursesTopicsHelper");
+const {
+  loadCoursesStatuses,
+  loadCompatibles,
+} = require("../helper/CoursesTopicsHelper");
 
 const { con } = require("../db");
 const { pluck } = require("../helper/Helper");
@@ -30,14 +33,10 @@ const headers = [
   "PROMEDIO",
   "AVANCE (%)",
   "RESULTADO CURSO",
+  "ESTADO COMPATIBLE",
 ];
 
 async function generateSegmentationReport({ cursos, escuelas }) {
-
-  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId,[1,5,13,4,40,41])
-  await createHeaders(headersEstaticos.concat(headers))
-
-
   // Generate Excel file header
   await createHeaders(headers);
   let users_to_export = [];
@@ -49,58 +48,74 @@ async function generateSegmentationReport({ cursos, escuelas }) {
     const users_null = users.filter((us) => us.grade_average == null);
     const users_not_null = users.filter((us) => us.grade_average != null);
     users_to_export = users_not_null;
-    const compatibles = await loadCompatibles(course.id);
 
-    const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
-      users_null,
-      pluck(compatibles, 'id')
-    );
+    const compatibles_courses = await loadCompatibles(course.course_id);
+    const pluck_compatibles_courses = pluck(compatibles_courses, "id");
+    if (users_null.length > 0) {
+      const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
+        pluck(users_null, "id"),
+        pluck(compatibles_courses, "id")
+      );
 
-    for (const user in users_null) {
-      const sc_compatible = sc_compatibles
-        .filter((row) => row.user_id == user.id && course_id == course.id)
-        .sort((row) => row.grade_average)[0];
-      if (sc_compatible) {
-        const { name, lastname, surname, document, email } = user;
-        const { school_name, course_name, grade_average, advanced_percentage, status_id } =
-          sc_compatible;
-        const temp = {
-          name,
-          lastname,
-          surname,
-          document,
-          email,
+      users_null.forEach((user) => {
+        const sc_compatible = sc_compatibles
+          .filter(
+            (row) =>
+              row.user_id == user.id &&
+              pluck_compatibles_courses.includes(row.course_id)
+          )
+          .sort((row) => row.grade_average)[0];
+        if (sc_compatible) {
+          const { name, lastname, surname, document, email } = user;
+          const {
+            school_name,
+            course_name,
+            grade_average,
+            advanced_percentage,
+            status_id,
+          } = sc_compatible;
 
-          school_name,
-          course_name,
-          grade_average,
-          advanced_percentage,
-          status_id
-        };
+          const temp = {
+            name,
+            lastname,
+            surname,
+            document,
+            email,
 
-        users_to_export.push(temp);
-      }
+            school_name,
+            course_name,
+            grade_average,
+            advanced_percentage,
+            status_id,
+            compatible: `Es compatible con el curso : ${course.course_name}.`,
+          };
+
+          users_to_export.push(temp);
+        }
+      });
     }
-  }
 
-  for (const user of users_to_export) {
-    const cellRow = [];
-    const user_status = user.status_id
-      ? coursesStatuses.find((status) => status.id == user.status_id)
-      : { name: "Pendiente" };
-    cellRow.push(user.name);
-    cellRow.push(user.lastname);
-    cellRow.push(user.surname);
-    cellRow.push(user.document);
-    cellRow.push(user.email);
-    cellRow.push(course.school_name);
-    cellRow.push(course.course_name);
-    cellRow.push(user.grade_average || "-");
-    cellRow.push(
-      user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
-    );
-    cellRow.push(user_status.name);
-    worksheet.addRow(cellRow).commit();
+    for (const user of users_to_export) {
+      const cellRow = [];
+      const user_status = user.status_id
+        ? coursesStatuses.find((status) => status.id == user.status_id)
+        : { name: "Pendiente" };
+      cellRow.push(user.name);
+      cellRow.push(user.lastname);
+      cellRow.push(user.surname);
+      cellRow.push(user.document);
+      cellRow.push(user.email);
+
+      cellRow.push(user.school_name || course.school_name);
+      cellRow.push(user.course_name || course.course_name);
+      cellRow.push(user.grade_average || user.grade_average || "-");
+      cellRow.push(
+        user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
+      );
+      cellRow.push(user_status.name);
+      cellRow.push(user.compatible || `-`);
+      worksheet.addRow(cellRow).commit();
+    }
   }
 
   if (worksheet._rowZero > 1) {

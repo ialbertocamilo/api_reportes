@@ -41,6 +41,16 @@ module.exports = {
       children.kill()
     })
   },
+  // * Consolidado por curso con compatibles
+  consolidadoCursosv2 ({ body }, res) {
+    const children = fork('./controllers/consolidado_cursos_v2.js')
+    children.send(body)
+
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   // * Consolidado por temas
   consolidadoTemas ({ body }, res) {
     const children = fork('./controllers/consolidado_temas_v2.js')
