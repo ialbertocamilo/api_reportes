@@ -15,7 +15,7 @@ const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { con } = require('../db')
 
-const headers = [
+let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
@@ -23,14 +23,15 @@ const headers = [
   'Visitas'
 ]
 
-async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, start, end }) {
+async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, careers, areas, tipocurso, start, end }) {
   // Generate Excel file header
+
+  // console.log({careers, areas, tipocurso});
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load workspace criteria
-
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
@@ -125,10 +126,12 @@ async function loadUsersWithVisits (
        inner join course_school cs on c.id = cs.course_id
        inner join schools s on cs.school_id = s.id
        inner join school_workspace sw on s.id = sw.school_id
-    where 
-      u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId}
+      
   `
+  const workspaceCondition = `where u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId}`;
+
+  
 
   if (start && end) {
     query += ` and (

@@ -12,7 +12,7 @@ const { getUserCriterionValues, loadUsersCriteriaValues,
   addActiveUsersCondition
 } = require('../helper/Usuarios')
 const moment = require('moment')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 let headers = [
@@ -55,8 +55,8 @@ async function exportarEvaluacionesAbiertas ({
 
   const questions = await loadQuestions(modulos)
 
-  const createdNewHeaders = getCreatedHeaders(users, headers);
-  await createHeaders(headersEstaticos.concat(createdNewHeaders));
+  const { altHeaders, maxQuestions } = getCreatedHeaders(users, headers);
+  await createHeaders(headersEstaticos.concat(altHeaders));
 
   // Add users to Excel rows
   for (const user of users) {
@@ -85,20 +85,45 @@ async function exportarEvaluacionesAbiertas ({
     cellRow.push(user.course_type || '-')
     cellRow.push(user.topic_name || '-')
 
-    try {
-      const answers = user.answers // JSON.parse(user.answers)
+    // === Questions Answers FP / Others ===
+    const answers = user.answers;
+    
+    if(workspaceId === 25) {
+      const countLimit = answers ? answers.length : 0;
+      if(countLimit) {
+        const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
 
+        answers.forEach((answer, index) => {
+          if (answer) {
+            const question = questions[index];
+
+            cellRow.push(question ? strippedString(question.pregunta) : '-')
+            cellRow.push(answer ? strippedString(answer.respuesta) : '-')
+          }
+        });
+      }
+
+    } else {
       if (answers) {
-
         answers.forEach((answer, index) => {
           if (answer) {
             const question = questions.find(q => q.id === answer.id)
             cellRow.push(question ? strippedString(question.pregunta) : '-')
             cellRow.push(answer ? strippedString(answer.respuesta) : '-')
           }
-        })
+        });
       }
-    } catch (ex) {}
+    }
+    // === Questions Answers FP / Others ===
+
+    // === if empty questions ===
+    const emptyRows = (answers) ? maxQuestions - answers.length
+                                : maxQuestions;
+    for (let i = 0; i < emptyRows; i++) {
+      cellRow.push('-');
+      cellRow.push('-');
+    }
+    // === if empty questions ===
 
     worksheet.addRow(cellRow).commit()
   }
@@ -114,6 +139,18 @@ async function exportarEvaluacionesAbiertas ({
 
 const strippedString = (value) => {
   return value.replace(/(<([^>]+)>)/gi, '')
+}
+
+async function getQuestionsByTopic(topic_id, countLimit) {
+
+  let query = `select q.* from questions q 
+               where q.topic_id = ${topic_id} 
+               limit ${countLimit}`;
+
+  // logtime(query);
+
+  const [rows] = await con.raw(query);
+  return rows;
 }
 
 function getCreatedHeaders(users, headers){
@@ -145,7 +182,7 @@ function getCreatedHeaders(users, headers){
     return loopColumns;
   };
 
-  const StaticKeysColumns = ['Pregunta','Respuesta'];
+  const StaticKeysColumns = ['Pregunta','Respuesta']; //cols loop
   
   if(maxQuestions > 1) {
     const conditionHeaders = MakeLoopColumns(maxQuestions, StaticKeysColumns);
@@ -153,7 +190,7 @@ function getCreatedHeaders(users, headers){
 
   } else headers = [...headers, ...StaticKeysColumns]; 
 
-  return headers;
+  return { altHeaders: headers, maxQuestions };
   // === CONDITIONAL HEADERS ===
 }
 
@@ -162,8 +199,6 @@ async function loadUsersQuestions (
   schoolsIds, coursesIds, topicsIds, start, end, areas, tipocurso
 ) {
 
-  // Load evaluation types
-
   const questionTypes = await con('taxonomies')
     .where('group', 'question')
     .where('code', 'written-answer')
@@ -171,14 +206,15 @@ async function loadUsersQuestions (
 
   let query = `
     select 
-        u.*, 
+        u.*,
         tax.name as course_type, 
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
         q.pregunta,
         q.id pregunta_id,
-        st.answers
+        st.answers,
+        st.topic_id
             
       from users u
         inner join summary_topics st on u.id = st.user_id
@@ -220,7 +256,6 @@ async function loadUsersQuestions (
   if(start) query += ` and date(st.created_at) >= '${start}'`
   if(end) query += ` and date(st.created_at) <= '${end}'`
 
-
   // Add condition for schools ids
 
   if (schoolsIds.length > 0) {
@@ -239,11 +274,12 @@ async function loadUsersQuestions (
     query += ` and t.id in (${topicsIds.join()})`
   }
 
+  /*
   if (start && end) {
     query += ` and (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
-  }
+  }*/
 
   // Add user conditions and group sentence
 
@@ -251,6 +287,7 @@ async function loadUsersQuestions (
   query += ' group by u.id, t.id, st.id'
 
   // Execute query
+  // logtime(query);
 
   const [rows] = await con.raw(query)
   return rows
@@ -262,8 +299,6 @@ async function loadUsersQuestions (
  * @returns {Promise<*>}
  */
 async function loadQuestions (modulesIds) {
-
-  // Load evaluation types
 
   const questionTypes = await con('taxonomies')
     .where('group', 'question')
@@ -287,6 +322,7 @@ async function loadQuestions (modulesIds) {
             group by t.id
         )
   `
+  // logtime(query)
 
   const [rows] = await con.raw(query, { typeId: type.id })
   return rows
