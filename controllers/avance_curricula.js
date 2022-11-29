@@ -7,7 +7,7 @@ const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 // Headers for Excel file
@@ -18,14 +18,13 @@ const headers = [
   'Avance'
 ]
 
-async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, validacion }) {
+async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, validacion, careers, areas }) {
   // Generate Excel file header
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load workspace criteria
-
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
@@ -37,7 +36,9 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
 
   // Load users from database and generate ids array
 
-  const users = await loadUsersWithProgress(modulos, UsuariosActivos, UsuariosInactivos)
+  const users = await loadUsersWithProgress(modulos, UsuariosActivos, 
+                                                     UsuariosInactivos, 
+                                            careers, areas)
   const usersIds = pluck(users, 'id')
 
   // Load workspace user criteria
@@ -89,7 +90,7 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithProgress (
-  modulesIds, activeUsers, inactiveUsers
+  modulesIds, activeUsers, inactiveUsers, careers, areas
 ) {
   // Base query
 
@@ -100,18 +101,37 @@ async function loadUsersWithProgress (
         su.courses_completed,
         su.advanced_percentage
     from users u
-        inner join summary_users su on u.id = su.user_id
-    where
-        u.subworkspace_id in (${modulesIds.join()})
-  `
+        inner join summary_users su on u.id = su.user_id`;
 
+  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
+
+  if(careers.length > 0 || areas.length > 0) {
+
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += userCondition
+
+    // query += ' and cv.value_text = :jobPosition';
+    mergeCareersAreas = [careers, ...areas];
+
+    query += ` and ( cvu.criterion_value_id in ( `;
+    mergeCareersAreas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+
+  } else {
+    query += userCondition;
+  }
   // Add user conditions and group sentence
 
-  query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
-  query += ' group by u.id'
+  query = addActiveUsersCondition(query, activeUsers, inactiveUsers);
+  query += ' group by u.id';
 
+  // logtime(query);
   // Execute query
 
-  const [rows] = await con.raw(query)
-  return rows
+  const [rows] = await con.raw(query);
+  return rows;
 }

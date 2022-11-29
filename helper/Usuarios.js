@@ -22,6 +22,44 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   }
 }
 
+exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
+  let query = `select * from users u `;
+  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
+
+  if(careers.length > 0 || areas.length > 0) {
+
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += userCondition
+
+    // query += ' and cv.value_text = :jobPosition';
+    mergeCareersAreas = [careers, ...areas];
+
+    query += ` and ( cvu.criterion_value_id in ( `;
+    mergeCareersAreas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+
+  } else {
+    query += userCondition;
+  }
+
+  if (modulesIds && activeUsers && !inactiveUsers) {
+    query += ` and u.active = 1`;
+  } 
+  
+  if (modulesIds && !activeUsers && inactiveUsers) {
+    query += ` and u.active = 0`;
+  }
+
+  // logtime(query);
+
+  const [rows] = await con.raw(query);
+  return rows;
+}
+
 exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers) => {
   if (activeUsers && inactiveUsers) {
     return query

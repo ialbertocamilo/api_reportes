@@ -15,23 +15,20 @@ const moment = require('moment')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
-const headers = [
+let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
   'Tipo curso',
   'Tema',
-  'Pregunta',
-  'Respuesta'
 ]
 
 async function exportarEvaluacionesAbiertas ({
   workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end, areas, tipocurso
 }) {
   // Generate Excel file header
-
   const headersEstaticos = await getGenericHeaders(workspaceId)
-  await createHeaders(headersEstaticos.concat(headers))
+ 
 
   // Load workspace criteria
 
@@ -58,8 +55,10 @@ async function exportarEvaluacionesAbiertas ({
 
   const questions = await loadQuestions(modulos)
 
-  // Add users to Excel rows
+  const createdNewHeaders = getCreatedHeaders(users, headers);
+  await createHeaders(headersEstaticos.concat(createdNewHeaders));
 
+  // Add users to Excel rows
   for (const user of users) {
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
 
@@ -88,7 +87,9 @@ async function exportarEvaluacionesAbiertas ({
 
     try {
       const answers = user.answers // JSON.parse(user.answers)
+
       if (answers) {
+
         answers.forEach((answer, index) => {
           if (answer) {
             const question = questions.find(q => q.id === answer.id)
@@ -113,6 +114,47 @@ async function exportarEvaluacionesAbiertas ({
 
 const strippedString = (value) => {
   return value.replace(/(<([^>]+)>)/gi, '')
+}
+
+function getCreatedHeaders(users, headers){
+  
+  let maxQuestions = 0;
+
+  for (const user of users) {
+    const answers = user.answers;
+    if(answers) {
+      const countAnswers = answers.length; 
+      if(countAnswers > maxQuestions) maxQuestions = countAnswers;
+    }
+  }
+
+  // === CONDITIONAL HEADERS ===
+  const MakeLoopColumns = (num, keys) => {
+    let loopColumns = [];
+    
+    for (let i = 0; i < num; i++) {
+      let stack = [];
+      
+      for(const val of keys) {
+        let current = `${val} ${i + 1}`;        
+        stack.push(current);
+      }
+      loopColumns.push(...stack); 
+    }
+
+    return loopColumns;
+  };
+
+  const StaticKeysColumns = ['Pregunta','Respuesta'];
+  
+  if(maxQuestions > 1) {
+    const conditionHeaders = MakeLoopColumns(maxQuestions, StaticKeysColumns);
+    headers = [...headers, ...conditionHeaders];
+
+  } else headers = [...headers, ...StaticKeysColumns]; 
+
+  return headers;
+  // === CONDITIONAL HEADERS ===
 }
 
 async function loadUsersQuestions (
