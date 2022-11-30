@@ -26,7 +26,7 @@ let headers = [
 async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, careers, areas, tipocurso, start, end }) {
   // Generate Excel file header
 
-  // console.log({careers, areas, tipocurso});
+  console.log({careers, areas, tipocurso});
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
@@ -44,7 +44,8 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
   // Load users from database and generate ids array
 
   const users = await loadUsersWithVisits(
-    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, start, end
+    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, careers, areas, tipocurso, 
+    start, end
   )
   const usersIds = pluck(users, 'id')
 
@@ -105,13 +106,14 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithVisits (
-  workspaceId, modulesIds, activeUsers, inactiveUsers, start, end
+  workspaceId, modulesIds, activeUsers, inactiveUsers, careers, areas, tipocurso, start, end
 ) {
   // Base query
 
   let query = `
     select 
         u.*,
+        tx.name as course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
@@ -123,21 +125,46 @@ async function loadUsersWithVisits (
        inner join topics t on t.id = st.topic_id
        inner join summary_courses sc on u.id = sc.user_id
        inner join courses c on t.course_id = c.id
+       inner join taxonomies tx on tx.id = c.type_id
        inner join course_school cs on c.id = cs.course_id
        inner join schools s on cs.school_id = s.id
        inner join school_workspace sw on s.id = sw.school_id
       
   `
-  const workspaceCondition = `where u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId}`;
+  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} `;
 
-  
+  if(careers.length > 0 || areas.length > 0) {
 
-  if (start && end) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += userCondition
+
+    // query += ' and cv.value_text = :jobPosition';
+    let mergeCareersAreas = [...careers, ...areas];
+
+    console.log(mergeCareersAreas);
+    query += ` and ( cvu.criterion_value_id in ( `;
+    mergeCareersAreas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+
+  } else {
+    query += userCondition;
+  }
+
+  // Add type_course and dates at ('created_at')
+  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(start) query += ` and date(sc.created_at) >= '${start}'`
+  if(end) query += ` and date(sc.created_at) <= '${end}'`
+
+  /*if (start && end) {
     query += ` and (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
-  }
+  }*/
 
   // Add user conditions and group sentence
 

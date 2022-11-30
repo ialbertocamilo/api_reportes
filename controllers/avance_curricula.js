@@ -112,7 +112,7 @@ async function loadUsersWithProgress (
     query += userCondition
 
     // query += ' and cv.value_text = :jobPosition';
-    mergeCareersAreas = [careers, ...areas];
+    let mergeCareersAreas = [...careers, ...areas];
 
     query += ` and ( cvu.criterion_value_id in ( `;
     mergeCareersAreas.forEach(cv => query += `${cv},`);
