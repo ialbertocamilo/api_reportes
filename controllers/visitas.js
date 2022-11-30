@@ -11,7 +11,7 @@ const {
   getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
 } = require('../helper/Usuarios')
 const moment = require('moment')
-const { pluck } = require('../helper/Helper')
+const { pluck,logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { con } = require('../db')
 
@@ -19,11 +19,13 @@ let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
+  'TIpo curso',
   'Tema',
   'Visitas'
 ]
 
-async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, careers, areas, tipocurso, start, end }) {
+async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
+  careers, areas, tipocurso, start, end }) {
   // Generate Excel file header
 
   console.log({careers, areas, tipocurso});
@@ -78,6 +80,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
     cellRow.push(user.school_name)
     cellRow.push(user.course_name)
+    cellRow.push(user.course_type)
     cellRow.push(user.topic_name)
     cellRow.push(user.views)
 
@@ -106,7 +109,8 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithVisits (
-  workspaceId, modulesIds, activeUsers, inactiveUsers, careers, areas, tipocurso, start, end
+  workspaceId, modulesIds, activeUsers, inactiveUsers,
+  careers, areas, tipocurso, start, end
 ) {
   // Base query
 
@@ -143,7 +147,6 @@ async function loadUsersWithVisits (
     // query += ' and cv.value_text = :jobPosition';
     let mergeCareersAreas = [...careers, ...areas];
 
-    console.log(mergeCareersAreas);
     query += ` and ( cvu.criterion_value_id in ( `;
     mergeCareersAreas.forEach(cv => query += `${cv},`);
     query = query.slice(0, -1);
@@ -155,10 +158,11 @@ async function loadUsersWithVisits (
     query += userCondition;
   }
 
-  // Add type_course and dates at ('created_at')
+  // Add type_course 
   if(tipocurso) query +=  ` and tx.code = 'free'` 
-  if(start) query += ` and date(sc.created_at) >= '${start}'`
-  if(end) query += ` and date(sc.created_at) <= '${end}'`
+
+  // if(start) query += ` and date(sc.created_at) >= '${start}'`
+  // if(end) query += ` and date(sc.created_at) <= '${end}'`
 
   /*if (start && end) {
     query += ` and (
@@ -173,6 +177,7 @@ async function loadUsersWithVisits (
 
   // Execute query
 
+  logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }

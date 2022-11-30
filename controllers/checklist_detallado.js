@@ -19,6 +19,7 @@ const headers = [
   'Nombre (entrenador)',
   'Escuela',
   'Curso',
+  'Tipo Curso',
   'Checklist',
   'Avance de Checklist',
  // 'Estado de entrenador de usuario'
@@ -91,6 +92,7 @@ async function generateReport ({
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
     cellRow.push(user.school_name)
+    cellRow.push(user.course_type)
     cellRow.push(user.course_name)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
@@ -129,6 +131,7 @@ async function loadUsersCheckists (
           trainers.document trainer_document,
           s.name school_name,
           c.name course_name,
+          tx.name as course_type,
           checklists.title checklists_title,
           count(checklist_id) assigned_checklists,
           sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
@@ -140,16 +143,35 @@ async function loadUsersCheckists (
               inner join users u on u.id = ca.student_id
               inner join schools s on s.id = ca.school_id
               inner join courses c on c.id = ca.course_id
+              inner join taxonomies tx on tx.id = c.type_id
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
-      
-      where
+  `
+
+  const staticCondition = `where
           u.active = 1 and
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
           ca.school_id = :schoolId and
           ca.course_id = :courseId and
           ca.checklist_id = :checklistId
-  `
+  `;
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+
+    query += staticCondition;
+
+    query += ` and ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+
+  } else {
+    query += userCondition;
+  }
 
   // Add user conditions and group sentence
 
