@@ -243,8 +243,8 @@ async function loadUsersWithCoursesAndTopics (
 
   // Add type_course and dates at ('created_at')
   if(tipocurso) query +=  ` and tx.code = 'free'` 
-  if(start) query += ` and date(st.created_at) >= '${start}'`
-  if(end) query += ` and date(st.created_at) <= '${end}'`
+  if(start) query += ` and date(st.updated_at) >= '${start}'`
+  if(end) query += ` and date(st.updated_at) <= '${end}'`
 
   // Add condition for schools ids
 
