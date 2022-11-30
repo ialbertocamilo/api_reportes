@@ -1,4 +1,5 @@
 const { con } = require("../db");
+const { uniqueElements } = require("./Helper");
 /**
  * Filter user course status using its id, and return its name
  * @param userCourseStatuses
@@ -77,24 +78,37 @@ exports.getTopicStatusName = (userTopicStatuses, statusId) => {
 };
 
 /**
- * Get the id of the supported courses
+ * Get the id of the compatibles courses
  * @param course_id
  */
 exports.loadCompatiblesId = async (course_id) => {
-  const [rows] = await con.raw(
+  const [rows_a] = await con.raw(
     `
         select 
-            c_b.id
+          comp.course_a_id as id
         from 
             compatibilities comp
-                left outer join courses c_a on c_a.id = comp.course_a_id 
+                join courses c_a on c_a.id = comp.course_a_id 
                             and c_a.active = 1
-                left outer join courses c_b on c_b.id = comp.course_b_id 
-                            and c_b.active = 1
         where 
-          c_a.id = ${course_id} or c_b.id = ${course_id}
+          comp.course_b_id = ${course_id}
     `
   );
 
-  return rows;
+  const [rows_b] = await con.raw(
+    `
+    select 
+      comp.course_b_id as id
+    from 
+        compatibilities comp
+            join courses c_b on c_b.id = comp.course_b_id 
+                        and c_b.active = 1
+    where 
+      comp.course_a_id = ${course_id}
+    `
+  );
+
+  const rows = [...rows_a, ...rows_b];
+
+  return uniqueElements(rows);
 };

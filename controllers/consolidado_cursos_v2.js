@@ -27,6 +27,7 @@ const {
 const {
   loadUsersCriteriaValues,
   getUserCriterionValues,
+  getUserCriterionValues2,
 } = require("../helper/Usuarios");
 const { getSuboworkspacesIds } = require("../helper/Workspace");
 
@@ -93,12 +94,10 @@ async function generateSegmentationReport({
       inactiveUsers
     );
 
-    console.log({ users_count: users.length });
-
-    const usersCriterionValues = await loadUsersCriteriaValues(
-      modulos,
-      pluck(users, "id")
-    );
+    // const usersCriterionValues = await loadUsersCriteriaValues(
+    //   modulos,
+    //   pluck(users, "id")
+    // );
 
     const users_null = users.filter((us) => us.grade_average == null);
     const users_not_null = users.filter((us) => us.grade_average != null);
@@ -131,17 +130,26 @@ async function generateSegmentationReport({
           continue;
         }
 
-        const { name, lastname, surname, document, email, active, last_login } =
+        const { id, name, lastname, surname, document, email, active, last_login } =
           user;
         const {
           school_name,
           course_name,
           grade_average,
           advanced_percentage,
-          status_id,
+          course_status_id,
+          course_passed, 
+          assigned,
+          completed,
+          taken,
+          reviewed,
+          last_time_evaluated_at,
+          course_restarts,
+          course_views
         } = sc_compatible;
 
         const temp = {
+          id,
           name,
           lastname,
           surname,
@@ -154,7 +162,15 @@ async function generateSegmentationReport({
           course_name,
           grade_average,
           advanced_percentage,
-          status_id,
+          course_status_id,
+          course_passed, 
+          assigned,
+          completed,
+          taken,
+          reviewed,
+          last_time_evaluated_at,
+          course_restarts,
+          course_views,
           compatible: `Es compatible con el curso : ${course_name}.`,
         };
 
@@ -173,20 +189,12 @@ async function generateSegmentationReport({
       cellRow.push(user.active === 1 ? "Activo" : "Inactivo");
       cellRow.push(user.email);
 
-      const userValues = getUserCriterionValues(
+      // const userValues = getUserCriterionValues(
+      const userValues = await getUserCriterionValues2(
         user.id,
-        workspaceCriteriaNames,
-        usersCriterionValues
+        workspaceCriteriaNames
       );
       userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
-
-      // cellRow.push(course.school_name);
-      // cellRow.push(course.course_name);
-      // cellRow.push(user.grade_average || "-");
-      // cellRow.push(
-      //   user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
-      // );
-      // cellRow.push(user_status.name);
 
       const passed = user.course_passed || 0;
       const taken = user.taken || 0;

@@ -147,14 +147,14 @@ exports.loadUsersSegmentedv2 = async (
 
     const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
     const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
-    console.log({
-      queryJoin,
-      start_date_query,
-      end_date_query,
-      modules_query,
-      user_active_query,
-      user_inactive_query,
-    });
+    // console.log({
+    //   queryJoin,
+    //   start_date_query,
+    //   end_date_query,
+    //   modules_query,
+    //   user_active_query,
+    //   user_inactive_query,
+    // });
 
     const [rows] = await con.raw(`
         select 
@@ -162,7 +162,9 @@ exports.loadUsersSegmentedv2 = async (
 
             sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at,
             sc.views as course_views, sc.passed as course_passed, sc.assigned, sc.completed,
-            sc.last_time_evaluated_at, sc.restarts, sc.taken, sc.reviewed
+            sc.last_time_evaluated_at, sc.restarts, sc.taken, sc.reviewed,
+
+            sc.status_id as course_status_id
 
         from users u
         
@@ -171,6 +173,8 @@ exports.loadUsersSegmentedv2 = async (
             inner join criterion_value_user cvu on cvu.user_id = u.id
             inner join criterion_values cv on cv.id = cvu.criterion_value_id
             inner join criteria c on c.id = cv.criterion_id
+
+            LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
 
         ${join_criterions_values_user} 
 
