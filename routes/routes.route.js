@@ -9,6 +9,7 @@ router.get('/', async (req, res) => {
 })
 
 router.post('/notas_usuario', handler.notasUsuario)
+router.post('/historial_usuario', handler.historialUsuario)
 router.post('/usuarios', handler.usuarios)
 router.post('/consolidado_cursos', handler.consolidadoCursos)
 

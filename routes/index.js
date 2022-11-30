@@ -23,6 +23,16 @@ module.exports = {
       children.kill()
     })
   },
+  // * Historial usuario
+  historialUsuario ({ body }, res) {
+    const children = fork('./controllers/historial_usuario.js')
+    children.send(body)
+
+    children.on('message', datos => {
+      res.send(datos)
+      children.kill()
+    })
+  },
   segmentation({body},res){
     const children = fork('./controllers/segmentation.js')
     children.send(body)
