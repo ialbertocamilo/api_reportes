@@ -11,6 +11,9 @@ router.get('/', async (req, res) => {
 router.post('/notas_usuario', handler.notasUsuario)
 router.post('/usuarios', handler.usuarios)
 router.post('/consolidado_cursos', handler.consolidadoCursos)
+
+router.post('/segmentation', handler.segmentation)
+
 router.post('/consolidado_temas', handler.consolidadoTemas)
 router.post('/avance_curricula', handler.avanceCurricula)
 router.post('/visitas', handler.visitas)

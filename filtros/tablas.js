@@ -87,7 +87,7 @@ module.exports = {
         c.*
       from courses c inner join course_school cs on c.id = cs.course_id
       where cs.school_id = :schoolId and 
-            c.active = 1
+            c.active = 1 and c.deleted_at is null
     `, { schoolId }
     )
     return rows
@@ -98,6 +98,9 @@ module.exports = {
    * @returns {Promise<*>}
    */
   async loadCoursesFromSchools(schoolsId) {
+    if(schoolsId.length == 0){
+      return []
+    }
     const [rows] = await con.raw(`
       select
         c.*
@@ -209,6 +212,7 @@ module.exports = {
       inner join course_school as cs
         on c.id = cs.course_id
       where 
+        c.deleted_at is null and
         cs.school_id in(:schoolIds)
         ${SqlState}
     `, { schoolIds });
