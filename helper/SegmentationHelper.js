@@ -105,7 +105,7 @@ exports.loadUsersSegmentedv2 = async (
     "get_array"
   );
   let users = [];
-  for (segment of segments_groupby) {
+  for (let segment of segments_groupby) {
     const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
     let join_criterions_values_user = "";
     grouped.forEach((values, idx) => {
@@ -148,6 +148,7 @@ exports.loadUsersSegmentedv2 = async (
     const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
     const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
     // console.log({
+    //   join_criterions_values_user,
     //   queryJoin,
     //   start_date_query,
     //   end_date_query,

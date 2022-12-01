@@ -80,6 +80,7 @@ async function generateSegmentationReport({
   }
 
   let users_to_export = [];
+
   //Load Courses
   const courses = await loadCourses({ cursos, escuelas });
   const coursesStatuses = await loadCoursesStatuses();
@@ -94,18 +95,20 @@ async function generateSegmentationReport({
       inactiveUsers
     );
 
-    // const usersCriterionValues = await loadUsersCriteriaValues(
-    //   modulos,
-    //   pluck(users, "id")
-    // );
+    console.log({
+      course: course.course_name,
+      usuarios: users.length,
+      users: pluck(users, "id"),
+    });
 
-    const users_null = users.filter((us) => us.grade_average == null);
-    const users_not_null = users.filter((us) => us.grade_average != null);
+    const users_null = users.filter((us) => us.created_at == null);
+    const users_not_null = users.filter((us) => us.created_at != null);
     users_to_export = users_not_null;
 
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
-    if (compatibles_courses.length > 0 && users_null.length > 0) {
+
+    if (compatibles_courses.length > 0) {
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
         pluck(compatibles_courses, "id")
@@ -130,22 +133,30 @@ async function generateSegmentationReport({
           continue;
         }
 
-        const { id, name, lastname, surname, document, email, active, last_login } =
-          user;
+        const {
+          id,
+          name,
+          lastname,
+          surname,
+          document,
+          email,
+          active,
+          last_login,
+        } = user;
         const {
           school_name,
           course_name,
           grade_average,
           advanced_percentage,
           course_status_id,
-          course_passed, 
+          course_passed,
           assigned,
           completed,
           taken,
           reviewed,
           last_time_evaluated_at,
           course_restarts,
-          course_views
+          course_views,
         } = sc_compatible;
 
         const temp = {
@@ -163,7 +174,7 @@ async function generateSegmentationReport({
           grade_average,
           advanced_percentage,
           course_status_id,
-          course_passed, 
+          course_passed,
           assigned,
           completed,
           taken,
@@ -176,6 +187,8 @@ async function generateSegmentationReport({
 
         users_to_export.push(temp);
       }
+    } else {
+      users_to_export = [...users_not_null, ...users_null];
     }
 
     for (const user of users_to_export) {
