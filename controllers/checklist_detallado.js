@@ -147,12 +147,12 @@ async function loadUsersCheckists (
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
 
-  const staticCondition = `where
+  const staticCondition = ` where 
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
           ca.school_id = :schoolId and
           ca.course_id = :courseId and
-          ca.checklist_id = :checklistId
+          ca.checklist_id = :checklistId 
   `;
 
   if(areas.length > 0) {
@@ -190,7 +190,7 @@ async function loadUsersCheckists (
 
   // Execute query
   // logtime(query);
-
+  console.log({ checklistId, courseId, schoolId });
   const [rows] = await con.raw(query, { checklistId, courseId, schoolId })
   return rows
 }

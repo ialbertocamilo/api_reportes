@@ -21,9 +21,10 @@ const headers = [
   'Fecha'
 ]
 
-async function Reinicios ({ workspaceId, admin, start, end }) {
+async function Reinicios ({ workspaceId, admin, tipo, start, end }) {
   // Generate Excel file header
 
+  console.log({ workspaceId, admin, tipo, start, end })
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
@@ -39,7 +40,7 @@ async function Reinicios ({ workspaceId, admin, start, end }) {
   // Load users from database and generate ids array
 
   const users = await loadUsersWithRestarts(
-    workspaceId, modulos, admin, start, end
+    workspaceId, modulos, admin, tipo, start, end
   )
   const usersIds = pluck(users, 'id')
 
@@ -98,7 +99,7 @@ async function Reinicios ({ workspaceId, admin, start, end }) {
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithRestarts (
-  workspaceId, modulesIds, adminId, start, end
+  workspaceId, modulesIds, tipo, adminId, start, end
 ) {
   // Base query
 
@@ -127,9 +128,7 @@ async function loadUsersWithRestarts (
   `
 
   if (adminId) {
-    if (adminId !== 'ALL') {
-      query += ` and st.restarter_id = ${adminId}`
-    }
+    query += ` and st.restarter_id = ${adminId}`
   }
 
   if (start && end) {
@@ -143,6 +142,7 @@ async function loadUsersWithRestarts (
   query += '  group by u.id, t.id, st.id'
 
   // Execute query
+  logtime(query);
 
   const [rows] = await con.raw(query)
 

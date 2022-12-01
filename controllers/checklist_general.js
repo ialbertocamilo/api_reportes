@@ -116,13 +116,13 @@ async function loadUsersCheckists (
               inner join users u on u.id = ca.student_id
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
-  const workspaceCondition = ` where
+  const workspaceCondition = `  where
         checklists.active = 1 and
         u.subworkspace_id in (${modulos.join()}) `;
 
   if(areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
-               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id `
 
     query += workspaceCondition;
 
