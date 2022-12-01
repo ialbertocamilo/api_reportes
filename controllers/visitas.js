@@ -28,8 +28,6 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
   careers, areas, tipocurso, start, end }) {
   // Generate Excel file header
 
-  console.log({careers, areas, tipocurso});
-
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
@@ -177,7 +175,7 @@ async function loadUsersWithVisits (
 
   // Execute query
 
-  logtime(query);
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }

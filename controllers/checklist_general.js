@@ -7,7 +7,7 @@ const { worksheet, workbook, createAt, createHeaders } = require('../exceljs')
 const { response } = require('../response')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const {
   getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
 } = require('../helper/Usuarios')
@@ -23,7 +23,7 @@ const headers = [
 ]
 
 async function generateReport ({
-  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, start, end
+  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, start, end, areas
 }) {
   // Generate Excel file header
 
@@ -43,7 +43,7 @@ async function generateReport ({
 
   // Load users from database and generate ids array
 
-  const users = await loadUsersCheckists(modulos, UsuariosActivos, UsuariosInactivos, start, end)
+  const users = await loadUsersCheckists(modulos, UsuariosActivos, UsuariosInactivos, start, end, areas)
   const usersIds = pluck(users, 'id')
 
   // Load workspace user criteria
@@ -93,7 +93,7 @@ async function generateReport ({
 }
 
 async function loadUsersCheckists (
-  modulos, activeUsers, inactiveUsers, start, end
+  modulos, activeUsers, inactiveUsers, start, end, areas
 ) {
   let query = `
       select
@@ -115,12 +115,27 @@ async function loadUsersCheckists (
               inner join users trainers on ca.coach_id = trainers.id
               inner join users u on u.id = ca.student_id
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
-
-      where
-          u.active = 1 and
-          checklists.active = 1 and
-          u.subworkspace_id in (${modulos.join()})
   `
+  const workspaceCondition = ` where
+        checklists.active = 1 and
+        u.subworkspace_id in (${modulos.join()}) `;
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+
+    query += workspaceCondition;
+
+    query += ` and ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+
+  } else {
+    query += workspaceCondition;
+  }
 
   // Add user conditions and group sentence
 
@@ -135,6 +150,7 @@ async function loadUsersCheckists (
   }
 
   // Add group sentence
+  // logtime(query);
 
   query += ' group by u.id'
 

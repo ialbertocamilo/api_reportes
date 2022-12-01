@@ -12,14 +12,13 @@ exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
                 inner join workspaces w on w.id = cw.workspace_id
         where 
             w.id = :workspaceId and 
-            ${criteria_id.length>0 ? ` c.id in (${criteria_id.toString()}) and ` : ''}
+            ${criteria_id.length > 0 ? ` c.id in (${criteria_id.toString()}) and ` : ''}
             c.show_in_reports = 1 and
             w.active = 1 and
             c.active = 1
-          group by c.id
+        group by c.id
     `,
-  { workspaceId }
-  )
+  { workspaceId })
 
   return rows
 }

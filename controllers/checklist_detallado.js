@@ -7,7 +7,7 @@ const { worksheet, workbook, createAt, createHeaders } = require('../exceljs')
 const { response } = require('../response')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck, pluckUnique } = require('../helper/Helper')
+const { pluck, pluckUnique, logtime } = require('../helper/Helper')
 const {
   getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
 } = require('../helper/Usuarios')
@@ -27,10 +27,10 @@ const headers = [
 
 async function generateReport ({
   workspaceId, checklist, curso, escuela, modulos,
-  UsuariosActivos, UsuariosInactivos, start, end
+  UsuariosActivos, UsuariosInactivos, start, end, areas
 }) {
   // Generate Excel file header
-
+ 
   const headersEstaticos = await getGenericHeaders(workspaceId)
 
   // Load workspace criteria
@@ -47,7 +47,7 @@ async function generateReport ({
   // Load users from database and generate ids array
 
   const users = await loadUsersCheckists(
-    modulos, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end
+    modulos, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas
   )
   const usersIds = pluck(users, 'id')
 
@@ -92,8 +92,8 @@ async function generateReport ({
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
     cellRow.push(user.school_name)
-    cellRow.push(user.course_type)
     cellRow.push(user.course_name)
+    cellRow.push(user.course_type)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
 
@@ -116,7 +116,7 @@ async function generateReport ({
 }
 
 async function loadUsersCheckists (
-  modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end
+  modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas
 ) {
   let query = `
       select
@@ -148,7 +148,6 @@ async function loadUsersCheckists (
   `
 
   const staticCondition = `where
-          u.active = 1 and
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
           ca.school_id = :schoolId and
@@ -170,7 +169,7 @@ async function loadUsersCheckists (
     query += `) `;
 
   } else {
-    query += userCondition;
+    query += staticCondition;
   }
 
   // Add user conditions and group sentence
@@ -190,6 +189,7 @@ async function loadUsersCheckists (
   query += ' group by s.id, c.id, u.id'
 
   // Execute query
+  // logtime(query);
 
   const [rows] = await con.raw(query, { checklistId, courseId, schoolId })
   return rows
