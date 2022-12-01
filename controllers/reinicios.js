@@ -142,7 +142,7 @@ async function loadUsersWithRestarts (
   query += '  group by u.id, t.id, st.id'
 
   // Execute query
-  logtime(query);
+  // logtime(query);
 
   const [rows] = await con.raw(query)
 

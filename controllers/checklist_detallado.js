@@ -190,7 +190,6 @@ async function loadUsersCheckists (
 
   // Execute query
   // logtime(query);
-  console.log({ checklistId, courseId, schoolId });
   const [rows] = await con.raw(query, { checklistId, courseId, schoolId })
   return rows
 }
