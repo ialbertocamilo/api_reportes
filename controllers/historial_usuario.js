@@ -11,7 +11,7 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { findUserByDocument } = require('../helper/Usuarios')
 const { getTopicStatusName, loadTopicsStatuses } = require('../helper/CoursesTopicsHelper')
 
-async function historialUsuario ({ document }) {
+async function historialUsuario ({ document, excel }) {
   // Load user from database
 
   const user = await findUserByDocument(document)
@@ -24,10 +24,7 @@ async function historialUsuario ({ document }) {
     process.exit()
   }
 
-  // When user has no summary courses,
-  // stop execution and return response
-
-  const [userSummaryCourses] = await con.raw(`
+  const [users] = await con.raw(`
     select group_concat(distinct (s.name) separator ', ') schools_names,
            c.name                                         course_name,
            t.name                                         topic_name,
@@ -47,7 +44,7 @@ async function historialUsuario ({ document }) {
   { userId: user.id }
   )
 
-  if (!userSummaryCourses.length) {
+  if (!users.length) {
     process.send({ alert: `El usuario con el documento ${document} no tiene evaluaciones desarrolladas` })
     process.exit()
   }
@@ -59,21 +56,23 @@ async function historialUsuario ({ document }) {
   // Generate results
 
   const courseResults = []
-  for (const summaryCourse of userSummaryCourses) {
-
+  for (const user of users) {
     const courseObj = {}
 
-    courseObj.schools_names = summaryCourse.schools_names
-    courseObj.course_name = summaryCourse.course_name
-    courseObj.topic_name = summaryCourse.topic_name
-    courseObj.grade = summaryCourse.grade ?? '-'
-    courseObj.topic_status = getTopicStatusName(userTopicsStatuses, summaryCourse.topic_status_id)
+    courseObj.schools_names = user.schools_names
+    courseObj.course_name = user.course_name
+    courseObj.topic_name = user.topic_name
+    courseObj.grade = user.topic_grade ?? '-'
+    courseObj.topic_status = getTopicStatusName(userTopicsStatuses, user.topic_status_id)
 
     courseResults.push(courseObj)
   }
 
-  jsonResponse(user, courseResults)
-  // excelResponse(courseResults)
+  if (excel) {
+    await excelResponse(courseResults)
+  } else {
+    await jsonResponse(user, courseResults)
+  }
 }
 
 async function jsonResponse (user, courseResults) {
