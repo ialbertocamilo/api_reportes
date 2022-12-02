@@ -119,10 +119,9 @@ async function loadUsersWithVisits (
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
-        st.views 
-        
-    from users u
-       inner join workspaces w on u.subworkspace_id = w.id
+        st.views `
+
+  let defaultInner =` inner join workspaces w on u.subworkspace_id = w.id
        inner join summary_topics st on u.id = st.user_id
        inner join topics t on t.id = st.topic_id
        inner join summary_courses sc on u.id = sc.user_id
@@ -130,29 +129,32 @@ async function loadUsersWithVisits (
        inner join taxonomies tx on tx.id = c.type_id
        inner join course_school cs on c.id = cs.course_id
        inner join schools s on cs.school_id = s.id
-       inner join school_workspace sw on s.id = sw.school_id
-      
-  `
+       inner join school_workspace sw on s.id = sw.school_id`
+    
   const userCondition = ` where u.subworkspace_id in (${modulesIds.join()}) and
       sw.workspace_id = ${workspaceId} `;
 
-  if(careers.length > 0 || areas.length > 0) {
-
-    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
-               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
+  let mergeCareersAreas = [...careers, ...areas];
+  if(stateCareerArea) {
+    query += ` , group_concat(cvu.criterion_value_id separator ', ') as stack_criterion_value_id 
+              from criterion_value_user cvu 
+              inner join users u on cvu.user_id = u.id 
+              ${defaultInner} `
+    query += ` inner join summary_users su on u.id = su.user_id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id `
     query += userCondition
 
     // query += ' and cv.value_text = :jobPosition';
-    let mergeCareersAreas = [...careers, ...areas];
-
     query += ` and ( cvu.criterion_value_id in ( `;
     mergeCareersAreas.forEach(cv => query += `${cv},`);
     query = query.slice(0, -1);
-
     query += `) `;
     query += `) `;
 
   } else {
+    query +=  ` from users u `
+    query += defaultInner;
     query += userCondition;
   }
 
@@ -171,8 +173,12 @@ async function loadUsersWithVisits (
   // Add user conditions and group sentence
 
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
-  query += '  group by  u.id, t.id, st.id'
+  query += '  group by  u.id, t.id, st.id ';
 
+  if(stateCareerArea) {
+    const mergeIds = mergeCareersAreas.join(', ');
+    query += ` having stack_criterion_value_id = '${mergeIds}' `
+  }
   // Execute query
 
   // logtime(query);

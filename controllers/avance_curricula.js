@@ -105,29 +105,41 @@ async function loadUsersWithProgress (
 
   const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
 
-  if(careers.length > 0 || areas.length > 0) {
+  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
+  let mergeCareersAreas = [...careers, ...areas];
 
-    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+  if(stateCareerArea) {
+    query = ` select u.*, su.courses_assigned, su.courses_completed, su.advanced_percentage,
+                        group_concat(cvu.criterion_value_id separator ', ') as 
+                        stack_criterion_value_id 
+
+                        from criterion_value_user cvu 
+                         inner join users u on cvu.user_id = u.id `
+
+    query += ` inner join summary_users su on u.id = su.user_id
                inner join criterion_values cv on cvu.criterion_value_id = cv.id`
     query += userCondition
 
     // query += ' and cv.value_text = :jobPosition';
-    let mergeCareersAreas = [...careers, ...areas];
-
     query += ` and ( cvu.criterion_value_id in ( `;
     mergeCareersAreas.forEach(cv => query += `${cv},`);
     query = query.slice(0, -1);
-
     query += `) `;
     query += `) `;
 
   } else {
     query += userCondition;
   }
+
   // Add user conditions and group sentence
 
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers);
   query += ' group by u.id';
+
+  if(stateCareerArea) {
+    const mergeIds = mergeCareersAreas.join(', ');
+    query += ` having stack_criterion_value_id = '${mergeIds}' `
+  }
 
   // logtime(query);
   // Execute query
