@@ -34,9 +34,10 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
   // Load records from database
 
   const users = await getUsersCareersAreas(modulos, UsuariosActivos, UsuariosInactivos, careers, areas)
+  const usersIds = pluck(users, 'id')
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
-  const usersCriteriaValues = await loadUsersCriteriaValues(modulos)
+  const usersCriteriaValues = await loadUsersCriteriaValues(modulos, usersIds)
 
   // Generate headers adding workspace criteria to default header columns
 
