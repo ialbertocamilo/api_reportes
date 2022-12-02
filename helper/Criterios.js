@@ -3,7 +3,8 @@ const { logtime } = require('./Helper')
 
 exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
   logtime('method: getWorkspaceCriteria')
-  const [rows] = await con.raw(`
+
+  let query = `
         select 
             c.*
         from 
@@ -17,8 +18,10 @@ exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
             w.active = 1 and
             c.active = 1
         group by c.id
-    `,
-  { workspaceId })
+    `
+  // logtime(query)
+
+  const [rows] = await con.raw(query, { workspaceId })
 
   return rows
 }

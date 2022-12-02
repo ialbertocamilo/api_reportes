@@ -23,7 +23,7 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
 }
 
 exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
-  let query = `select * from users u `;
+  let query = `select u.* from users u `;
   const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
 
   if(careers.length > 0 || areas.length > 0) {
@@ -117,7 +117,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
   // Add sorting order
 
   query += 'group by u.id,cv.criterion_id order by cv.id'
-
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }
