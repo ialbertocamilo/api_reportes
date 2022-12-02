@@ -10,8 +10,9 @@ const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { findUserByDocument } = require('../helper/Usuarios')
 const { getTopicStatusName, loadTopicsStatuses } = require('../helper/CoursesTopicsHelper')
+const { generatePagination } = require('../helper/Helper')
 
-async function historialUsuario ({ document, excel }) {
+async function historialUsuario ({ document, type, page }) {
   // Load user from database
 
   const user = await findUserByDocument(document)
@@ -24,27 +25,32 @@ async function historialUsuario ({ document, excel }) {
     process.exit()
   }
 
-  const [users] = await con.raw(`
-    select group_concat(distinct (s.name) separator ', ') schools_names,
-           c.name                                         course_name,
-           t.name                                         topic_name,
-           st.grade                                       topic_grade,
-           st.status_id                                   topic_status_id
+  // Load user's history from database
 
-    from users u
-             inner join summary_topics st on u.id = st.user_id
-             inner join topics t on t.id = st.topic_id
-             inner join courses c on t.course_id = c.id
-             inner join course_school cs on c.id = cs.course_id
-             inner join schools s on cs.school_id = s.id
+  let userHistory = []
+  let pagination
+  if (type === 'paginated') {
 
-    where u.id = :userId
-    group by u.id, st.topic_id
-    `,
-  { userId: user.id }
-  )
+    const countQuery = `select count(*) total from (${generateQuery()}) u`
+    const [count] = await con.raw(countQuery,
+      { userId: user.id }
+    )
 
-  if (!users.length) {
+    const total = count[0]['total'] || 0
+    pagination = generatePagination(total, 16, page)
+    const [rows] = await con.raw(generateQuery(pagination),
+      { userId: user.id }
+    )
+    console.log(generateQuery(pagination));
+    userHistory = rows
+  } else {
+    const [rows] = await con.raw(generateQuery(),
+      { userId: user.id }
+    )
+    userHistory = rows
+  }
+
+  if (!userHistory.length) {
     process.send({ alert: `El usuario con el documento ${document} no tiene evaluaciones desarrolladas` })
     process.exit()
   }
@@ -56,7 +62,7 @@ async function historialUsuario ({ document, excel }) {
   // Generate results
 
   const courseResults = []
-  for (const user of users) {
+  for (const user of userHistory) {
     const courseObj = {}
 
     courseObj.schools_names = user.schools_names
@@ -68,14 +74,16 @@ async function historialUsuario ({ document, excel }) {
     courseResults.push(courseObj)
   }
 
-  if (excel) {
+  // Generate response according the report's type
+
+  if (type === 'excel') {
     await excelResponse(courseResults)
   } else {
-    await jsonResponse(user, courseResults)
+    await jsonResponse(user, courseResults, pagination)
   }
 }
 
-async function jsonResponse (user, courseResults) {
+async function jsonResponse (user, courseResults, pagination) {
   // Load user module
 
   const modules = await con('workspaces')
@@ -83,12 +91,19 @@ async function jsonResponse (user, courseResults) {
 
   process.send({
     courses: courseResults,
+    pagination: pagination || {},
     user: {
       user, module: modules[0]
     }
   })
 }
 
+/**
+ * Generate Excel file and make a response with its data
+ *
+ * @param courseResults
+ * @returns {Promise<void>}
+ */
 async function excelResponse (courseResults) {
   await createHeaders(['Escuelas', 'Curso', 'Tema', 'Nota', 'Estado'])
   for (const course of courseResults) {
@@ -110,4 +125,36 @@ async function excelResponse (courseResults) {
   } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
+}
+
+/**
+ * Generate SQL query for report
+ * @param pagination
+ * @returns {string}
+ */
+function generateQuery (pagination = null) {
+  let limit = ''
+  if (pagination) {
+    limit = `limit ${pagination.startIndex}, ${pagination.perPage}`
+  }
+
+  return `
+    select
+        group_concat(distinct (s.name) separator ', ') schools_names,
+        c.name                                         course_name,
+        t.name                                         topic_name,
+        st.grade                                       topic_grade,
+        st.status_id                                   topic_status_id
+    
+    from users u
+             inner join summary_topics st on u.id = st.user_id
+             inner join topics t on t.id = st.topic_id
+             inner join courses c on t.course_id = c.id
+             inner join course_school cs on c.id = cs.course_id
+             inner join schools s on cs.school_id = s.id
+
+    where u.id = :userId
+    group by u.id, st.topic_id
+    ${limit}
+   `
 }
