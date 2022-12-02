@@ -8,7 +8,7 @@ const { con } = require('../db')
 const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const { getUserCriterionValues, loadUsersCriteriaValues } = require('../helper/Usuarios')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 const headers = [
@@ -24,7 +24,7 @@ const headers = [
 async function Reinicios ({ workspaceId, admin, tipo, start, end }) {
   // Generate Excel file header
 
-  console.log({ workspaceId, admin, tipo, start, end })
+  // console.log({ workspaceId, admin, tipo, start, end })
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
@@ -99,7 +99,7 @@ async function Reinicios ({ workspaceId, admin, tipo, start, end }) {
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithRestarts (
-  workspaceId, modulesIds, tipo, adminId, start, end
+  workspaceId, modulesIds, adminId, tipo, start, end
 ) {
   // Base query
 

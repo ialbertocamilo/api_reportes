@@ -25,20 +25,20 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
 exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
   let query = `select u.* from users u `;
   const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
+  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
+  let mergeCareersAreas = [...careers, ...areas];
 
-  if(careers.length > 0 || areas.length > 0) {
-
-    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+  if(stateCareerArea) {
+    query = ` select u.*, group_concat(cvu.criterion_value_id separator ', ') as 
+                         stack_criterion_value_id from criterion_value_user cvu `
+    query += ` inner join users u on cvu.user_id = u.id
                inner join criterion_values cv on cvu.criterion_value_id = cv.id`
     query += userCondition
 
     // query += ' and cv.value_text = :jobPosition';
-    let mergeCareersAreas = [...careers, ...areas];
-
     query += ` and ( cvu.criterion_value_id in ( `;
     mergeCareersAreas.forEach(cv => query += `${cv},`);
     query = query.slice(0, -1);
-
     query += `) `;
     query += `) `;
 
@@ -52,6 +52,13 @@ exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, ca
   
   if (modulesIds && !activeUsers && inactiveUsers) {
     query += ` and u.active = 0`;
+  }
+
+  query += ` group by u.id`;
+
+  if(stateCareerArea) {
+    const mergeIds = mergeCareersAreas.join(', ');
+    query += ` having stack_criterion_value_id = '${mergeIds}' `
   }
 
   // logtime(query);
