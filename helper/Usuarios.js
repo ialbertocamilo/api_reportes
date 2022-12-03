@@ -22,44 +22,66 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   }
 }
 
-exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
-  let query = `select u.* from users u `;
-  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
-  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
-  let mergeCareersAreas = [...careers, ...areas];
+const innerCriterionValueUser = (careers, areas, queryCondition) => {
+  let query = `, group_concat(cvu.criterion_value_id separator ', ') as stack_ids_cvu
+            from users u 
+            inner join criterion_value_user cvu on cvu.user_id = u.id
+            inner join criterion_values cv on cvu.criterion_value_id = cv.id `
 
-  if(stateCareerArea) {
-    query = ` select u.*, group_concat(cvu.criterion_value_id separator ', ') as 
-                         stack_criterion_value_id from criterion_value_user cvu `
-    query += ` inner join users u on cvu.user_id = u.id
-               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
-    query += userCondition
+  query += queryCondition
+  const MergeCareersAreas = [...careers, ...areas];
+    
+  query += ` and ( cvu.criterion_value_id in ( `;
+  MergeCareersAreas.forEach(cv => query += `${cv},`);
+  query = query.slice(0, -1);
+  query += ` ) ) `;
 
-    // query += ' and cv.value_text = :jobPosition';
-    query += ` and ( cvu.criterion_value_id in ( `;
-    mergeCareersAreas.forEach(cv => query += `${cv},`);
-    query = query.slice(0, -1);
-    query += `) `;
-    query += `) `;
+  return query;
+}
 
-  } else {
-    query += userCondition;
+const havingProccessValueUser = (careers, areas) => {
+  const CountCareers = careers.length;
+  const CountAreas = areas.length;
+
+  let stackCareer = [];
+  
+  for (let i = 0; i < CountCareers; i++) {
+    const career_v = careers[i];
+
+    if(CountAreas) {
+      let stackArea = []
+      for (let x = 0; x < CountAreas; x++) {
+        const area_v = areas[x];
+        stackArea.push(`'${career_v}, ${area_v}'`);
+      }
+      stackCareer.push(stackArea);
+    } else stackCareer.push(`'${career_v}'`);
+
   }
+
+  return ` having stack_ids_cvu in (${stackCareer.join(', ')}) `;
+} 
+
+exports.havingProccessValueUser = havingProccessValueUser;
+exports.innerCriterionValueUser = innerCriterionValueUser;
+
+exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
+  let query = ` select u.* `;
+  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
+
+  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
+  if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);
+  else query += ` from users u ${userCondition} `;
 
   if (modulesIds && activeUsers && !inactiveUsers) {
     query += ` and u.active = 1`;
   } 
-  
   if (modulesIds && !activeUsers && inactiveUsers) {
     query += ` and u.active = 0`;
   }
-
   query += ` group by u.id`;
 
-  if(stateCareerArea) {
-    const mergeIds = mergeCareersAreas.join(', ');
-    query += ` having stack_criterion_value_id = '${mergeIds}' `
-  }
+  if(stateCareerArea) query += havingProccessValueUser(careers, areas);  
 
   // logtime(query);
 
