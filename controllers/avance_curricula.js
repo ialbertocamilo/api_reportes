@@ -5,7 +5,8 @@ require('../error')
 const { con } = require('../db')
 const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
-const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition } = require('../helper/Usuarios')
+const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition,
+        innerCriterionValueUser, havingProccessValueUser } = require('../helper/Usuarios')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
@@ -94,52 +95,22 @@ async function loadUsersWithProgress (
 ) {
   // Base query
 
-  let query = `
-    select 
-        u.*, 
-        su.courses_assigned,
-        su.courses_completed,
-        su.advanced_percentage
-    from users u
-        inner join summary_users su on u.id = su.user_id`;
+  let query = ` select u.*, 
+                  su.courses_assigned,
+                  su.courses_completed,
+                  su.advanced_percentage `;
 
-  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
-
+  const userCondition = ` inner join summary_users su on u.id = su.user_id
+                          where u.subworkspace_id in (${modulesIds.join()}) `; 
   const stateCareerArea = (careers.length > 0 || areas.length > 0); 
-  let mergeCareersAreas = [...careers, ...areas];
-
-  if(stateCareerArea) {
-    query = ` select u.*, su.courses_assigned, su.courses_completed, su.advanced_percentage,
-                        group_concat(cvu.criterion_value_id separator ', ') as 
-                        stack_criterion_value_id 
-
-                        from criterion_value_user cvu 
-                         inner join users u on cvu.user_id = u.id `
-
-    query += ` inner join summary_users su on u.id = su.user_id
-               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
-    query += userCondition
-
-    // query += ' and cv.value_text = :jobPosition';
-    query += ` and ( cvu.criterion_value_id in ( `;
-    mergeCareersAreas.forEach(cv => query += `${cv},`);
-    query = query.slice(0, -1);
-    query += `) `;
-    query += `) `;
-
-  } else {
-    query += userCondition;
-  }
+  if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);
+  else query += ` from users u ${userCondition}`;
 
   // Add user conditions and group sentence
-
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers);
   query += ' group by u.id';
 
-  if(stateCareerArea) {
-    const mergeIds = mergeCareersAreas.join(', ');
-    query += ` having stack_criterion_value_id = '${mergeIds}' `
-  }
+  if(stateCareerArea) query += havingProccessValueUser(careers, areas);  
 
   // logtime(query);
   // Execute query

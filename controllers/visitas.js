@@ -7,9 +7,8 @@ process.on('message', (requestData) => {
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const {
-  getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
-} = require('../helper/Usuarios')
+const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition, getUsersCareersAreas,
+        innerCriterionValueUser, havingProccessValueUser } = require('../helper/Usuarios')
 const moment = require('moment')
 const { pluck,logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
@@ -111,58 +110,40 @@ async function loadUsersWithVisits (
   careers, areas, tipocurso, start, end
 ) {
   // Base query
+  const InitialUsers = await getUsersCareersAreas(modulesIds, activeUsers, inactiveUsers, careers, areas);
+  const InitialUsersIds = pluck(InitialUsers, 'id');
+
+  if(!InitialUsersIds.length) return []; 
+  // logtime(InitialUsersIds);
 
   let query = `
     select 
+        
         u.*,
         tx.name as course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
-        st.views `
+        st.views 
 
-  let defaultInner =` inner join workspaces w on u.subworkspace_id = w.id
-       inner join summary_topics st on u.id = st.user_id
-       inner join topics t on t.id = st.topic_id
-       inner join summary_courses sc on u.id = sc.user_id
-       inner join courses c on t.course_id = c.id
-       inner join taxonomies tx on tx.id = c.type_id
-       inner join course_school cs on c.id = cs.course_id
-       inner join schools s on cs.school_id = s.id
-       inner join school_workspace sw on s.id = sw.school_id`
-    
-  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()}) and
+      from users u
+
+      inner join workspaces w on u.subworkspace_id = w.id
+      inner join summary_topics st on u.id = st.user_id
+      inner join topics t on t.id = st.topic_id
+      inner join summary_courses sc on u.id = sc.user_id
+      inner join courses c on t.course_id = c.id
+      inner join taxonomies tx on tx.id = c.type_id
+      inner join course_school cs on c.id = cs.course_id
+      inner join schools s on cs.school_id = s.id
+      inner join school_workspace sw on s.id = sw.school_id
+
+      where 
+      u.id in (${InitialUsersIds.join()}) and 
       sw.workspace_id = ${workspaceId} `;
-
-  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
-  let mergeCareersAreas = [...careers, ...areas];
-  if(stateCareerArea) {
-    query += ` , group_concat(cvu.criterion_value_id separator ', ') as stack_criterion_value_id 
-              from criterion_value_user cvu 
-              inner join users u on cvu.user_id = u.id 
-              ${defaultInner} `
-    query += ` inner join summary_users su on u.id = su.user_id
-               inner join criterion_values cv on cvu.criterion_value_id = cv.id `
-    query += userCondition
-
-    // query += ' and cv.value_text = :jobPosition';
-    query += ` and ( cvu.criterion_value_id in ( `;
-    mergeCareersAreas.forEach(cv => query += `${cv},`);
-    query = query.slice(0, -1);
-    query += `) `;
-    query += `) `;
-
-  } else {
-    query +=  ` from users u `
-    query += defaultInner;
-    query += userCondition;
-  }
 
   // Add type_course 
   if(tipocurso) query +=  ` and tx.code = 'free'` 
-
-  // if(start) query += ` and date(sc.created_at) >= '${start}'`
-  // if(end) query += ` and date(sc.created_at) <= '${end}'`
 
   /*if (start && end) {
     query += ` and (
@@ -171,16 +152,10 @@ async function loadUsersWithVisits (
   }*/
 
   // Add user conditions and group sentence
-
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
   query += '  group by  u.id, t.id, st.id ';
 
-  if(stateCareerArea) {
-    const mergeIds = mergeCareersAreas.join(', ');
-    query += ` having stack_criterion_value_id = '${mergeIds}' `
-  }
   // Execute query
-
   // logtime(query);
   const [rows] = await con.raw(query)
   return rows
