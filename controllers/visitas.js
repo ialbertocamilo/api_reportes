@@ -7,7 +7,7 @@ process.on('message', (requestData) => {
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition,
+const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition, getUsersCareersAreas,
         innerCriterionValueUser, havingProccessValueUser } = require('../helper/Usuarios')
 const moment = require('moment')
 const { pluck,logtime } = require('../helper/Helper')
@@ -110,17 +110,24 @@ async function loadUsersWithVisits (
   careers, areas, tipocurso, start, end
 ) {
   // Base query
+  const InitialUsers = await getUsersCareersAreas(modulesIds, activeUsers, inactiveUsers, careers, areas);
+  const InitialUsersIds = pluck(InitialUsers, 'id');
+
+  if(!InitialUsersIds.length) return []; 
+  // logtime(InitialUsersIds);
 
   let query = `
     select 
+        
         u.*,
         tx.name as course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
-        st.views `
-    
-  const userCondition = ` 
+        st.views 
+
+      from users u
+
       inner join workspaces w on u.subworkspace_id = w.id
       inner join summary_topics st on u.id = st.user_id
       inner join topics t on t.id = st.topic_id
@@ -132,12 +139,8 @@ async function loadUsersWithVisits (
       inner join school_workspace sw on s.id = sw.school_id
 
       where 
-      u.subworkspace_id in (${modulesIds.join()}) and
+      u.id in (${InitialUsersIds.join()}) and 
       sw.workspace_id = ${workspaceId} `;
-
-  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
-  if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);
-  else query += ` from users u ${userCondition}`;
 
   // Add type_course 
   if(tipocurso) query +=  ` and tx.code = 'free'` 
@@ -149,14 +152,11 @@ async function loadUsersWithVisits (
   }*/
 
   // Add user conditions and group sentence
-
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
   query += '  group by  u.id, t.id, st.id ';
 
-  if(stateCareerArea) query += havingProccessValueUser(careers, areas);
   // Execute query
-
-  logtime(query);
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }
