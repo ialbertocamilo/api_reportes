@@ -4,6 +4,7 @@ const {
   groupArrayOfObjects,
   uniqueElements,
   pluckUnique,
+  logtime,
 } = require("./Helper");
 
 exports.loadUsersSegmented = async (course_id) => {
@@ -83,6 +84,7 @@ exports.loadUsersSegmentedv2 = async (
   // inner join `criterion_value_user` as `cvu1` on `users`.`id` = `cvu1`.`user_id` and `cvu1`.`criterion_value_id` in (?)
   // inner join `criterion_value_user` as `cvu46` on `users`.`id` = `cvu46`.`user_id` and `cvu46`.`criterion_value_id` in (?)
   // where `active` = ?
+  // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
   const segments = await con("segments_values as sv")
     .select(
       "sv.criterion_id",
@@ -171,10 +173,6 @@ exports.loadUsersSegmentedv2 = async (
         
             ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} ${start_date_query} ${end_date_query}
 
-            inner join criterion_value_user cvu on cvu.user_id = u.id
-            inner join criterion_values cv on cv.id = cvu.criterion_value_id
-            inner join criteria c on c.id = cv.criterion_id
-
             LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
 
         ${join_criterions_values_user} 
@@ -188,6 +186,8 @@ exports.loadUsersSegmentedv2 = async (
       users = [...users, ...rows];
     }
   }
+  // logtime(`FIN METHOD : [loadUsersSegmentedv2]`)
+
   return uniqueElements(users, "id");
 };
 

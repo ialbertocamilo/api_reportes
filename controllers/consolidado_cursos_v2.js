@@ -18,7 +18,7 @@ const {
   getCourseStatusName,
 } = require("../helper/CoursesTopicsHelper");
 
-const { pluck } = require("../helper/Helper");
+const { pluck, logtime } = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -85,6 +85,9 @@ async function generateSegmentationReport({
   const courses = await loadCourses({ cursos, escuelas });
   const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
+    // Load workspace user criteria
+    
+    logtime(`CURSO => ${course.course_name}`);
     // const users = await loadUsersSegmented(course.course_id);
     const users = await loadUsersSegmentedv2(
       course.course_id,
@@ -94,12 +97,13 @@ async function generateSegmentationReport({
       activeUsers,
       inactiveUsers
     );
-
-    console.log({
-      course: course.course_name,
-      usuarios: users.length,
-      users: pluck(users, "id"),
-    });
+    logtime(`[loadUsersSegmentedv2]`);
+    
+    // console.log({
+    //   course: course.course_name,
+    //   usuarios: users.length,
+    //   users: pluck(users, "id"),
+    // });
 
     const users_null = users.filter((us) => us.created_at == null);
     const users_not_null = users.filter((us) => us.created_at != null);
@@ -109,6 +113,7 @@ async function generateSegmentationReport({
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
     if (compatibles_courses.length > 0) {
+      logtime(`INICIO COMPATIBLES`);
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
         pluck(compatibles_courses, "id")
@@ -191,6 +196,14 @@ async function generateSegmentationReport({
       users_to_export = [...users_not_null, ...users_null];
     }
 
+    logtime(`FIN COMPATIBLES`);
+
+    logtime(`INICIANDO addRow`);
+
+    // const usersCriterionValues = await loadUsersCriteriaValues(
+    //   modulos,
+    //   pluck(users_to_export, 'id')
+    // );
     for (const user of users_to_export) {
       const cellRow = [];
       const lastLogin = moment(user.last_login).format("DD/MM/YYYY H:mm:ss");
@@ -203,6 +216,10 @@ async function generateSegmentationReport({
       cellRow.push(user.email);
 
       // const userValues = getUserCriterionValues(
+      //   user.id,
+      //   workspaceCriteriaNames,
+      //   usersCriterionValues
+      // );
       const userValues = await getUserCriterionValues2(
         user.id,
         workspaceCriteriaNames
@@ -237,7 +254,10 @@ async function generateSegmentationReport({
 
       worksheet.addRow(cellRow).commit();
     }
+    logtime(`FIN addRow`);
   }
+
+  logtime(`FIN Cursos`);
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
