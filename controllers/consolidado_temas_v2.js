@@ -10,7 +10,7 @@ const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
@@ -27,6 +27,7 @@ let headers = [
   'CURSO',
   'RESULTADO CURSO',
   'REINICIOS CURSO',
+  'TIPO CURSO',
   'TEMA',
   'RESULTADO TEMA',
   'ESTADO TEMA',
@@ -44,7 +45,7 @@ async function exportarUsuariosDW ({
   workspaceId,
   modulos, UsuariosActivos, UsuariosInactivos, escuelas,
   cursos, temas, revisados, aprobados, desaprobados, realizados, porIniciar,
-  temasActivos, temasInactivos, end, start, validador
+  activeTopics, inactiveTopics, end, start, validador, areas, tipocurso
 }) {
   // Generate Excel file header
 
@@ -87,7 +88,8 @@ async function exportarUsuariosDW ({
     workspaceId, userTopicsStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
-    temasActivos, temasInactivos, start, end,evaluationTypes
+    activeTopics, inactiveTopics, start, end, areas, tipocurso
+    ,evaluationTypes
   )
   const usersIds = pluck(users, 'id')
 
@@ -123,6 +125,7 @@ async function exportarUsuariosDW ({
     cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id))
 
     cellRow.push(user.course_restarts || '-')
+    cellRow.push(user.course_type || '-')
     cellRow.push(user.topic_name)
 
     cellRow.push(getTopicStatusName(userTopicsStatuses, user.topic_status_id))
@@ -178,7 +181,7 @@ async function loadUsersWithCoursesAndTopics (
   workspaceId, userTopicsStatuses,
   modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds, topicsIds,
   revisados, aprobados, desaprobados, realizados, porIniciar,
-  activeTopics, inactiveTopics, start, end,evaluationTypes
+  activeTopics, inactiveTopics, start, end, areas, tipocurso, evaluationTypes
 ) {
   // Base query
   const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
@@ -186,6 +189,7 @@ async function loadUsersWithCoursesAndTopics (
     select 
         u.*, 
         group_concat(distinct(s.name) separator ', ') school_name,
+        tx.name as course_type,
         c.name course_name,
         c.active course_active,
         sc.status_id course_status_id,
@@ -210,14 +214,37 @@ async function loadUsersWithCoursesAndTopics (
         inner join topics t on t.id = st.topic_id
         inner join summary_courses sc on u.id = sc.user_id and sc.course_id = t.course_id
         inner join courses c on t.course_id = c.id
+        inner join taxonomies tx on tx.id = c.type_id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id
         inner join school_workspace sw on s.id = sw.school_id
-    where 
-      u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId} and
-      t.type_evaluation_id = ${taxonomy.id}
   `
+  const workspaceCondition = ` where 
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} and t.type_evaluation_id = ${taxonomy.id}`
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += workspaceCondition
+
+    // query += ' and cv.value_text = :jobPosition'
+    query += ` and 
+                  ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+    
+  } else {
+    query += workspaceCondition;
+  } 
+
+  // Add type_course and dates at ('created_at')
+  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(start) query += ` and date(st.updated_at) >= '${start}'`
+  if(end) query += ` and date(st.updated_at) <= '${end}'`
 
   // Add condition for schools ids
 
@@ -248,6 +275,7 @@ async function loadUsersWithCoursesAndTopics (
   if (!activeTopics && inactiveTopics) {
     query += ' and t.active = 0'
   }
+  //logtime(query);
 
   // Get statuses ids
 
@@ -269,10 +297,6 @@ async function loadUsersWithCoursesAndTopics (
     if (porIniciar) { statusConditions.push(`st.status_id = ${porIniciarId}`) }
 
     query += ' and (' + statusConditions.join(' or ') + ')'
-  }
-
-  if (start || end) {
-
   }
 
   // Add user conditions and group sentence
