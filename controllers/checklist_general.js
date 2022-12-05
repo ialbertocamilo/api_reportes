@@ -69,9 +69,8 @@ async function generateReport ({
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Add additional values
-
     const progress = user.completed_checklists > 0
-      ? (user.assigned_checklists * 100) / user.completed_checklists
+      ? (user.completed_checklists / user.assigned_checklists) * 100
       : 0
 
     cellRow.push(user.trainer_document)
