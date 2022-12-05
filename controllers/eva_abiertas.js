@@ -12,25 +12,23 @@ const { getUserCriterionValues, loadUsersCriteriaValues,
   addActiveUsersCondition
 } = require('../helper/Usuarios')
 const moment = require('moment')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
-const headers = [
+let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
+  'Tipo curso',
   'Tema',
-  'Pregunta',
-  'Respuesta'
 ]
 
 async function exportarEvaluacionesAbiertas ({
-  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end
+  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas, start, end, areas, tipocurso
 }) {
   // Generate Excel file header
-
   const headersEstaticos = await getGenericHeaders(workspaceId)
-  await createHeaders(headersEstaticos.concat(headers))
+ 
 
   // Load workspace criteria
 
@@ -47,7 +45,7 @@ async function exportarEvaluacionesAbiertas ({
 
   const users = await loadUsersQuestions(
     workspaceId, modulos, UsuariosActivos, UsuariosInactivos,
-    escuelas, cursos, temas, start, end
+    escuelas, cursos, temas, start, end, areas, tipocurso
   )
   const usersIds = pluck(users, 'id')
 
@@ -57,8 +55,10 @@ async function exportarEvaluacionesAbiertas ({
 
   const questions = await loadQuestions(modulos)
 
-  // Add users to Excel rows
+  const { altHeaders, maxQuestions } = getCreatedHeaders(users, headers);
+  await createHeaders(headersEstaticos.concat(altHeaders));
 
+  // Add users to Excel rows
   for (const user of users) {
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
 
@@ -82,10 +82,28 @@ async function exportarEvaluacionesAbiertas ({
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
     cellRow.push(user.school_name || '-')
     cellRow.push(user.course_name || '-')
+    cellRow.push(user.course_type || '-')
     cellRow.push(user.topic_name || '-')
 
-    try {
-      const answers = user.answers // JSON.parse(user.answers)
+    // === Questions Answers FP / Others ===
+    const answers = user.answers;
+    
+    if(workspaceId === 25) {
+      const countLimit = answers ? answers.length : 0;
+      if(countLimit) {
+        const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
+
+        answers.forEach((answer, index) => {
+          if (answer) {
+            const question = questions[index];
+
+            cellRow.push(question ? strippedString(question.pregunta) : '-')
+            cellRow.push(answer ? strippedString(answer.respuesta) : '-')
+          }
+        });
+      }
+
+    } else {
       if (answers) {
         answers.forEach((answer, index) => {
           if (answer) {
@@ -93,9 +111,19 @@ async function exportarEvaluacionesAbiertas ({
             cellRow.push(question ? strippedString(question.pregunta) : '-')
             cellRow.push(answer ? strippedString(answer.respuesta) : '-')
           }
-        })
+        });
       }
-    } catch (ex) {}
+    }
+    // === Questions Answers FP / Others ===
+
+    // === if empty questions ===
+    const emptyRows = (answers) ? maxQuestions - answers.length
+                                : maxQuestions;
+    for (let i = 0; i < emptyRows; i++) {
+      cellRow.push('-');
+      cellRow.push('-');
+    }
+    // === if empty questions ===
 
     worksheet.addRow(cellRow).commit()
   }
@@ -113,12 +141,63 @@ const strippedString = (value) => {
   return value.replace(/(<([^>]+)>)/gi, '')
 }
 
+async function getQuestionsByTopic(topic_id, countLimit) {
+
+  let query = `select q.* from questions q 
+               where q.topic_id = ${topic_id} 
+               limit ${countLimit}`;
+
+  // logtime(query);
+
+  const [rows] = await con.raw(query);
+  return rows;
+}
+
+function getCreatedHeaders(users, headers){
+  
+  let maxQuestions = 0;
+
+  for (const user of users) {
+    const answers = user.answers;
+    if(answers) {
+      const countAnswers = answers.length; 
+      if(countAnswers > maxQuestions) maxQuestions = countAnswers;
+    }
+  }
+
+  // === CONDITIONAL HEADERS ===
+  const MakeLoopColumns = (num, keys) => {
+    let loopColumns = [];
+    
+    for (let i = 0; i < num; i++) {
+      let stack = [];
+      
+      for(const val of keys) {
+        let current = `${val} ${i + 1}`;        
+        stack.push(current);
+      }
+      loopColumns.push(...stack); 
+    }
+
+    return loopColumns;
+  };
+
+  const StaticKeysColumns = ['Pregunta','Respuesta']; //cols loop
+  
+  if(maxQuestions > 1) {
+    const conditionHeaders = MakeLoopColumns(maxQuestions, StaticKeysColumns);
+    headers = [...headers, ...conditionHeaders];
+
+  } else headers = [...headers, ...StaticKeysColumns]; 
+
+  return { altHeaders: headers, maxQuestions };
+  // === CONDITIONAL HEADERS ===
+}
+
 async function loadUsersQuestions (
   workspaceId, modulesIds, activeUsers, inactiveUsers,
-  schoolsIds, coursesIds, topicsIds, start, end
+  schoolsIds, coursesIds, topicsIds, start, end, areas, tipocurso
 ) {
-
-  // Load evaluation types
 
   const questionTypes = await con('taxonomies')
     .where('group', 'question')
@@ -127,29 +206,55 @@ async function loadUsersQuestions (
 
   let query = `
     select 
-        u.*, 
+        u.*,
+        tax.name as course_type, 
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
         q.pregunta,
         q.id pregunta_id,
-        st.answers
+        st.answers,
+        st.topic_id
             
       from users u
         inner join summary_topics st on u.id = st.user_id
         inner join topics t on t.id = st.topic_id
         inner join summary_courses sc on u.id = sc.user_id
         inner join courses c on t.course_id = c.id
+        inner join taxonomies tax on tax.id = c.type_id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id 
         inner join school_workspace sw on s.id = sw.school_id
         inner join questions q on t.id = q.topic_id
-      
-      where 
-        u.subworkspace_id in (${modulesIds.join()}) and
-        sw.workspace_id = ${workspaceId} and
-        q.type_id = ${type.id}
   `
+
+  const workspaceCondition = ` where 
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} and 
+      q.type_id = ${type.id} `
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += workspaceCondition
+
+    // query += ' and cv.value_text = :jobPosition'
+    query += ` and 
+                  ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    
+    query += `) `;
+  } else {
+    query += workspaceCondition;
+  } 
+
+  // Add type_course and dates at ('created_at')
+  if(tipocurso) query +=  ` and tax.code = 'free'` 
+  if(start) query += ` and date(st.updated_at) >= '${start}'`
+  if(end) query += ` and date(st.updated_at) <= '${end}'`
 
   // Add condition for schools ids
 
@@ -169,11 +274,12 @@ async function loadUsersQuestions (
     query += ` and t.id in (${topicsIds.join()})`
   }
 
+  /*
   if (start && end) {
     query += ` and (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
-  }
+  }*/
 
   // Add user conditions and group sentence
 
@@ -181,6 +287,7 @@ async function loadUsersQuestions (
   query += ' group by u.id, t.id, st.id'
 
   // Execute query
+  // logtime(query);
 
   const [rows] = await con.raw(query)
   return rows
@@ -192,8 +299,6 @@ async function loadUsersQuestions (
  * @returns {Promise<*>}
  */
 async function loadQuestions (modulesIds) {
-
-  // Load evaluation types
 
   const questionTypes = await con('taxonomies')
     .where('group', 'question')
@@ -217,6 +322,7 @@ async function loadQuestions (modulesIds) {
             group by t.id
         )
   `
+  // logtime(query)
 
   const [rows] = await con.raw(query, { typeId: type.id })
   return rows

@@ -10,7 +10,7 @@ const { response } = require('../response')
 const { getGenericHeadersNotasXCurso, getWorkspaceCriteria } = require('../helper/Criterios')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const { getCourseStatusName, getCourseStatusId, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { con } = require('../db')
 
@@ -24,6 +24,7 @@ const headers = [
   'NOTA PROMEDIO',
   'RESULTADO CURSO',
   'ESTADO CURSO',
+  'TIPO CURSO',
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
@@ -36,7 +37,9 @@ async function generateConsolidatedCoursesReport ({
   aprobados,
   desaprobados,
   desarrollo,
-  encuestaPendiente
+  encuestaPendiente, 
+  start, end,
+  tipocurso, areas
 }) {
   // Generate Excel file header
 
@@ -63,7 +66,8 @@ async function generateConsolidatedCoursesReport ({
   const users = await loadUsersWithCourses(
     workspaceId, userCourseStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos,
-    aprobados, desaprobados, desarrollo, encuestaPendiente
+    aprobados, desaprobados, desarrollo, encuestaPendiente, start, end,
+    tipocurso, areas
   )
   const usersIds = pluck(users, 'id')
 
@@ -108,6 +112,7 @@ async function generateConsolidatedCoursesReport ({
     cellRow.push(user.course_passed > 0 ? user.grade_average : '-')
     cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id))
     cellRow.push(user.course_active === 1 ? 'Activo' : 'Inactivo')
+    cellRow.push(user.course_type || '-')
     cellRow.push(user.course_restarts || '-')
     cellRow.push(user.assigned || 0)
     cellRow.push(Math.round(completed) || 0)
@@ -146,13 +151,15 @@ async function generateConsolidatedCoursesReport ({
 async function loadUsersWithCourses (
   workspaceId, userCourseStatuses,
   modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds,
-  aprobados, desaprobados, desarrollo, encuestasPendientes
+  aprobados, desaprobados, desarrollo, encuestasPendientes, start, end,
+  tipocurso, areas
 ) {
   // Base query
 
   let query = `
     select 
         u.*, 
+        tx.name as course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         c.active course_active,
@@ -172,12 +179,36 @@ async function loadUsersWithCourses (
         inner join summary_courses sc on u.id = sc.user_id
         inner join courses c on sc.course_id = c.id
         inner join course_school cs on c.id = cs.course_id
+        inner join taxonomies tx on tx.id = c.type_id
         inner join schools s on cs.school_id = s.id 
         inner join school_workspace sw on s.id = sw.school_id
-    where 
-      u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId}
+   
   `
+  const workspaceCondition = ` where 
+      u.subworkspace_id in (${modulesIds.join()}) and
+      sw.workspace_id = ${workspaceId} `
+
+  if(areas.length > 0) {
+    query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
+               inner join criterion_values cv on cvu.criterion_value_id = cv.id`
+    query += workspaceCondition
+
+    // query += ' and cv.value_text = :jobPosition'
+    query += ` and 
+                  ( cvu.criterion_value_id in ( `;
+    areas.forEach(cv => query += `${cv},`);
+    query = query.slice(0, -1);
+
+    query += `) `;
+    query += `) `;
+  } else {
+    query += workspaceCondition;
+  } 
+
+  // Add type_course and dates at ('created_at')
+  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(start) query += ` and date(sc.updated_at) >= '${start}'`
+  if(end) query += ` and date(sc.updated_at) <= '${end}'`
 
   // Add condition for schools ids
 

@@ -69,3 +69,42 @@ exports.uniqueElements = (list,key = 'id')=>{
       return unique;
   },[])
 }
+
+exports.generatePagination = (total, perPage, page) => {
+  if (!page) {
+    page = 1
+  }
+  let pages = Math.floor(total / perPage)
+  const leftover = total % perPage
+
+  // When there are leftover items,
+  // add a new page for them
+
+  if (leftover > 0) {
+    pages++
+  }
+
+  // When provided page number is higher, fix its
+  // value with the page count
+
+  if (page > pages) {
+    page = pages
+  }
+
+  // Calculate start and end index for items
+
+  const startIndex = (page * perPage) - perPage
+  let endIndex = startIndex + perPage
+
+  if (leftover > 0 && page === pages) {
+    endIndex = startIndex + leftover
+  }
+
+  return {
+    pages: pages,
+    page: page,
+    perPage: perPage,
+    startIndex: startIndex,
+    endIndex: endIndex
+  }
+}

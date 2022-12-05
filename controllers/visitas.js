@@ -7,30 +7,30 @@ process.on('message', (requestData) => {
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const {
-  getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
-} = require('../helper/Usuarios')
+const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition, getUsersCareersAreas,
+        innerCriterionValueUser, havingProccessValueUser } = require('../helper/Usuarios')
 const moment = require('moment')
-const { pluck } = require('../helper/Helper')
+const { pluck,logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { con } = require('../db')
 
-const headers = [
+let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
+  'TIpo curso',
   'Tema',
   'Visitas'
 ]
 
-async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, start, end }) {
+async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
+  careers, areas, tipocurso, start, end }) {
   // Generate Excel file header
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load workspace criteria
-
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
@@ -43,7 +43,8 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
   // Load users from database and generate ids array
 
   const users = await loadUsersWithVisits(
-    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, start, end
+    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, careers, areas, tipocurso, 
+    start, end
   )
   const usersIds = pluck(users, 'id')
 
@@ -76,6 +77,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
     cellRow.push(user.school_name)
     cellRow.push(user.course_name)
+    cellRow.push(user.course_type)
     cellRow.push(user.topic_name)
     cellRow.push(user.views)
 
@@ -104,45 +106,57 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithVisits (
-  workspaceId, modulesIds, activeUsers, inactiveUsers, start, end
+  workspaceId, modulesIds, activeUsers, inactiveUsers,
+  careers, areas, tipocurso, start, end
 ) {
   // Base query
+  const InitialUsers = await getUsersCareersAreas(modulesIds, activeUsers, inactiveUsers, careers, areas);
+  const InitialUsersIds = pluck(InitialUsers, 'id');
+
+  if(!InitialUsersIds.length) return []; 
+  // logtime(InitialUsersIds);
 
   let query = `
     select 
+        
         u.*,
+        tx.name as course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
         st.views 
-        
-    from users u
-       inner join workspaces w on u.subworkspace_id = w.id
-       inner join summary_topics st on u.id = st.user_id
-       inner join topics t on t.id = st.topic_id
-       inner join summary_courses sc on u.id = sc.user_id
-       inner join courses c on t.course_id = c.id
-       inner join course_school cs on c.id = cs.course_id
-       inner join schools s on cs.school_id = s.id
-       inner join school_workspace sw on s.id = sw.school_id
-    where 
-      u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId}
-  `
 
-  if (start && end) {
+      from users u
+
+      inner join workspaces w on u.subworkspace_id = w.id
+      inner join summary_topics st on u.id = st.user_id
+      inner join topics t on t.id = st.topic_id
+      inner join summary_courses sc on u.id = sc.user_id
+      inner join courses c on t.course_id = c.id
+      inner join taxonomies tx on tx.id = c.type_id
+      inner join course_school cs on c.id = cs.course_id
+      inner join schools s on cs.school_id = s.id
+      inner join school_workspace sw on s.id = sw.school_id
+
+      where 
+      u.id in (${InitialUsersIds.join()}) and 
+      sw.workspace_id = ${workspaceId} `;
+
+  // Add type_course 
+  if(tipocurso) query +=  ` and tx.code = 'free'` 
+
+  /*if (start && end) {
     query += ` and (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
-  }
+  }*/
 
   // Add user conditions and group sentence
-
   query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
-  query += '  group by  u.id, t.id, st.id'
+  query += '  group by  u.id, t.id, st.id ';
 
   // Execute query
-
+  logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }

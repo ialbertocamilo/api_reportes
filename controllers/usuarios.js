@@ -7,7 +7,7 @@ require('../error')
 const moment = require('moment')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
-const { getUsers, loadUsersCriteriaValues, getUserCriterionValues } = require('../helper/Usuarios')
+const { getUsersCareersAreas, loadUsersCriteriaValues, getUserCriterionValues } = require('../helper/Usuarios')
 const { getWorkspaceCriteria } = require('../helper/Criterios')
 const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
@@ -22,7 +22,9 @@ const defaultHeaders = [
   'ULTIMA SESIÓN'
 ]
 
-async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos }) {
+async function exportarUsuariosDW ({ workspaceId, modulos, 
+                                     UsuariosActivos, UsuariosInactivos,
+                                     careers, areas }) {
   // When no modules are provided, get its ids using its parent id
 
   if (modulos.length === 0) {
@@ -31,10 +33,11 @@ async function exportarUsuariosDW ({ workspaceId, modulos, UsuariosActivos, Usua
 
   // Load records from database
 
-  const users = await getUsers(modulos, UsuariosActivos, UsuariosInactivos)
+  const users = await getUsersCareersAreas(modulos, UsuariosActivos, UsuariosInactivos, careers, areas)
+  const usersIds = pluck(users, 'id')
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
-  const usersCriteriaValues = await loadUsersCriteriaValues(modulos)
+  const usersCriteriaValues = await loadUsersCriteriaValues(modulos, usersIds)
 
   // Generate headers adding workspace criteria to default header columns
 
