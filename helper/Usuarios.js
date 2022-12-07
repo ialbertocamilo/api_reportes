@@ -25,8 +25,8 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
 const innerCriterionValueUser = (careers, areas, queryCondition) => {
   let query = `, group_concat(cvu.criterion_value_id separator ', ') as stack_ids_cvu
             from users u 
-            inner join criterion_value_user cvu on cvu.user_id = u.id
-            inner join criterion_values cv on cvu.criterion_value_id = cv.id `
+            inner join criterion_value_user cvu on cvu.user_id = u.id `
+            // inner join criterion_values cv on cvu.criterion_value_id = cv.id `
 
   query += queryCondition
   const MergeCareersAreas = [...careers, ...areas];
@@ -65,9 +65,16 @@ const havingProccessValueUser = (careers, areas) => {
 exports.havingProccessValueUser = havingProccessValueUser;
 exports.innerCriterionValueUser = innerCriterionValueUser;
 
-exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
-  let query = ` select u.* `;
-  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
+exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
+                                       careers, areas,
+
+                                       colsquery = 'u.*',
+                                       colsrelations = '',
+                                       colsconditions = '' ) => {
+  let query = ` select ${colsquery} `;
+  const userCondition = ` ${colsrelations} 
+                          where u.subworkspace_id in (${modulesIds.join()}) 
+                          ${colsconditions} `; 
 
   const stateCareerArea = (careers.length > 0 || areas.length > 0); 
   if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);

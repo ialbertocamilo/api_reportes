@@ -1,4 +1,5 @@
 const { con } = require('../db')
+const { findUserByDocument } = require('../helper/Usuarios')
 const knex = require('../db').con
 module.exports = {
   async datosIniciales(workspaceId) {
@@ -187,7 +188,7 @@ module.exports = {
   },
   async loadSchoolsStatesByWorkspaceId (data) {
     const { workspaceId, active, inactive } = data;
-    const SqlState = (active && inactive) ? '' : 
+    const SqlState = (active && inactive) ? '' :
                      `and s.active = ${active ? 1 : 0}`;
 
     const [ rows ] = await con.raw(`
@@ -205,7 +206,7 @@ module.exports = {
   },
   async loadSchoolCoursesStatesById (data) {
     const { schoolIds, active, inactive } = data;
-    const SqlState = (active && inactive) ? '' : 
+    const SqlState = (active && inactive) ? '' :
                      `and c.active = ${active ? 1 : 0}`;
 
     const [ rows ] = await con.raw(`
@@ -472,6 +473,50 @@ module.exports = {
 
     const [rows] = await con.raw(`${query_string}`, { criterionCode })
     return rows;
-  }
+  },
 
+  async userHistoryFilter ({ document }) {
+    const user = await findUserByDocument(document)
+    let query = `
+        select 
+            distinct s.name school_name,
+           s.id school_id,
+           w.name workspace_name,
+           w.id workspace_id
+        
+        from users u
+           inner join summary_courses sc on sc.user_id = u.id
+           inner join courses c on sc.course_id = c.id
+           inner join course_school cs on c.id = cs.course_id
+           inner join schools s on cs.school_id = s.id
+           inner join course_workspace cw on cw.course_id = c.id
+           inner join workspaces w on cw.workspace_id = w.id
+
+        where u.id = :userId
+    `
+    const [rows] = await con.raw(query,
+      { userId: user.id }
+    )
+    const workspacesIds = []
+    const workspaces = []
+    rows.forEach(row => {
+      const exists = workspacesIds.includes(row.workspace_id)
+      if (!exists) {
+        workspaces.push({
+          id: row.workspace_id,
+          name: row.workspace_name,
+          schools: []
+        })
+        workspacesIds.push(row.workspace_id)
+      }
+
+      const workspace = workspaces.find(w => w.id === row.workspace_id)
+      workspace.schools.push({
+        id: row.school_id,
+        name: row.school_name
+      })
+    })
+
+    return { workspaces }
+  }
 }

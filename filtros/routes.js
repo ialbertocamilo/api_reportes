@@ -132,6 +132,11 @@ router.post('/CambiaCursoCargaTemas', async (req, res) => {
   res.json(datos)
 })
 
+router.post('/historial_usuario', async (req, res) => {
+  const data = await tablas.userHistoryFilter(req.body)
+  res.json(data)
+})
+
 router.get(`/sub-workspace/:subworkspaceId/criterion-values/:criterionCode`, async (req, res) => {
   const { subworkspaceId, criterionCode } = req.params;
   const { criterion_value_id } = await tablas.loadSubworkspaceById(subworkspaceId);

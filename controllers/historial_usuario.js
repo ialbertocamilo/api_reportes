@@ -12,7 +12,7 @@ const { findUserByDocument } = require('../helper/Usuarios')
 const { getTopicStatusName, loadTopicsStatuses } = require('../helper/CoursesTopicsHelper')
 const { generatePagination } = require('../helper/Helper')
 
-async function historialUsuario ({ document, type, page }) {
+async function historialUsuario ({ document, type, page, schoolId }) {
   // Load user from database
 
   const user = await findUserByDocument(document)
@@ -38,10 +38,10 @@ async function historialUsuario ({ document, type, page }) {
 
     const total = count[0]['total'] || 0
     pagination = generatePagination(total, 16, page)
-    const [rows] = await con.raw(generateQuery(pagination),
+    const [rows] = await con.raw(generateQuery(pagination, schoolId),
       { userId: user.id }
     )
-    console.log(generateQuery(pagination));
+
     userHistory = rows
   } else {
     const [rows] = await con.raw(generateQuery(),
@@ -130,9 +130,10 @@ async function excelResponse (courseResults) {
 /**
  * Generate SQL query for report
  * @param pagination
+ * @param schoolId
  * @returns {string}
  */
-function generateQuery (pagination = null) {
+function generateQuery (pagination = null, schoolId = null) {
   let limit = ''
   if (pagination) {
     limit = `limit ${pagination.startIndex}, ${pagination.perPage}`
@@ -153,7 +154,8 @@ function generateQuery (pagination = null) {
              inner join course_school cs on c.id = cs.course_id
              inner join schools s on cs.school_id = s.id
 
-    where u.id = :userId
+    where 
+        u.id = :userId ${schoolId ? ' and s.id = ' + schoolId : ''}
     group by u.id, st.topic_id
     ${limit}
    `
