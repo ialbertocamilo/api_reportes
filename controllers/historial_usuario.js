@@ -68,7 +68,7 @@ async function historialUsuario ({ document, type, page, schoolId }) {
     courseObj.schools_names = user.schools_names
     courseObj.course_name = user.course_name
     courseObj.topic_name = user.topic_name
-    courseObj.grade = user.topic_grade ?? '-'
+    courseObj.grade = user.topic_grade || '-'
     courseObj.topic_status = getTopicStatusName(userTopicsStatuses, user.topic_status_id)
 
     courseResults.push(courseObj)
