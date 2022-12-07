@@ -189,7 +189,7 @@ async function loadUsersCheckists (
   query += ' group by s.id, c.id, u.id'
 
   // Execute query
-  logtime(query);
+  // logtime(query);
   const [rows] = await con.raw(query, { checklistId, courseId, schoolId })
   return rows
 }

@@ -65,9 +65,16 @@ const havingProccessValueUser = (careers, areas) => {
 exports.havingProccessValueUser = havingProccessValueUser;
 exports.innerCriterionValueUser = innerCriterionValueUser;
 
-exports.getUsersCareersAreas = async (modulesIds, activeUsers, inactiveUsers, careers, areas) => {
-  let query = ` select u.* `;
-  const userCondition = ` where u.subworkspace_id in (${modulesIds.join()})`; 
+exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
+                                       careers, areas,
+
+                                       colsquery = 'u.*',
+                                       colsrelations = '',
+                                       colsconditions = '' ) => {
+  let query = ` select ${colsquery} `;
+  const userCondition = ` ${colsrelations} 
+                          where u.subworkspace_id in (${modulesIds.join()}) 
+                          ${colsconditions} `; 
 
   const stateCareerArea = (careers.length > 0 || areas.length > 0); 
   if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);
