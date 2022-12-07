@@ -113,17 +113,16 @@ async function loadUsersWithVisits (
 ) {
   // Base query
 
-  const colsrelations = ` inner join summary_topics st on u.id = st.user_id
-                          inner join workspaces w on u.subworkspace_id = w.id
-                          inner join summary_courses sc on u.id = sc.user_id `;
+  const colsrelations = ` inner join summary_topics st on u.id = st.user_id `;
   const colsquery = ' u.id ';
 
   const InitialUsers = await getUsersCareersAreas(modulesIds, 
-                                                  activeUsers, inactiveUsers, 
-                                                  careers, areas,
+                                          activeUsers, inactiveUsers, 
+                                          careers, areas,
                      
-                                                  colsquery,
-                                                  colsrelations);
+                                          colsquery,
+                                          colsrelations);
+
   const InitialUsersIds = pluck(InitialUsers, 'id');
   if(!InitialUsersIds.length) return []; 
 
@@ -131,7 +130,7 @@ async function loadUsersWithVisits (
     select 
         
         u.*,
-        tx.name as course_type,
+        tx.name course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
@@ -139,7 +138,18 @@ async function loadUsersWithVisits (
 
       from users u
 
-      inner join workspaces w on u.subworkspace_id = w.id
+       inner join summary_topics st on u.id = st.user_id
+       inner join topics t on t.id = st.topic_id
+       inner join summary_courses sc on u.id = sc.user_id
+       inner join courses c on t.course_id = c.id
+       inner join taxonomies tx on tx.id = c.type_id
+       inner join course_school cs on c.id = cs.course_id
+       inner join schools s on cs.school_id = s.id
+
+      where u.id in (${InitialUsersIds.join()}) `;
+
+
+/*    inner join workspaces w on u.subworkspace_id = w.id
       inner join summary_topics st on u.id = st.user_id
       inner join topics t on t.id = st.topic_id
       inner join summary_courses sc on u.id = sc.user_id
@@ -148,10 +158,7 @@ async function loadUsersWithVisits (
       inner join course_school cs on c.id = cs.course_id
       inner join schools s on cs.school_id = s.id
       inner join school_workspace sw on s.id = sw.school_id
-
-      where 
-      u.id in (${InitialUsersIds.join()})`;
-      // and sw.workspace_id = ${workspaceId} `;
+*/
 
   // Add type_course 
   if(schools.length) query += ` and s.id in(${schools.join()}) `;
@@ -163,12 +170,13 @@ async function loadUsersWithVisits (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
   }*/
-  // query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
+    
   // Add user conditions and group sentence
+  // query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
   query += '  group by u.id, t.id, st.id ';
 
   // Execute query
-  logtime(query);
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }
