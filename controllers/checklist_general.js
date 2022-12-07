@@ -17,6 +17,8 @@ const {
 const headers = [
   'Documento (entrenador)',
   'Nombre (entrenador)',
+  'Escuela',
+  'Curso',
   'Checklist asignados',
   'Checklist realizados',
   'Avance total'
@@ -75,6 +77,8 @@ async function generateReport ({
 
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
+    cellRow.push(user.school_name)
+    cellRow.push(user.course_name)
     cellRow.push(user.assigned_checklists)
     cellRow.push(user.completed_checklists)
     cellRow.push(Math.round(progress) + '%')
@@ -105,6 +109,10 @@ async function loadUsersCheckists (
           
           ifnull(trainers.fullname, trainers.name) trainer_name,
           trainers.document trainer_document,
+
+          s.name school_name,
+          c.name course_name,
+          
           count(checklist_id) assigned_checklists,
           sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
 
@@ -113,6 +121,10 @@ async function loadUsersCheckists (
               inner join checklists on ca.checklist_id = checklists.id
               inner join users trainers on ca.coach_id = trainers.id
               inner join users u on u.id = ca.student_id
+              
+              inner join schools s on s.id = ca.school_id
+              inner join courses c on c.id = ca.course_id
+              
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
   const workspaceCondition = `  where
