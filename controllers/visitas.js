@@ -24,7 +24,7 @@ let headers = [
 ]
 
 async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
-  careers, areas, tipocurso, start, end }) {
+  careers, areas, tipocurso, schools, courses , start, end }) {
   // Generate Excel file header
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
@@ -43,7 +43,8 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
   // Load users from database and generate ids array
 
   const users = await loadUsersWithVisits(
-    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, careers, areas, tipocurso, 
+    workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
+    careers, areas, tipocurso, schools, courses, 
     start, end
   )
   const usersIds = pluck(users, 'id')
@@ -69,8 +70,8 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
 
     // Add user's criterion values
 
-    // const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
-    // userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Add additional report values
 
@@ -107,20 +108,29 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
  */
 async function loadUsersWithVisits (
   workspaceId, modulesIds, activeUsers, inactiveUsers,
-  careers, areas, tipocurso, start, end
+  careers, areas, tipocurso, schools, courses, 
+  start, end
 ) {
   // Base query
-  const InitialUsers = await getUsersCareersAreas(modulesIds, activeUsers, inactiveUsers, careers, areas);
-  const InitialUsersIds = pluck(InitialUsers, 'id');
 
+  const colsrelations = ` inner join summary_topics st on u.id = st.user_id `;
+  const colsquery = ' u.id ';
+
+  const InitialUsers = await getUsersCareersAreas(modulesIds, 
+                                          activeUsers, inactiveUsers, 
+                                          careers, areas,
+                     
+                                          colsquery,
+                                          colsrelations);
+
+  const InitialUsersIds = pluck(InitialUsers, 'id');
   if(!InitialUsersIds.length) return []; 
-  // logtime(InitialUsersIds);
 
   let query = `
     select 
         
         u.*,
-        tx.name as course_type,
+        tx.name course_type,
         group_concat(distinct(s.name) separator ', ') school_name,
         c.name course_name,
         t.name topic_name,
@@ -128,7 +138,18 @@ async function loadUsersWithVisits (
 
       from users u
 
-      inner join workspaces w on u.subworkspace_id = w.id
+       inner join summary_topics st on u.id = st.user_id
+       inner join topics t on t.id = st.topic_id
+       inner join summary_courses sc on u.id = sc.user_id
+       inner join courses c on t.course_id = c.id
+       inner join taxonomies tx on tx.id = c.type_id
+       inner join course_school cs on c.id = cs.course_id
+       inner join schools s on cs.school_id = s.id
+
+      where u.id in (${InitialUsersIds.join()}) `;
+
+
+/*    inner join workspaces w on u.subworkspace_id = w.id
       inner join summary_topics st on u.id = st.user_id
       inner join topics t on t.id = st.topic_id
       inner join summary_courses sc on u.id = sc.user_id
@@ -137,12 +158,11 @@ async function loadUsersWithVisits (
       inner join course_school cs on c.id = cs.course_id
       inner join schools s on cs.school_id = s.id
       inner join school_workspace sw on s.id = sw.school_id
-
-      where 
-      u.id in (${InitialUsersIds.join()}) and 
-      sw.workspace_id = ${workspaceId} `;
+*/
 
   // Add type_course 
+  if(schools.length) query += ` and s.id in(${schools.join()}) `;
+  if(courses.length) query += ` and c.id in(${courses.join()}) `;
   if(tipocurso) query +=  ` and tx.code = 'free'` 
 
   /*if (start && end) {
@@ -150,13 +170,13 @@ async function loadUsersWithVisits (
       st.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
   }*/
-
+    
   // Add user conditions and group sentence
-  query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
-  query += '  group by  u.id, t.id, st.id ';
+  // query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
+  query += '  group by u.id, t.id, st.id ';
 
   // Execute query
-  logtime(query);
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }

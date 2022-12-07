@@ -143,8 +143,6 @@ async function loadUsersWithRestarts (
 
   // Execute query
   // logtime(query);
-
   const [rows] = await con.raw(query)
-
   return rows
 }
