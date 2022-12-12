@@ -111,20 +111,32 @@ async function loadUsersWithVisits (
   careers, areas, tipocurso, schools, courses, 
   start, end
 ) {
+
   // Base query
+  let queryCondition = '';
+  const MergeState = [...careers, ...areas].length > 0;
 
-  const colsrelations = ` inner join summary_topics st on u.id = st.user_id `;
-  const colsquery = ' u.id ';
+  if(MergeState) {
 
-  const InitialUsers = await getUsersCareersAreas(modulesIds, 
-                                          activeUsers, inactiveUsers, 
-                                          careers, areas,
-                     
-                                          colsquery,
-                                          colsrelations);
+    const colsrelations = ` inner join summary_topics st on u.id = st.user_id `;
+    const colsquery = ' u.id ';
 
-  const InitialUsersIds = pluck(InitialUsers, 'id');
-  if(!InitialUsersIds.length) return []; 
+    const InitialUsers = await getUsersCareersAreas(modulesIds, 
+                                            activeUsers, inactiveUsers, 
+                                            careers, areas,
+                       
+                                            colsquery,
+                                            colsrelations);
+    const InitialUsersIds = pluck(InitialUsers, 'id');
+    if(!InitialUsersIds.length) return []; 
+
+    queryCondition += ` where u.id in (${InitialUsersIds.join()})`
+
+  } else {
+    queryCondition += ` where u.subworkspace_id in (${modulesIds.join()}) `
+    queryCondition = addActiveUsersCondition(queryCondition, activeUsers, inactiveUsers);
+  }
+
 
   let query = `
     select 
@@ -145,9 +157,9 @@ async function loadUsersWithVisits (
        inner join taxonomies tx on tx.id = c.type_id
        inner join course_school cs on c.id = cs.course_id
        inner join schools s on cs.school_id = s.id
+        ${queryCondition} `
 
-      where u.id in (${InitialUsersIds.join()}) `;
-
+      // ` where u.id in (${InitialUsersIds.join()}) `;
 
 /*    inner join workspaces w on u.subworkspace_id = w.id
       inner join summary_topics st on u.id = st.user_id
@@ -171,11 +183,8 @@ async function loadUsersWithVisits (
     )`
   }*/
     
-  // Add user conditions and group sentence
-  // query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
   query += '  group by u.id, t.id, st.id ';
 
-  // Execute query
   // logtime(query);
   const [rows] = await con.raw(query)
   return rows
