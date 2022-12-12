@@ -10,9 +10,9 @@ const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { findUserByDocument } = require('../helper/Usuarios')
 const { getTopicStatusName, loadTopicsStatuses } = require('../helper/CoursesTopicsHelper')
-const { generatePagination } = require('../helper/Helper')
+const { generatePagination, pluck } = require('../helper/Helper')
 
-async function historialUsuario ({ document, type, page, schoolId }) {
+async function historialUsuario ({ document, type, page, schoolId, search }) {
   // Load user from database
 
   const user = await findUserByDocument(document)
@@ -25,20 +25,33 @@ async function historialUsuario ({ document, type, page, schoolId }) {
     process.exit()
   }
 
+  // Load user topic statuses
+
+  const userTopicsStatuses = await loadTopicsStatuses()
+
   // Load user's history from database
 
   let userHistory = []
   let pagination
   if (type === 'paginated') {
+    // Get only allowed statuses ids
+    const allowedStatuses = userTopicsStatuses.filter(
+      s => ['realizado', 'aprobado', 'revisado'].includes(s.code)
+    )
+    const allowStatusesIds = pluck(allowedStatuses, 'id')
 
-    const countQuery = `select count(*) total from (${generateQuery()}) u`
+    // Calaculate query records count
+
+    const countQuery = `select count(*) total from (${generateQuery(null, schoolId, search, allowStatusesIds)}) u`
     const [count] = await con.raw(countQuery,
       { userId: user.id }
     )
 
+    // Fetch paginated records
+
     const total = count[0]['total'] || 0
     pagination = generatePagination(total, 16, page)
-    const [rows] = await con.raw(generateQuery(pagination, schoolId),
+    const [rows] = await con.raw(generateQuery(pagination, schoolId, search, allowStatusesIds),
       { userId: user.id }
     )
 
@@ -54,10 +67,6 @@ async function historialUsuario ({ document, type, page, schoolId }) {
     process.send({ alert: `El usuario con el documento ${document} no tiene evaluaciones desarrolladas` })
     process.exit()
   }
-
-  // Load user topic statuses
-
-  const userTopicsStatuses = await loadTopicsStatuses()
 
   // Generate results
 
@@ -131,11 +140,15 @@ async function excelResponse (courseResults) {
  * Generate SQL query for report
  * @param pagination
  * @param schoolId
+ * @param search
+ * @param allowStatusesIds
  * @returns {string}
  */
-function generateQuery (pagination = null, schoolId = null) {
+function generateQuery (pagination = null, schoolId = null, search = null, allowStatusesIds = []) {
   let limit = ''
+  let statusCondition = ''
   if (pagination) {
+    statusCondition = ` and st.status_id in (${allowStatusesIds.join(',')})`
     limit = `limit ${pagination.startIndex}, ${pagination.perPage}`
   }
 
@@ -155,7 +168,10 @@ function generateQuery (pagination = null, schoolId = null) {
              inner join schools s on cs.school_id = s.id
 
     where 
-        u.id = :userId ${schoolId ? ' and s.id = ' + schoolId : ''}
+        u.id = :userId 
+        ${statusCondition}
+        ${schoolId ? ' and s.id = ' + schoolId : ''}
+        ${search ? ' and c.name like "%' + search + '%"' : ''}
     group by u.id, st.topic_id
     ${limit}
    `
