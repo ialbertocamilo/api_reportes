@@ -129,6 +129,8 @@ async function loadUsersWithRestarts (
 
   if (adminId) {
     query += ` and st.restarter_id = ${adminId}`
+  }else {
+    query += ` and st.restarter_id is not null`
   }
 
   if (start && end) {
