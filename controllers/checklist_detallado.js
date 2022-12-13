@@ -220,6 +220,8 @@ async function loadChecklistActivities (checklistId) {
 
   // Execute query
 
+  // logtime(query);
+  
   const [rows] = await con.raw(query, { checklistId })
   return rows
 }
