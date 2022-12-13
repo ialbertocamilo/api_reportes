@@ -70,7 +70,7 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
 
   // Generate results
 
-  const courseResults = []
+  let courseResults = []
   for (const user of userHistory) {
     const courseObj = {}
 
@@ -81,6 +81,22 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
     courseObj.topic_status = getTopicStatusName(userTopicsStatuses, user.topic_status_id)
 
     courseResults.push(courseObj)
+  }
+
+  // Paginated data is for app, so group courses by workspace
+  if (type === 'paginated') {
+    const groups = { }
+    courseResults.forEach(item => {
+      const list = groups[item.schools_names]
+
+      if (list) {
+        list.push(item)
+      } else {
+        groups[item.schools_names] = [item]
+      }
+    })
+    courseResults = groups
+    console.log(groups)
   }
 
   // Generate response according the report's type
