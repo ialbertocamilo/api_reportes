@@ -185,7 +185,7 @@ async function loadUsersWithVisits (
     
   query += '  group by u.id, t.id, st.id ';
 
-  // logtime(query);
+  //logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }

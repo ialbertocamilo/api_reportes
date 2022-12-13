@@ -19,6 +19,7 @@ const headers = [
   'Nombre (entrenador)',
   'Escuela',
   'Curso',
+  'Checklist',
   'Checklist asignados',
   'Checklist realizados',
   'Avance total'
@@ -79,6 +80,7 @@ async function generateReport ({
     cellRow.push(user.trainer_name)
     cellRow.push(user.school_name)
     cellRow.push(user.course_name)
+    cellRow.push(user.checklists_title)
     cellRow.push(user.assigned_checklists)
     cellRow.push(user.completed_checklists)
     cellRow.push(Math.round(progress) + '%')
@@ -112,7 +114,8 @@ async function loadUsersCheckists (
 
           s.name school_name,
           c.name course_name,
-          
+          checklists.title checklists_title,
+
           count(checklist_id) assigned_checklists,
           sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
 
