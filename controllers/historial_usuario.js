@@ -43,6 +43,7 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
     // Calaculate query records count
 
     const countQuery = `select count(*) total from (${generateQuery(null, schoolId, search, allowStatusesIds)}) u`
+    console.log(countQuery)
     const [count] = await con.raw(countQuery,
       { userId: user.id }
     )
@@ -164,8 +165,11 @@ function generateQuery (pagination = null, schoolId = null, search = null, allow
   let limit = ''
   let statusCondition = ''
   if (pagination) {
-    statusCondition = ` and st.status_id in (${allowStatusesIds.join(',')})`
     limit = `limit ${pagination.startIndex}, ${pagination.perPage}`
+  }
+
+  if (allowStatusesIds.length > 0) {
+    statusCondition = ` and st.status_id in (${allowStatusesIds.join(',')})`
   }
 
   return `

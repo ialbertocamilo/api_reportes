@@ -73,7 +73,10 @@ exports.uniqueElements = (list,key = 'id')=>{
 exports.generatePagination = (total, perPage, page) => {
   if (!page) {
     page = 1
+  } else {
+    page = +page
   }
+
   let pages = Math.floor(total / perPage)
   const leftover = total % perPage
 
@@ -101,6 +104,7 @@ exports.generatePagination = (total, perPage, page) => {
   }
 
   return {
+    total: total,
     pages: pages,
     page: page,
     perPage: perPage,
