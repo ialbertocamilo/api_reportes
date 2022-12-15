@@ -28,9 +28,9 @@ app.use(function (req, res, next) {
 
 // Initialize database configuration
 
-(async () => {
-  await con.raw("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))")
-})()
+// (async () => {
+//   await con.raw("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))")
+// })()
 
 // Initialize routes
 

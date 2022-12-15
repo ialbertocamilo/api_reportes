@@ -43,7 +43,6 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
     // Calaculate query records count
 
     const countQuery = `select count(*) total from (${generateQuery(null, schoolId, search, allowStatusesIds)}) u`
-    console.log(countQuery)
     const [count] = await con.raw(countQuery,
       { userId: user.id }
     )
