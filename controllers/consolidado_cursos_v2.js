@@ -86,7 +86,7 @@ async function generateSegmentationReport({
   const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
     // Load workspace user criteria
-    
+
     logtime(`CURSO => ${course.course_name}`);
     // const users = await loadUsersSegmented(course.course_id);
     const users = await loadUsersSegmentedv2(
@@ -98,7 +98,7 @@ async function generateSegmentationReport({
       inactiveUsers
     );
     logtime(`[loadUsersSegmentedv2]`);
-    
+
     // console.log({
     //   course: course.course_name,
     //   usuarios: users.length,
@@ -195,10 +195,6 @@ async function generateSegmentationReport({
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
-
-    logtime(`FIN COMPATIBLES`);
-
-    logtime(`INICIANDO addRow`);
 
     // const usersCriterionValues = await loadUsersCriteriaValues(
     //   modulos,

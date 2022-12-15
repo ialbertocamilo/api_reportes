@@ -112,3 +112,25 @@ exports.loadCompatiblesId = async (course_id) => {
 
   return uniqueElements(rows);
 };
+
+
+exports.loadTopicsByCourseId = async (courses_id) => {
+  courses_id = courses_id.filter(el => el != null);
+
+  if (courses_id.length === 0) return [];
+
+  const [rows] = await con.raw(
+    `
+        select
+
+          t.id as topic_id
+
+        from 
+            topics t
+        where 
+          t.course_id in (${courses_id.join()})
+    `
+  );
+
+  return rows;
+}

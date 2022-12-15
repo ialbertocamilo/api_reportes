@@ -1,6 +1,7 @@
 const { con } = require("../db");
 const { logtime } = require("./Helper");
 
+
 exports.loadSummaryCoursesByUsersAndCourses = async (users_id, courses_id) => {
   courses_id = courses_id.filter((val) => val != null);
   users_id = users_id.filter((val) => val != null);
@@ -22,6 +23,9 @@ exports.loadSummaryCoursesByUsersAndCourses = async (users_id, courses_id) => {
             join schools s on s.id = cs.school_id and s.active = 1
             join summary_courses as sc on sc.course_id = c.id and cs.course_id = c.id 
               and sc.status_id = 4568
+            
+            INNER join topics t on t.course_id = sc.course_id
+            LEFT OUTER JOIN summary_topics st on st.topic_id = t.id
 
             LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
 
