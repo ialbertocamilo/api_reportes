@@ -130,33 +130,42 @@ async function loadUsersWithVisits (
     const InitialUsersIds = pluck(InitialUsers, 'id');
     if(!InitialUsersIds.length) return []; 
 
-    queryCondition += ` where u.id in (${InitialUsersIds.join()})`
+    queryCondition += ` where u.id in (${InitialUsersIds.join()}) and sw.workspace_id = ${workspaceId} `
 
   } else {
-    queryCondition += ` where u.subworkspace_id in (${modulesIds.join()}) `
+    queryCondition += ` where u.subworkspace_id in (${modulesIds.join()}) and sw.workspace_id = ${workspaceId} `
     queryCondition = addActiveUsersCondition(queryCondition, activeUsers, inactiveUsers);
   }
 
 
   let query = `
     select 
-        
-        u.*,
-        tx.name course_type,
-        group_concat(distinct(s.name) separator ', ') school_name,
-        c.name course_name,
-        t.name topic_name,
-        st.views 
+      
+      u.*,
+      s.name school_name,
+      c.name course_name,
+      c.id course_id,
+      tx.name course_type,
+      t.name topic_name,
+      st.views
 
       from users u
 
-       inner join summary_topics st on u.id = st.user_id
-       inner join topics t on t.id = st.topic_id
-       inner join summary_courses sc on u.id = sc.user_id
-       inner join courses c on t.course_id = c.id
-       inner join taxonomies tx on tx.id = c.type_id
-       inner join course_school cs on c.id = cs.course_id
-       inner join schools s on cs.school_id = s.id
+        inner join summary_topics st on
+           st.user_id = u.id
+        inner join topics t on
+           t.id = st.topic_id
+        inner join courses c on
+           c.id = t.course_id
+        inner join taxonomies tx on 
+          tx.id = c.type_id
+        inner join course_school cs on
+           cs.course_id = c.id
+        inner join schools s on
+           s.id = cs.school_id
+        inner join school_workspace sw on
+           sw.school_id = s.id
+
         ${queryCondition} `
 
       // ` where u.id in (${InitialUsersIds.join()}) `;
@@ -183,7 +192,8 @@ async function loadUsersWithVisits (
     )`
   }*/
     
-  query += '  group by u.id, t.id, st.id ';
+  // query += '  group by u.id, t.id, st.id ';
+  query += ' order by u.id ';
 
   //logtime(query);
   const [rows] = await con.raw(query)
