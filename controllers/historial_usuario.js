@@ -9,7 +9,7 @@ const { con } = require('../db')
 const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { findUserByDocument } = require('../helper/Usuarios')
-const { getTopicStatusName, loadTopicsStatuses } = require('../helper/CoursesTopicsHelper')
+const { getCourseStatusName, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
 const { generatePagination, pluck } = require('../helper/Helper')
 
 async function historialUsuario ({ document, type, page, schoolId, search }) {
@@ -27,7 +27,7 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
 
   // Load user topic statuses
 
-  const userTopicsStatuses = await loadTopicsStatuses()
+  const userCoursesStatuses = await loadCoursesStatuses()
 
   // Load user's history from database
 
@@ -35,8 +35,8 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
   let pagination
   if (type === 'paginated') {
     // Get only allowed statuses ids
-    const allowedStatuses = userTopicsStatuses.filter(
-      s => ['realizado', 'aprobado', 'revisado'].includes(s.code)
+    const allowedStatuses = userCoursesStatuses.filter(
+      s => ['aprobado'].includes(s.code)
     )
     const allowStatusesIds = pluck(allowedStatuses, 'id')
 
@@ -51,6 +51,7 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
 
     const total = count[0]['total'] || 0
     pagination = generatePagination(total, 16, page)
+    console.log(pagination)
     const [rows] = await con.raw(generateQuery(pagination, schoolId, search, allowStatusesIds),
       { userId: user.id }
     )
@@ -76,9 +77,8 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
 
     courseObj.schools_names = user.schools_names
     courseObj.course_name = user.course_name
-    courseObj.topic_name = user.topic_name
-    courseObj.grade = user.topic_grade || '-'
-    courseObj.topic_status = getTopicStatusName(userTopicsStatuses, user.topic_status_id)
+    courseObj.grade = user.course_grade || '-'
+    courseObj.course_status = getCourseStatusName(userCoursesStatuses, user.course_status_id)
 
     courseResults.push(courseObj)
   }
@@ -130,14 +130,13 @@ async function jsonResponse (user, courseResults, pagination) {
  * @returns {Promise<void>}
  */
 async function excelResponse (courseResults) {
-  await createHeaders(['Escuelas', 'Curso', 'Tema', 'Nota', 'Estado'])
+  await createHeaders(['Escuelas', 'Curso', 'Nota', 'Estado'])
   for (const course of courseResults) {
     const cellRow = []
     cellRow.push(course.schools_names)
     cellRow.push(course.course_name)
-    cellRow.push(course.topic_name)
     cellRow.push(course.grade)
-    cellRow.push(course.topic_status)
+    cellRow.push(course.course_status)
 
     // Add row to sheet
 
@@ -154,6 +153,7 @@ async function excelResponse (courseResults) {
 
 /**
  * Generate SQL query for report
+ *
  * @param pagination
  * @param schoolId
  * @param search
@@ -168,21 +168,19 @@ function generateQuery (pagination = null, schoolId = null, search = null, allow
   }
 
   if (allowStatusesIds.length > 0) {
-    statusCondition = ` and st.status_id in (${allowStatusesIds.join(',')})`
+    statusCondition = ` and sc.status_id in (${allowStatusesIds.join(',')})`
   }
 
   return `
     select
         group_concat(distinct (s.name) separator ', ') schools_names,
         c.name                                         course_name,
-        t.name                                         topic_name,
-        st.grade                                       topic_grade,
-        st.status_id                                   topic_status_id
+        sc.grade_average                               course_grade,
+        sc.status_id                                   course_status_id
     
     from users u
-             inner join summary_topics st on u.id = st.user_id
-             inner join topics t on t.id = st.topic_id
-             inner join courses c on t.course_id = c.id
+             inner join summary_courses sc on u.id = sc.user_id
+             inner join courses c on sc.course_id = c.id
              inner join course_school cs on c.id = cs.course_id
              inner join schools s on cs.school_id = s.id
 
@@ -191,7 +189,8 @@ function generateQuery (pagination = null, schoolId = null, search = null, allow
         ${statusCondition}
         ${schoolId ? ' and s.id = ' + schoolId : ''}
         ${search ? ' and c.name like "%' + search + '%"' : ''}
-    group by u.id, st.topic_id
+    
+    group by u.id, sc.course_id
     ${limit}
    `
 }

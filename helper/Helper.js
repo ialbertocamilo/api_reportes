@@ -108,7 +108,7 @@ exports.generatePagination = (total, perPage, page) => {
     pages: pages,
     page: page,
     perPage: perPage,
-    startIndex: startIndex,
+    startIndex: startIndex > 0 ? startIndex : 0,
     endIndex: endIndex
   }
 }
