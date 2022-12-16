@@ -61,9 +61,19 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
   let SaveUserValues = [];
   let SaveLastLoginUser = '-';
 
-  for (const user of usersTopicsData) {
-    const cellRow = []
+  const arrayWorksheets = workbook.getWorksheet(1);
 
+
+  let worksheetState = 0;
+  let currentRowCount = 0;
+  let currentWorkSheet = worksheet;
+
+  worksheet.name = `Hoja ${worksheetState + 1}`;
+  const countUserTopics = usersTopicsData.length;
+  
+  for (let i = 0; i < countUserTopics; i++) {
+    const user = usersTopicsData[i];
+    const cellRow = []
     // === user data ===
     const { name, lastname, surname, document: numdoc, active, last_login } = usersData[user.id];
 
@@ -112,10 +122,21 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
 
     // Add row to sheet
 
-    worksheet.addRow(cellRow).commit()
+    // Add sheet to limit
+    if(currentRowCount === 1000000) {
+
+      currentRowCount = 0;
+      worksheetState++;
+      currentWorkSheet = workbook.addWorksheet(`Hoja ${worksheetState + 1}`);
+      await createHeaders(headersEstaticos.concat(headers), null, currentWorkSheet);
+    }
+  
+    currentRowCount++;
+    currentWorkSheet.addRow(cellRow).commit();
+  
   }
 
-  if (worksheet._rowZero > 1) {
+  if (currentWorkSheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: 'Visitas' }))
     })
@@ -246,8 +267,9 @@ async function getSubWorkspaceUsers(modulesIds) {
   //set id to key array;
   let schema = {};
   let usersIds = [];
+  const countRows = rows.length;
 
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 0; i < countRows; i++) {
     const currentRow = rows[i];
     const { id } = currentRow;
 
@@ -275,7 +297,10 @@ async function getSchoolsWorkspace(workspaceId) {
 
   //set id to key array;
   const schema = {};
-  for (let i = 0; i < rows.length; i++) {
+  const countRows = rows.length;
+
+  for (let i = 0; i < countRows; i++) {
+
     const currentRow = rows[i];
     const { id } = currentRow;
 
@@ -307,7 +332,9 @@ async function getCoursesWorkspace(workspaceId) {
 
   //set id to key array;
   const schema = {};
-  for (let i = 0; i < rows.length; i++) {
+  const countRows = rows.length;
+
+  for (let i = 0; i < countRows; i++) {
     const currentRow = rows[i];
     const { id } = currentRow;
 
@@ -341,7 +368,9 @@ async function getTopicsWorkspace(workspaceId) {
 
   //set id to key array;
   const schema = {};
-  for (let i = 0; i < rows.length; i++) {
+  const countRows = rows.length;
+
+  for (let i = 0; i < countRows; i++) {
     const currentRow = rows[i];
     const { id } = currentRow;
 
