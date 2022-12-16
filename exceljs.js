@@ -19,9 +19,14 @@ const options = {
 const workbook = new Excel.stream.xlsx.WorkbookWriter(options)
 const worksheet = workbook.addWorksheet('sheet')
 
-worksheet.getRow(1).font = { bold: true }
+const createHeaders = async function (headersAgregados, headersFijos, anotherWorksheet = null) {
+  let currentWorkSheet =  worksheet;
+  if(anotherWorksheet !== null) {
+    currentWorkSheet =  anotherWorksheet;
+  }
 
-const createHeaders = async function (headersAgregados, headersFijos) {
+  currentWorkSheet.getRow(1).font = { bold: true }
+
   let Fijos = headersFijos ? await headersFijos() : []
   let $Headers = _.concat(Fijos, headersAgregados)
   const array = []
@@ -31,7 +36,7 @@ const createHeaders = async function (headersAgregados, headersFijos) {
     array.push(json)
   })
 
-  worksheet.columns = array
+  currentWorkSheet.columns = array
 }
 //
 module.exports = {
