@@ -18,7 +18,6 @@ let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
-  'TIpo curso',
   'Tema',
   'Visitas'
 ]
@@ -40,46 +39,75 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     modulos = await getSuboworkspacesIds(workspaceId)
   }
 
-  // Load users from database and generate ids array
-
-  const users = await loadUsersWithVisits(
+  // users and usersData
+  const { usersIds, usersData } = await getSubWorkspaceUsers(modulos);
+  const usersTopicsData = await loadUsersWithVisits(
     workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
     careers, areas, tipocurso, schools, courses, 
     start, end
-  )
-  const usersIds = pluck(users, 'id')
+  );
 
-  // Load workspace user criteria
+  // console.log('data', usersData);
 
+  // users criteria
   const usersCriterionValues = await loadUsersCriteriaValues(modulos, usersIds)
+  
+  // schools data
+  const schoolsData = await getSchoolsWorkspace(workspaceId);
+  const coursesData = await getCoursesWorkspace(workspaceId);
+  const topicsData = await getTopicsWorkspace(workspaceId);
 
-  // Add users to Excel rows
+  let SaveUserId = 0;
+  let SaveUserValues = [];
+  let SaveLastLoginUser = '-';
 
-  for (const user of users) {
-    const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
-
+  for (const user of usersTopicsData) {
     const cellRow = []
 
-    // Add default values
+    // === user data ===
+    const { name, lastname, surname, document: numdoc, active, last_login } = usersData[user.id];
 
-    cellRow.push(user.name)
-    cellRow.push(user.lastname)
-    cellRow.push(user.surname)
-    cellRow.push(user.document)
-    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+    cellRow.push(name);
+    cellRow.push(lastname);
+    cellRow.push(surname);
+    cellRow.push(numdoc);
+    cellRow.push(active === 1 ? 'Activo' : 'Inactivo');
+    // === user data ===
 
-    // Add user's criterion values
+    // === user criteria ===
+    if(SaveUserId === user.id) {
+      SaveUserValues.forEach(item => cellRow.push(item.criterion_value || '-'));
+      cellRow.push(SaveLastLoginUser);
+    } else {
+      
+      SaveUserId = user.id
+      const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues);
+            userValues.forEach(item => cellRow.push(item.criterion_value || '-'));
+      SaveUserValues = userValues;
 
-    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
-    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+      // lastLogin user
+      const lastLogin = moment(last_login).format('DD/MM/YYYY H:mm:ss');
+      const SaveLastLoginUser = (lastLogin !== 'Invalid date') ? lastLogin : '-';
+      cellRow.push(SaveLastLoginUser);
 
-    // Add additional report values
+    }
+    // === user criteria ===
 
-    cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
-    cellRow.push(user.school_name)
-    cellRow.push(user.course_name)
-    cellRow.push(user.course_type)
-    cellRow.push(user.topic_name)
+    // === schools data ===
+    const { school_name } = schoolsData[user.school_id];
+    cellRow.push(school_name);
+    // === schools data ===
+
+    // === course data ===
+    const { course_name } = coursesData[user.course_id];
+    cellRow.push(course_name);
+    // === course data ===
+
+    // === topics data ===
+    const { topic_name } = topicsData[user.topic_id];
+    cellRow.push(topic_name);
+    // === topics data ===
+
     cellRow.push(user.views)
 
     // Add row to sheet
@@ -134,22 +162,20 @@ async function loadUsersWithVisits (
 
   } else {
     queryCondition += ` where u.subworkspace_id in (${modulesIds.join()}) and sw.workspace_id = ${workspaceId} `
-    queryCondition = addActiveUsersCondition(queryCondition, activeUsers, inactiveUsers);
+    queryCondition = addActiveUsersCondition(queryCondition, activeUsers, inactiveUsers, true);
   }
 
 
   let query = `
     select 
       
-      u.*,
-      s.name school_name,
-      c.name course_name,
+      st.user_id id,
+      s.id school_id,
       c.id course_id,
-      tx.name course_type,
-      t.name topic_name,
+      st.topic_id,
       st.views
 
-      from users u
+    from users u
 
         inner join summary_topics st on
            st.user_id = u.id
@@ -157,8 +183,6 @@ async function loadUsersWithVisits (
            t.id = st.topic_id
         inner join courses c on
            c.id = t.course_id
-        inner join taxonomies tx on 
-          tx.id = c.type_id
         inner join course_school cs on
            cs.course_id = c.id
         inner join schools s on
@@ -195,7 +219,133 @@ async function loadUsersWithVisits (
   // query += '  group by u.id, t.id, st.id ';
   query += ' order by u.id ';
 
-  //logtime(query);
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
+}
+
+async function getSubWorkspaceUsers(modulesIds) {
+
+  const query = `
+  SELECT
+    
+    u.id,
+    u.active,
+    u.name,
+    u.lastname,
+    u.surname,
+    u.document,
+    u.last_login
+    
+  FROM users u
+  WHERE u.subworkspace_id in (${modulesIds.join()}) 
+  ORDER BY u.id `;
+
+  const [ rows ] = await con.raw(query);
+
+  //set id to key array;
+  let schema = {};
+  let usersIds = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const currentRow = rows[i];
+    const { id } = currentRow;
+
+    usersIds.push(id);
+    schema[id] = currentRow;
+  }
+
+  return { usersData: schema, usersIds };
+}
+
+async function getSchoolsWorkspace(workspaceId) {
+
+  const query = `
+  SELECT
+    s.id,
+    s.name school_name
+  FROM schools s 
+  INNER JOIN school_workspace sw ON
+     sw.school_id = s.id
+  WHERE
+     sw.workspace_id = ${workspaceId}
+  ORDER BY s.id`;
+
+  const [ rows ] = await con.raw(query);
+
+  //set id to key array;
+  const schema = {};
+  for (let i = 0; i < rows.length; i++) {
+    const currentRow = rows[i];
+    const { id } = currentRow;
+
+    schema[id] = currentRow;
+  }
+
+  return schema;
+}
+
+
+async function getCoursesWorkspace(workspaceId) {
+
+  const query = `
+  SELECT
+    c.id,
+    c.name course_name
+  FROM courses c 
+  INNER JOIN course_school cs ON
+     cs.course_id = c.id
+  INNER JOIN schools s ON
+     s.id = cs.school_id
+  INNER JOIN school_workspace sw ON
+     sw.school_id = s.id
+  WHERE
+     sw.workspace_id = ${workspaceId}
+  ORDER BY c.id`;
+
+  const [ rows ] = await con.raw(query);
+
+  //set id to key array;
+  const schema = {};
+  for (let i = 0; i < rows.length; i++) {
+    const currentRow = rows[i];
+    const { id } = currentRow;
+
+    schema[id] = currentRow;
+  }
+
+  return schema;
+}
+
+
+async function getTopicsWorkspace(workspaceId) {
+
+  const query = `
+  SELECT
+    t.id,
+    t.name topic_name
+  FROM topics t
+  INNER JOIN courses c ON
+     c.id = t.course_id
+  INNER JOIN course_school cs ON
+     cs.course_id = c.id
+  INNER JOIN schools s ON
+     s.id = cs.school_id
+  INNER JOIN school_workspace sw ON
+     sw.school_id = s.id
+  WHERE
+     sw.workspace_id = ${workspaceId}
+  ORDER BY t.id`;
+
+  const [ rows ] = await con.raw(query);
+
+  //set id to key array;
+  const schema = {};
+  for (let i = 0; i < rows.length; i++) {
+    const currentRow = rows[i];
+    const { id } = currentRow;
+
+    schema[id] = currentRow;
+  }
+  return schema;
 }

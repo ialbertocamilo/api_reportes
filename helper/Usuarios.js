@@ -96,9 +96,9 @@ exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
   return rows;
 }
 
-exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers) => {
+exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers, inValues = false) => {
   if (activeUsers && inactiveUsers) {
-    return query
+    return  inValues ? `${query} and u.active in (1, 0)` : query; 
   } else if (activeUsers && !inactiveUsers) {
     return `${query} and u.active = 1`
   } else if (!activeUsers && inactiveUsers) {
