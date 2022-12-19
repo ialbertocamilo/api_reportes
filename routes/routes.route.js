@@ -2,7 +2,6 @@ const { Router } = require('express')
 const router = Router()
 const db = require('../db')
 const handler = require('./index')
-
 router.get('/', async (req, res) => {
   console.log(db.con)
   res.send({ response: 'Bienvenido a la api Node 3.0.0' })
