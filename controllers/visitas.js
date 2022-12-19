@@ -18,6 +18,7 @@ let headers = [
   'Última sesión',
   'Escuela',
   'Curso',
+  'Tipo curso',
   'Tema',
   'Visitas'
 ]
@@ -109,8 +110,9 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     // === schools data ===
 
     // === course data ===
-    const { course_name } = coursesData[user.course_id];
+    const { course_name, taxonomie_name } = coursesData[user.course_id];
     cellRow.push(course_name);
+    cellRow.push(taxonomie_name);
     // === course data ===
 
     // === topics data ===
@@ -123,7 +125,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     // Add row to sheet
 
     // Add sheet to limit
-    if(currentRowCount === 1000000) {
+    if(currentRowCount === 500000) {
 
       currentRowCount = 0;
       worksheetState++;
@@ -204,6 +206,8 @@ async function loadUsersWithVisits (
            t.id = st.topic_id
         inner join courses c on
            c.id = t.course_id
+        inner join taxonomies tx on 
+          tx.id = c.type_id
         inner join course_school cs on
            cs.course_id = c.id
         inner join schools s on
@@ -316,10 +320,13 @@ async function getCoursesWorkspace(workspaceId) {
   const query = `
   SELECT
     c.id,
-    c.name course_name
+    c.name course_name,
+    tx.name taxonomie_name
   FROM courses c 
   INNER JOIN course_school cs ON
      cs.course_id = c.id
+  INNER JOIN taxonomies tx on 
+     tx.id = c.type_id
   INNER JOIN schools s ON
      s.id = cs.school_id
   INNER JOIN school_workspace sw ON
@@ -344,6 +351,39 @@ async function getCoursesWorkspace(workspaceId) {
   return schema;
 }
 
+async function getTopicsWorkspace(workspaceId) {
+
+  const query = `
+  SELECT
+    t.id,
+    t.name topic_name
+  FROM topics t
+  INNER JOIN courses c ON
+     c.id = t.course_id
+  INNER JOIN course_school cs ON
+     cs.course_id = c.id
+  INNER JOIN schools s ON
+     s.id = cs.school_id
+  INNER JOIN school_workspace sw ON
+     sw.school_id = s.id
+  WHERE
+     sw.workspace_id = ${workspaceId}
+  ORDER BY t.id`;
+
+  const [ rows ] = await con.raw(query);
+
+  //set id to key array;
+  const schema = {};
+  const countRows = rows.length;
+
+  for (let i = 0; i < countRows; i++) {
+    const currentRow = rows[i];
+    const { id } = currentRow;
+
+    schema[id] = currentRow;
+  }
+  return schema;
+}
 
 async function getTopicsWorkspace(workspaceId) {
 
