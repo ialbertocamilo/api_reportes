@@ -384,37 +384,3 @@ async function getTopicsWorkspace(workspaceId) {
   }
   return schema;
 }
-
-async function getTopicsWorkspace(workspaceId) {
-
-  const query = `
-  SELECT
-    t.id,
-    t.name topic_name
-  FROM topics t
-  INNER JOIN courses c ON
-     c.id = t.course_id
-  INNER JOIN course_school cs ON
-     cs.course_id = c.id
-  INNER JOIN schools s ON
-     s.id = cs.school_id
-  INNER JOIN school_workspace sw ON
-     sw.school_id = s.id
-  WHERE
-     sw.workspace_id = ${workspaceId}
-  ORDER BY t.id`;
-
-  const [ rows ] = await con.raw(query);
-
-  //set id to key array;
-  const schema = {};
-  const countRows = rows.length;
-
-  for (let i = 0; i < countRows; i++) {
-    const currentRow = rows[i];
-    const { id } = currentRow;
-
-    schema[id] = currentRow;
-  }
-  return schema;
-}
