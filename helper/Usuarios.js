@@ -22,9 +22,83 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   }
 }
 
-exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers) => {
+const innerCriterionValueUser = (careers, areas, queryCondition) => {
+  let query = `, group_concat(cvu.criterion_value_id separator ', ') as stack_ids_cvu
+            from users u 
+            inner join criterion_value_user cvu on cvu.user_id = u.id `
+            // inner join criterion_values cv on cvu.criterion_value_id = cv.id `
+
+  query += queryCondition
+  const MergeCareersAreas = [...careers, ...areas];
+    
+  query += ` and ( cvu.criterion_value_id in ( `;
+  MergeCareersAreas.forEach(cv => query += `${cv},`);
+  query = query.slice(0, -1);
+  query += ` ) ) `;
+
+  return query;
+}
+
+const havingProccessValueUser = (careers, areas) => {
+  const CountCareers = careers.length;
+  const CountAreas = areas.length;
+
+  let stackCareer = [];
+  
+  for (let i = 0; i < CountCareers; i++) {
+    const career_v = careers[i];
+
+    if(CountAreas) {
+      let stackArea = []
+      for (let x = 0; x < CountAreas; x++) {
+        const area_v = areas[x];
+        stackArea.push(`'${career_v}, ${area_v}'`);
+      }
+      stackCareer.push(stackArea);
+    } else stackCareer.push(`'${career_v}'`);
+
+  }
+
+  return ` having stack_ids_cvu in (${stackCareer.join(', ')}) `;
+} 
+
+exports.havingProccessValueUser = havingProccessValueUser;
+exports.innerCriterionValueUser = innerCriterionValueUser;
+
+exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
+                                       careers, areas,
+
+                                       colsquery = 'u.*',
+                                       colsrelations = '',
+                                       colsconditions = '' ) => {
+  let query = ` select ${colsquery} `;
+  const userCondition = ` ${colsrelations} 
+                          where u.subworkspace_id in (${modulesIds.join()}) 
+                          ${colsconditions} `; 
+
+  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
+  if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);
+  else query += ` from users u ${userCondition} `;
+
+  if (modulesIds && activeUsers && !inactiveUsers) {
+    query += ` and u.active = 1`;
+  } 
+  if (modulesIds && !activeUsers && inactiveUsers) {
+    query += ` and u.active = 0`;
+  }
+  query += ` group by u.id`;
+
+  if(stateCareerArea) query += havingProccessValueUser(careers, areas);  
+
+  // logtime(query);
+
+  const [rows] = await con.raw(query);
+  return rows;
+}
+
+exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers, inValues = false) => {
   if (activeUsers && inactiveUsers) {
-    return query
+    return  inValues ? `${query} and u.active in (1, 0)` : query; 
   } else if (activeUsers && !inactiveUsers) {
     return `${query} and u.active = 1`
   } else if (!activeUsers && inactiveUsers) {
@@ -79,7 +153,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
   // Add sorting order
 
   query += 'group by u.id,cv.criterion_id order by cv.id'
-
+  // logtime(query);
   const [rows] = await con.raw(query)
   return rows
 }

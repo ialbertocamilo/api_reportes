@@ -171,7 +171,6 @@ async function loadUsersWithCourses (
         sc.assigned,
         sc.completed,
         sc.reviewed,
-        sc.taken,
         sc.advanced_percentage,
         sc.last_time_evaluated_at,
         sc.taken,

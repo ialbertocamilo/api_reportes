@@ -5,9 +5,10 @@ require('../error')
 const { con } = require('../db')
 const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
-const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition } = require('../helper/Usuarios')
+const { getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition,
+        innerCriterionValueUser, havingProccessValueUser } = require('../helper/Usuarios')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck } = require('../helper/Helper')
+const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 // Headers for Excel file
@@ -18,14 +19,13 @@ const headers = [
   'Avance'
 ]
 
-async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, validacion }) {
+async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, validacion, careers, areas }) {
   // Generate Excel file header
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   // Load workspace criteria
-
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
@@ -37,7 +37,9 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
 
   // Load users from database and generate ids array
 
-  const users = await loadUsersWithProgress(modulos, UsuariosActivos, UsuariosInactivos)
+  const users = await loadUsersWithProgress(modulos, UsuariosActivos, 
+                                                     UsuariosInactivos, 
+                                            careers, areas)
   const usersIds = pluck(users, 'id')
 
   // Load workspace user criteria
@@ -89,29 +91,30 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithProgress (
-  modulesIds, activeUsers, inactiveUsers
+  modulesIds, activeUsers, inactiveUsers, careers, areas
 ) {
   // Base query
 
-  let query = `
-    select 
-        u.*, 
-        su.courses_assigned,
-        su.courses_completed,
-        su.advanced_percentage
-    from users u
-        inner join summary_users su on u.id = su.user_id
-    where
-        u.subworkspace_id in (${modulesIds.join()})
-  `
+  let query = ` select u.*, 
+                  su.courses_assigned,
+                  su.courses_completed,
+                  su.advanced_percentage `;
+
+  const userCondition = ` inner join summary_users su on u.id = su.user_id
+                          where u.subworkspace_id in (${modulesIds.join()}) `; 
+  const stateCareerArea = (careers.length > 0 || areas.length > 0); 
+  if(stateCareerArea) query += innerCriterionValueUser(careers, areas, userCondition);
+  else query += ` from users u ${userCondition}`;
 
   // Add user conditions and group sentence
+  query = addActiveUsersCondition(query, activeUsers, inactiveUsers);
+  query += ' group by u.id';
 
-  query = addActiveUsersCondition(query, activeUsers, inactiveUsers)
-  query += ' group by u.id'
+  if(stateCareerArea) query += havingProccessValueUser(careers, areas);  
 
+  // logtime(query);
   // Execute query
 
-  const [rows] = await con.raw(query)
-  return rows
+  const [rows] = await con.raw(query);
+  return rows;
 }
