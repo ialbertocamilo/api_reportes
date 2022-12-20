@@ -207,7 +207,7 @@ async function loadUsersWithCoursesAndTopics (
         st.views topic_views,
         st.status_id topic_status_id,
         st.last_time_evaluated_at topic_last_time_evaluated_at,
-        json_extract(w.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
+        json_extract(c.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
     from users u
         inner join workspaces w on u.subworkspace_id = w.id
         inner join summary_topics st on u.id = st.user_id

@@ -7,7 +7,7 @@ const moment = require('moment')
 moment.locale('es')
 const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
-const { loadEvaluationTypes } = require('../helper/CoursesTopicsHelper')
+const { loadEvaluationTypes,loadCoursesStatuses,getCourseStatusName } = require('../helper/CoursesTopicsHelper')
 const { strippedString } = require('../helper/Helper')
 
 async function notasUsuario ({ document }) {
@@ -38,6 +38,9 @@ async function notasUsuario ({ document }) {
     process.send({ alert: `El usuario con el documento ${document} no tiene evaluaciones desarrolladas` })
     process.exit()
   }
+  // Load user course statuses
+
+  const userCourseStatuses = await loadCoursesStatuses()
 
   // Load evaluation types
 
@@ -113,8 +116,8 @@ async function notasUsuario ({ document }) {
     courseObj.visitas = summaryCourse.views
     courseObj.reinicios = summaryCourse.restarts ? summaryCourse.restarts : '-'
     courseObj.temas = topicsArray
-    courseObj.resultado = +summaryCourse.advance_percentage === 100 ? 'Completado' : 'En desarrollo'
-
+    // courseObj.resultado = +summaryCourse.advance_percentage === 100 ? 'Completado' : 'En desarrollo'
+    courseObj.resultado = getCourseStatusName(userCourseStatuses, summaryCourse.status_id);
     courseResults.push(courseObj)
   }
 

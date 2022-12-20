@@ -11,7 +11,7 @@ require('./cron')
 
 // Server config
 
-app.use(queue({ activeLimit: 2, queuedLimit: -1 }))
+// app.use(queue({ activeLimit: 10, queuedLimit: -1 }))
 app.use(cors())
 app.use(express.json())
 app.set('port', process.env.PORT || 3000)
@@ -34,7 +34,10 @@ app.use(function (req, res, next) {
 
 // Initialize routes
 
+app.get('/exportar', queue({ activeLimit: 2, queuedLimit: -1}))
+
 app.use('/exportar', rutaReportes)
+
 app.use('/filtros', rutaFiltros)
 app.get('/reports/:filename', (req, res) => {
   const file = CARPETA_DESCARGA + `/${req.params.filename}`
