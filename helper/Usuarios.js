@@ -23,7 +23,10 @@ exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
 }
 
 const innerCriterionValueUser = (careers, areas, queryCondition) => {
-  let query = `, group_concat(cvu.criterion_value_id separator ', ') as stack_ids_cvu
+  let query = `, group_concat( 
+                distinct(cvu.criterion_value_id) separator ', ') as 
+                stack_ids_cvu
+                
             from users u 
             inner join criterion_value_user cvu on cvu.user_id = u.id `
             // inner join criterion_values cv on cvu.criterion_value_id = cv.id `
@@ -88,7 +91,8 @@ exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
   }
   query += ` group by u.id`;
 
-  if(stateCareerArea) query += havingProccessValueUser(careers, areas);  
+  const stateHavingCareerArea = (careers.length > 0 && areas.length > 0)
+  if(stateHavingCareerArea) query += havingProccessValueUser(careers, areas);  
 
   // logtime(query);
 
