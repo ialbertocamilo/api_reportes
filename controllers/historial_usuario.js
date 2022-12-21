@@ -12,7 +12,7 @@ const { findUserByDocument } = require('../helper/Usuarios')
 const { getCourseStatusName, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
 const { generatePagination, pluck } = require('../helper/Helper')
 
-async function historialUsuario ({ document, type, page, schoolId, search }) {
+async function historialUsuario ({ document, type, page, schoolId, search, workspaceId }) {
   // Load user from database
 
   const user = await findUserByDocument(document)
@@ -42,7 +42,7 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
 
     // Calaculate query records count
 
-    const countQuery = `select count(*) total from (${generateQuery(null, schoolId, search, allowStatusesIds)}) u`
+    const countQuery = `select count(*) total from (${generateQuery(null, schoolId, search, allowStatusesIds, workspaceId)}) u`
     const [count] = await con.raw(countQuery,
       { userId: user.id }
     )
@@ -51,8 +51,8 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
 
     const total = count[0]['total'] || 0
     pagination = generatePagination(total, 16, page)
-    console.log(pagination)
-    const [rows] = await con.raw(generateQuery(pagination, schoolId, search, allowStatusesIds),
+
+    const [rows] = await con.raw(generateQuery(pagination, schoolId, search, allowStatusesIds, workspaceId),
       { userId: user.id }
     )
 
@@ -96,7 +96,6 @@ async function historialUsuario ({ document, type, page, schoolId, search }) {
       }
     })
     courseResults = groups
-    console.log(groups)
   }
 
   // Generate response according the report's type
@@ -158,9 +157,10 @@ async function excelResponse (courseResults) {
  * @param schoolId
  * @param search
  * @param allowStatusesIds
+ * @param workspaceId
  * @returns {string}
  */
-function generateQuery (pagination = null, schoolId = null, search = null, allowStatusesIds = []) {
+function generateQuery (pagination = null, schoolId = null, search = null, allowStatusesIds = [], workspaceId = null) {
   let limit = ''
   let statusCondition = ''
   if (pagination) {
@@ -179,14 +179,16 @@ function generateQuery (pagination = null, schoolId = null, search = null, allow
         sc.status_id                                   course_status_id
     
     from users u
-             inner join summary_courses sc on u.id = sc.user_id
-             inner join courses c on sc.course_id = c.id
-             inner join course_school cs on c.id = cs.course_id
-             inner join schools s on cs.school_id = s.id
+         inner join summary_courses sc on u.id = sc.user_id
+         inner join courses c on sc.course_id = c.id
+         inner join course_school cs on c.id = cs.course_id
+         inner join schools s on cs.school_id = s.id
+         inner join school_workspace sw on sw.school_id = s.id
 
     where 
         u.id = :userId 
         ${statusCondition}
+        ${workspaceId ? ' and sw.workspace_id = ' + workspaceId : ''}
         ${schoolId ? ' and s.id = ' + schoolId : ''}
         ${search ? ' and c.name like "%' + search + '%"' : ''}
     
