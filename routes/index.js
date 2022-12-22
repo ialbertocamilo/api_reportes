@@ -3,7 +3,7 @@ const { logtime } = require('../helper/Helper')
 
 module.exports = {
   // * Usuarios
-  usuarios (req, res) {
+  usuarios(req, res) {
     logtime('Start report: Usuarios')
     const children = fork('./controllers/usuarios.js')
     children.send(req.body)
@@ -14,7 +14,7 @@ module.exports = {
     })
   },
   // * Notas usuario
-  notasUsuario ({ body }, res) {
+  notasUsuario({ body }, res) {
     const children = fork('./controllers/notas_usuario.js')
     children.send(body)
 
@@ -42,7 +42,7 @@ module.exports = {
     })
   },
   // * Consolidado por curso
-  consolidadoCursos ({ body }, res) {
+  consolidadoCursos({ body }, res) {
     const children = fork('./controllers/consolidado_cursos.js')
     children.send(body)
 
@@ -51,9 +51,9 @@ module.exports = {
       children.kill()
     })
   },
-  // * Consolidado por temas
-  consolidadoTemas ({ body }, res) {
-    const children = fork('./controllers/consolidado_temas_v2.js')
+  // * Consolidado por curso con compatibles
+  consolidadoCursosv2({ body }, res) {
+    const children = fork('./controllers/consolidado_cursos_v2.js')
     children.send(body)
 
     children.on('message', (data) => {
@@ -61,7 +61,19 @@ module.exports = {
       children.kill()
     })
   },
-  avanceCurricula ({ body }, res) {
+  // * Consolidado por temas
+  consolidadoTemas({ body }, res) {
+    // const children = fork('./controllers/consolidado_temas_v2.js')
+    const children = fork('./controllers/consolidado_temas_v3.js')
+
+    children.send(body)
+
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+  avanceCurricula({ body }, res) {
     const children = fork('./controllers/avance_curricula.js')
     children.send(body)
     children.on('message', (data) => {
@@ -70,7 +82,7 @@ module.exports = {
     })
   },
   // * Visitas
-  visitas ({ body }, res) {
+  visitas({ body }, res) {
     const children = fork('./controllers/visitas.js')
     children.send(body)
 
@@ -80,7 +92,7 @@ module.exports = {
     })
   },
   // * Reinicios
-  reinicios ({ body }, res) {
+  reinicios({ body }, res) {
     const children = fork('./controllers/reinicios.js')
     children.send(body)
 
@@ -90,7 +102,7 @@ module.exports = {
     })
   },
   // * Evaluaciones abiertas
-  evaluacionesAbiertas ({ body }, res) {
+  evaluacionesAbiertas({ body }, res) {
     const children = fork('./controllers/eva_abiertas.js')
     children.send(body)
 
@@ -100,7 +112,7 @@ module.exports = {
     })
   },
   // * Temas no evaluable
-  temasNoEvaluables ({ body }, res) {
+  temasNoEvaluables({ body }, res) {
     const children = fork('./controllers/temas_no_evaluables.js')
     children.send(body)
 
@@ -110,7 +122,7 @@ module.exports = {
     })
   },
   // * Ranking
-  ranking ({ body }, res) {
+  ranking({ body }, res) {
     const children = fork('./controllers/ranking.js')
     children.send(body)
 
@@ -120,7 +132,7 @@ module.exports = {
     })
   },
   // * User uploads
-  userUploads ({ body }, res) {
+  userUploads({ body }, res) {
     const children = fork('./controllers/user_uploads.js')
     children.send(body)
 
@@ -129,7 +141,7 @@ module.exports = {
       children.kill()
     })
   },
-  supervisores_notas ({ body }, res) {
+  supervisores_notas({ body }, res) {
     const children = fork('./controllers/supervisores_notas.js')
     children.send(body)
     children.on('message', (data) => {
@@ -137,7 +149,7 @@ module.exports = {
       children.kill()
     })
   },
-  supervisores_avance_curricula ({ body }, res) {
+  supervisores_avance_curricula({ body }, res) {
     const children = fork('./controllers/supervisores_avance_curricula.js')
     children.send(body)
     children.on('message', (data) => {
@@ -145,7 +157,7 @@ module.exports = {
       children.kill()
     })
   },
-  checklist_general ({ body }, res) {
+  checklist_general({ body }, res) {
     const children = fork('./controllers/checklist_general.js')
     children.send(body)
     children.on('message', (data) => {
@@ -153,7 +165,7 @@ module.exports = {
       children.kill()
     })
   },
-  checklist_detallado ({ body }, res) {
+  checklist_detallado({ body }, res) {
     const children = fork('./controllers/checklist_detallado.js')
     children.send(body)
     children.on('message', (data) => {
@@ -163,7 +175,7 @@ module.exports = {
   },
 
   /* videoteca */
-  videoteca ({ body }, res) {
+  videoteca({ body }, res) {
     const children = fork('./controllers/videoteca.js')
     children.send(body)
     children.on('message', (data) => {
@@ -173,7 +185,7 @@ module.exports = {
   },
 
   /* vademecum */
-  vademecum ({ body }, res) {
+  vademecum({ body }, res) {
     const children = fork('./controllers/vademecum.js')
     children.send(body)
     children.on('message', (data) => {
@@ -183,7 +195,7 @@ module.exports = {
   },
 
   /* diplomas */
-  diplomas ({ body }, res) {
+  diplomas({ body }, res) {
     const children = fork('./controllers/diplomas.js')
     children.send(body)
     children.on('message', (data) => {

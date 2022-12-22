@@ -11,6 +11,7 @@ router.post('/notas_usuario', handler.notasUsuario)
 router.post('/historial_usuario', handler.historialUsuario)
 router.post('/usuarios', handler.usuarios)
 router.post('/consolidado_cursos', handler.consolidadoCursos)
+router.post('/consolidado_cursos_v2', handler.consolidadoCursosv2)
 
 router.post('/segmentation', handler.segmentation)
 

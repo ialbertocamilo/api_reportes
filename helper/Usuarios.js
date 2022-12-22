@@ -1,26 +1,26 @@
-const { con } = require('../db')
-const moment = require('moment/moment')
-const { pluck, logtime } = require('./Helper')
+const { con } = require("../db");
+const moment = require("moment/moment");
+const { pluck, logtime } = require("./Helper");
+const { loadCriterionValuesByUser } = require("./Criterian");
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
-  logtime('method: getUsers')
+  logtime("method: getUsers");
   if (modulesIds && activeUsers && inactiveUsers) {
-    return con('users')
-      .whereIn('subworkspace_id', modulesIds)
+    return con("users").whereIn("subworkspace_id", modulesIds);
   } else if (modulesIds && activeUsers && !inactiveUsers) {
-    return con('users')
-      .whereIn('subworkspace_id', modulesIds)
-      .andWhere('active', 1)
+    return con("users")
+      .whereIn("subworkspace_id", modulesIds)
+      .andWhere("active", 1);
   } else if (modulesIds && !activeUsers && inactiveUsers) {
-    return con('users')
-      .whereIn('subworkspace_id', modulesIds)
-      .andWhere('active', 0)
+    return con("users")
+      .whereIn("subworkspace_id", modulesIds)
+      .andWhere("active", 0);
   } else if (modulesIds && !activeUsers && !inactiveUsers) {
-    return []
+    return [];
   } else if (!modulesIds) {
-    return []
+    return [];
   }
-}
+};
 
 const innerCriterionValueUser = (careers, areas, queryCondition) => {
   let query = `, group_concat( 
@@ -104,11 +104,11 @@ exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers, inValues =
   if (activeUsers && inactiveUsers) {
     return  inValues ? `${query} and u.active in (1, 0)` : query; 
   } else if (activeUsers && !inactiveUsers) {
-    return `${query} and u.active = 1`
+    return `${query} and u.active = 1`;
   } else if (!activeUsers && inactiveUsers) {
-    return `${query} and u.active = 0`
+    return `${query} and u.active = 0`;
   }
-}
+};
 
 /**
  * Load users criteria values from selected values
@@ -117,7 +117,7 @@ exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers, inValues =
  * @returns {Promise<*>}
  */
 exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
-  logtime('method: loadUsersCriteriaValues')
+  logtime("method: loadUsersCriteriaValues");
   let query = `
     select 
         cvu.user_id, 
@@ -136,13 +136,13 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
             inner join criteria c on c.id = cv.criterion_id
     where
       c.show_in_reports = 1
-    `
+    `;
 
   // When module ids array has been provided, add condition to filter them
 
   if (modules) {
     if (modules.length > 0) {
-      query += ` and u.subworkspace_id in (${modules.join()})`
+      query += ` and u.subworkspace_id in (${modules.join()})`;
     }
   }
 
@@ -150,7 +150,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
 
   if (userIds) {
     if (userIds.length > 0) {
-      query += ` and u.id in (${userIds.join()})`
+      query += ` and u.id in (${userIds.join()})`;
     }
   }
 
@@ -170,12 +170,18 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
  * @param usersCriterionValues
  * @returns {*[]}
  */
-exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) => {
-  const result = []
-  const found = []
+exports.getUserCriterionValues = (
+  userId,
+  criterionNames,
+  usersCriterionValues
+) => {
+  const result = [];
+  const found = [];
 
   // Iterate criterion names to find its values
-  const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
+  const userValues = usersCriterionValues.filter(
+    (ucv) => ucv.user_id === userId
+  );
   // let userValuesCriteriosWithCiclos = userValues.filter(ucv => ucv.criterion_name === 'Ciclo');
   // userValues = userValues.filter(ucv => ucv.criterion_name != 'Ciclo');
 
@@ -184,13 +190,14 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
   //   userValuesCriteriosWithCiclos[0].value_text = ciclos_name
   //   userValues.push(userValuesCriteriosWithCiclos[0])
   // }
-  criterionNames.forEach(name => {
-    userValues.forEach(userCriterionValue => {
+  criterionNames.forEach((name) => {
+    userValues.forEach((userCriterionValue) => {
       if (userCriterionValue.criterion_name === name) {
         // Get criterion value
 
-        let value
-        if (userCriterionValue.value_text) value = userCriterionValue.value_text
+        let value;
+        if (userCriterionValue.value_text)
+          value = userCriterionValue.value_text;
         //if (userCriterionValue.value_datetime) value = moment(userCriterionValue.value_datetime).format('DD/MM/YYYY H:mm:ss')
         // if (userCriterionValue.value_date) value = moment(userCriterionValue.value_date).format('DD/MM/YYYY')
         // if (userCriterionValue.value_boolean === 1) value = 'Sí'
@@ -200,29 +207,71 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
 
         // Since value for name was found, added to found array
 
-        found.push(name)
+        found.push(name);
 
         // Add name and value for results collection
 
         result.push({
           criterion_name: name,
-          criterion_value: value
-        })
+          criterion_value: value,
+        });
       }
-    })
+    });
 
     // When value for name was not found, add an empty value
 
     if (!found.includes(name)) {
       result.push({
         criterion_name: name,
-        criterion_value: null
-      })
+        criterion_value: null,
+      });
     }
-  })
+  });
 
-  return result
-}
+  return result;
+};
+
+exports.getUserCriterionValues2 = async (userId, criterionNames) => {
+  const result = [];
+  const found = [];
+
+  // const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
+  const userValues = await loadCriterionValuesByUser(userId);
+
+  criterionNames.forEach((name) => {
+    userValues.forEach((userCriterionValue) => {
+      if (userCriterionValue.criterion_name === name) {
+        // Get criterion value
+
+        let value;
+        if (userCriterionValue.value_text)
+          value = userCriterionValue.value_text;
+
+        // Since value for name was found, added to found array
+        found.push(name);
+
+        // Add name and value for results collection
+        result.push({
+          criterion_name: name,
+          criterion_value: value,
+        });
+      }
+    });
+
+    // When value for name was not found, add an empty value
+
+    if (!found.includes(name)) {
+      result.push({
+        criterion_name: name,
+        criterion_value: null,
+      });
+    }
+  });
+
+  return result;
+};
+
+
 
 /**
  * Find user using its document number
@@ -230,11 +279,11 @@ exports.getUserCriterionValues = (userId, criterionNames, usersCriterionValues) 
  * @returns {Promise<ResolveResult<TResult>[0]>}
  */
 exports.findUserByDocument = async (document) => {
-  return await con('users')
-    .select('*')
-    .where('document', `${document}`)
-    .then(([row]) => row)
-}
+  return await con("users")
+    .select("*")
+    .where("document", `${document}`)
+    .then(([row]) => row);
+};
 
 /**
  * Load users which have all the provided criterion values ids
@@ -243,11 +292,15 @@ exports.findUserByDocument = async (document) => {
  * @param criterionValuesIds
  * @returns {Promise<*[]>}
  */
-exports.loadUsersIdsWithCriterionValues = async (workspaceId, criterionValuesIds) => {
-  criterionValuesIds = criterionValuesIds.filter(i => !!i)
-  if (criterionValuesIds.length === 0) return []
+exports.loadUsersIdsWithCriterionValues = async (
+  workspaceId,
+  criterionValuesIds
+) => {
+  criterionValuesIds = criterionValuesIds.filter((i) => !!i);
+  if (criterionValuesIds.length === 0) return [];
 
-  const [users] = await con.raw(`
+  const [users] = await con.raw(
+    `
     select 
         u.id,
         count(cvu.criterion_value_id) criterion_count
@@ -259,7 +312,9 @@ exports.loadUsersIdsWithCriterionValues = async (workspaceId, criterionValuesIds
         cvu.criterion_value_id in (${criterionValuesIds.join()}) 
     group by u.id
     having criterion_count = :criterionCount
-  `, { workspaceId, criterionCount: criterionValuesIds.length })
+  `,
+    { workspaceId, criterionCount: criterionValuesIds.length }
+  );
 
-  return pluck(users, 'id')
-}
+  return pluck(users, "id");
+};
