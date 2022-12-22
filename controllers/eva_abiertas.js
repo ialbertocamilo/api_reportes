@@ -270,8 +270,10 @@ async function loadUsersQuestions (
 
   // Add condition for topics ids
 
-  if (topicsIds.length > 0) {
-    query += ` and t.id in (${topicsIds.join()})`
+  if (topicsIds) {
+    if (topicsIds.length > 0) {
+      query += ` and t.id in (${topicsIds.join()})`
+    }
   }
 
   /*
