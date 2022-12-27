@@ -65,6 +65,8 @@ function parseResponseUser(response,type_poll_question){
         case 'califica':
             const parse_response = JSON.parse(response);
         return parse_response[0] ? parse_response[0].resp_cal : '-';
+        default : 
+        return response;
     }
 }
   
