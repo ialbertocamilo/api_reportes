@@ -524,7 +524,7 @@ module.exports = {
     const recommendations = [
       'Podrás encontrar todos los cursos completados en las empresas que estuviste',
       'Aparecerá "Revisado" cuando el curso no tuvo evaluación',
-      'Aparecerá la nota cuando si hubo por lo menos una evaluación',
+      'Aparecerá la nota solo si hubo por lo menos una evaluación',
       'Usa el buscador para encontrar un curso específico'
     ]
 
