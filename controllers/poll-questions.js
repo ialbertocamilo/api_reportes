@@ -32,7 +32,7 @@ async function exportReportPollQuestion(filters) {
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
         const schools_name = pluck(schools.filter(s=>s.course_id == poll_questions_answer.course_id),'name').join(',');
         
-        cellRow.push(workspace.name);
+        cellRow.push(workspace ? workspace.name : '-');
         if(!es_anonimo){
             cellRow.push(poll_questions_answer.name);
             cellRow.push(poll_questions_answer.lastname);
@@ -63,8 +63,12 @@ function parseResponseUser(response,type_poll_question){
         case 'texto':
         return response;
         case 'califica':
-            const parse_response = JSON.parse(response);
-        return parse_response[0] ? parse_response[0].resp_cal : '-';
+            try {
+                const parse_response = JSON.parse(response);
+                return parse_response[0] ? parse_response[0].resp_cal : '-';
+            } catch (e) {
+                return '-';
+            }
         default : 
         return response;
     }
