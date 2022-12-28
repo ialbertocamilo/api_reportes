@@ -144,14 +144,8 @@ async function generateSegmentationReport({
 
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
-        pluck(compatibles_courses, "id"),
-
-        aprobados,
-        desaprobados,
-        desarrollo,
-        encuestaPendiente,
-
-        coursesStatuses);
+        pluck(compatibles_courses, "id")
+      );
 
       for (const user of users_null) {
         if (user.sc_created_at) {
