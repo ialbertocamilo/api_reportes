@@ -16,6 +16,7 @@ const {
   loadCoursesStatuses,
   loadCompatiblesId,
   getCourseStatusName,
+  getCourseStatusId
 } = require("../helper/CoursesTopicsHelper");
 
 const { pluck, logtime } = require("../helper/Helper");
@@ -55,10 +56,18 @@ async function generateSegmentationReport({
   workspaceId,
   cursos,
   escuelas,
-  start_date,
-  end_date,
-  activeUsers,
-  inactiveUsers,
+  areas,
+
+  aprobados,
+  desaprobados,
+  desarrollo,
+  encuestaPendiente,
+  tipocurso,
+
+  start: start_date,
+  end: end_date,
+  UsuariosActivos: activeUsers,
+  UsuariosInactivos: inactiveUsers,
 }) {
   // Generate Excel file header
   const headersEstaticos = await getGenericHeadersNotasXCurso(
@@ -74,6 +83,7 @@ async function generateSegmentationReport({
     [1, 5, 13, 4, 40, 41]
   );
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
+  // console.log('workpace_criteria_data: ',{ workspaceCriteria });
 
   if (modulos.length === 0) {
     modulos = await getSuboworkspacesIds(workspaceId);
@@ -82,8 +92,21 @@ async function generateSegmentationReport({
   let users_to_export = [];
 
   //Load Courses
-  const courses = await loadCourses({ cursos, escuelas });
+  const courses = await loadCourses({ cursos, escuelas, tipocurso }, workspaceId);
   const coursesStatuses = await loadCoursesStatuses();
+
+
+  const StateChecks = (aprobados && desaprobados &&
+                       desarrollo && encuestaPendiente);
+  let StackChecks = [];
+
+  if (aprobados) { StackChecks.push( getCourseStatusId(coursesStatuses, 'aprobado') ) }
+  if (desaprobados) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desaprobado') ) }
+  if (desarrollo) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desarrollo') ) }
+  if (encuestaPendiente) { StackChecks.push( getCourseStatusId(coursesStatuses, 'enc_pend') ) }
+
+  // console.log('StackChecks', StackChecks);
+
   for (const course of courses) {
     // Load workspace user criteria
 
@@ -95,7 +118,8 @@ async function generateSegmentationReport({
       start_date,
       end_date,
       activeUsers,
-      inactiveUsers
+      inactiveUsers,
+      areas
     );
     logtime(`[loadUsersSegmentedv2]`);
 
@@ -105,22 +129,32 @@ async function generateSegmentationReport({
     //   users: pluck(users, "id"),
     // });
 
-    const users_null = users.filter((us) => us.created_at == null);
-    const users_not_null = users.filter((us) => us.created_at != null);
+    const users_null = users.filter((us) => us.sc_created_at == null);
+    const users_not_null = users.filter((us) => us.sc_created_at != null);
+    
     users_to_export = users_not_null;
 
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
+    
+    // console.log('compatibles_courses', compatibles_courses.length);
 
-    if (compatibles_courses.length > 0) {
+    if (compatibles_courses.length > 0 && users_null.length > 0) {
       logtime(`INICIO COMPATIBLES`);
+
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
-        pluck(compatibles_courses, "id")
-      );
+        pluck(compatibles_courses, "id"),
+
+        aprobados,
+        desaprobados,
+        desarrollo,
+        encuestaPendiente,
+
+        coursesStatuses);
 
       for (const user of users_null) {
-        if (user.created_at) {
+        if (user.sc_created_at) {
           users_to_export.push(user);
           continue;
         }
@@ -138,59 +172,60 @@ async function generateSegmentationReport({
           continue;
         }
 
-        const {
-          id,
-          name,
-          lastname,
-          surname,
-          document,
-          email,
-          active,
-          last_login,
-        } = user;
-        const {
-          school_name,
-          course_name,
-          grade_average,
-          advanced_percentage,
-          course_status_id,
-          course_passed,
-          assigned,
-          completed,
-          taken,
-          reviewed,
-          last_time_evaluated_at,
-          course_restarts,
-          course_views,
-        } = sc_compatible;
+        const { id, name, 
+                lastname, 
+                surname, 
+                document, 
+                email, 
+                active, 
+                last_login } = user;
+          
+        const { school_name, 
+                  
+                course_name, 
+                course_status_id, 
+                course_passed,
+                course_restarts, 
+                course_views,
 
-        const temp = {
-          id,
-          name,
-          lastname,
-          surname,
-          document,
-          email,
-          active,
-          last_login,
+                grade_average, 
+                advanced_percentage,
+                assigned, 
+                completed,
+                taken, 
+                reviewed, 
+                last_time_evaluated_at
 
-          school_name,
-          course_name,
-          grade_average,
-          advanced_percentage,
-          course_status_id,
-          course_passed,
-          assigned,
-          completed,
-          taken,
-          reviewed,
-          last_time_evaluated_at,
-          course_restarts,
-          course_views,
-          compatible: `Es compatible con el curso : ${course_name}.`,
+              } = sc_compatible;
+
+        const temp = { 
+            id, name, 
+            lastname, 
+            surname, 
+            document, 
+            email,
+            active, 
+            last_login,
+
+            school_name, 
+            course_name, 
+            course_status_id,
+            course_passed, 
+            course_restarts, 
+            course_views,
+
+            grade_average, 
+            advanced_percentage,
+            assigned, 
+            completed,
+            taken, reviewed,
+            last_time_evaluated_at,
+            
+            compatible: `Es compatible con el curso : ${course_name}.`
         };
 
         users_to_export.push(temp);
+
       }
     } else {
       users_to_export = [...users_not_null, ...users_null];
@@ -201,6 +236,9 @@ async function generateSegmentationReport({
     //   pluck(users_to_export, 'id')
     // );
     for (const user of users_to_export) {
+
+      if(!StateChecks && !StackChecks.includes(user.course_status_id)) continue;
+
       const cellRow = [];
       const lastLogin = moment(user.last_login).format("DD/MM/YYYY H:mm:ss");
 

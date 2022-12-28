@@ -1,6 +1,6 @@
 const moment = require("moment");
 const { con } = require("../db");
-const { loadTopicsByCourseId } = require("./CoursesTopicsHelper");
+const { loadTopicsByCourseId, getCourseStatusId } = require("./CoursesTopicsHelper");
 const {
   groupArrayOfObjects,
   uniqueElements,
@@ -75,10 +75,12 @@ exports.loadUsersSegmented = async (course_id) => {
 exports.loadUsersSegmentedv2 = async (
   course_id,
   modules = [],
+
   start_date = null,
   end_date = null,
   activeUsers = false,
-  inactiveUsers = false
+  inactiveUsers = false,
+  areas
 ) => {
   // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
   const segments = await con("segments_values as sv")
@@ -103,6 +105,7 @@ exports.loadUsersSegmentedv2 = async (
     "get_array"
   );
   let users = [];
+
   for (let segment of segments_groupby) {
     const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
     let join_criterions_values_user = "";
@@ -112,7 +115,8 @@ exports.loadUsersSegmentedv2 = async (
           values,
           "criterion_value_id"
         ).toString();
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
+        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id})`;
+        // console.log('criterios_inner', join_criterions_values_user);
       } else {
         let select_date = "select id from criterion_values where ";
         values.forEach((value, index) => {
@@ -143,6 +147,21 @@ exports.loadUsersSegmentedv2 = async (
 
     const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
     const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    
+
+    let join_criterions_values_user_area = '';
+    let where_criterions_values_user_area = '';
+
+    if(areas.length) {
+        join_criterions_values_user_area += ` 
+          inner join criterion_value_user cvu 
+            on cvu.user_id = u.id
+          inner join criterion_values cv 
+            on cvu.criterion_value_id = cv.id `;
+    
+        where_criterions_values_user_area += ` 
+          and cvu.criterion_value_id in ( ${areas.join()} )`
+    }
     // console.log({
     //   join_criterions_values_user,
     //   queryJoin,
@@ -153,30 +172,41 @@ exports.loadUsersSegmentedv2 = async (
     //   user_inactive_query,
     // });
 
-    const [rows] = await con.raw(`
+    let query = `
         select 
-            u.id, u.name,u.lastname,u.surname,u.email, u.document, u.active, u.last_login,
+            u.id, u.name,
+            u.lastname, u.surname,
+            u.email, u.document, 
+            u.active, u.last_login,
 
-            sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at,
-            sc.views as course_views, sc.passed as course_passed, sc.assigned, sc.completed,
-            sc.last_time_evaluated_at, sc.restarts, sc.taken, sc.reviewed,
-
+            sc.grade_average, sc.advanced_percentage,
+            sc.status_id, sc.created_at as sc_created_at,
+            sc.views as course_views, sc.passed as course_passed, 
+            sc.assigned, sc.completed,
+            sc.last_time_evaluated_at, sc.restarts,
+            sc.taken, sc.reviewed,
             sc.status_id as course_status_id
 
         from users u
         
-            ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} 
-            ${start_date_query} ${end_date_query}
+          ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} 
+          ${start_date_query} ${end_date_query}
+          LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
+          ${join_criterions_values_user} 
 
-            LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
-
-            ${join_criterions_values_user} 
+          ${join_criterions_values_user_area}
 
         where 
-            u.deleted_at is null
-            ${user_active_query} ${user_inactive_query}
-            ${modules_query}
-        `);
+          u.deleted_at is null
+          ${user_active_query} ${user_inactive_query}
+          ${modules_query} 
+
+          ${where_criterions_values_user_area}
+          `
+
+    // logtime(query);
+    const [rows] = await con.raw(query);
+
     if (rows.length > 0) {
       users = [...users, ...rows];
     }
@@ -312,32 +342,46 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 };
 
 
-exports.loadCourses = async ({ cursos = [], escuelas = [] }) => {
-  const where_courses =
-    cursos.length == 0
-      ? {
-        label: "cs.school_id",
-        value: escuelas,
-      }
-      : {
-        label: "cs.course_id",
-        value: cursos,
-      };
-  return await con("course_school as cs")
-    .select(
-      "cs.course_id",
-      "c.name as course_name",
-      "sc.name as school_name",
-      "c.active as course_active",
-      "t1.name as course_type"
-    )
-    .join("courses as c", "c.id", "cs.course_id")
-    .join("schools as sc", "sc.id", "cs.school_id")
-    .join("taxonomies as t1", "t1.id", "c.type_id")
-    .whereIn(where_courses.label, where_courses.value)
-    .where("c.active", 1)
-    .where("c.deleted_at", null)
-    .groupBy("cs.course_id");
+exports.loadCourses = async (
+  { cursos = [], 
+    escuelas = [],
+    tipocurso }, workspaceId) => {
+
+  let query = `
+    select  
+    
+      cs.course_id,
+      c.name as course_name,
+      s.name as school_name,
+      c.active as course_active,
+      tx.name as course_type
+
+    from course_school as cs
+
+    inner join courses as c 
+      on c.id = cs.course_id
+    inner join schools as s
+      on s.id = cs.school_id
+    inner join taxonomies as tx
+      on tx.id = c.type_id 
+    inner join school_workspace as sw
+      on sw.school_id = s.id
+
+    where c.active = 1 
+    and sw.workspace_id = ${workspaceId}  
+    and c.deleted_at is null 
+  `;
+
+  if(cursos.length) query += ` and cs.course_id in (${cursos.join()})`;
+  if(escuelas.length) query += ` and cs.school_id in (${escuelas.join()})`;
+  
+  if(!tipocurso) query += ` and tx.code not in ('free')`;
+  
+  query += ` group by cs.course_id`;
+
+  const [rows] = await con.raw(query);
+
+  return rows;
 };
 
 
