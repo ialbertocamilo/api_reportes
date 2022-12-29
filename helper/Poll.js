@@ -1,7 +1,7 @@
 const { con } = require('../db');
 const { pluck } = require('./Helper')
 
-exports.pollQuestionReportData =async({courses_id_selected,modules,poll,type_poll_question,date})=>{
+exports.pollQuestionReportData =async({courses_selected,modules,poll,type_poll_question,date})=>{
     const poll_questions_ids = await con('poll_questions').select('id').where('poll_id',poll.id).whereNull('deleted_at').where('type_id',type_poll_question.id);
     let select_query = ['pq.titulo','pqa.respuestas','pqa.course_id','c.name as course_name','pqa.created_at','u.subworkspace_id']; 
     if(!poll.anonima){
@@ -16,7 +16,7 @@ exports.pollQuestionReportData =async({courses_id_selected,modules,poll,type_pol
     join courses c on c.id = pqa.course_id
     where u.active =1 and u.deleted_at is null
     and u.subworkspace_id in (${modules.toString()})
-    and pqa.course_id in (${courses_id_selected.toString()})
+    and pqa.course_id in (${courses_selected.toString()})
     and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()})
     ${where_between_dates}
     order by pqa.created_at
@@ -40,9 +40,9 @@ exports.pollQuestionReportData =async({courses_id_selected,modules,poll,type_pol
 exports.loadSubWorkSpaces = async({modules})=>{
     return await con('workspaces').select('id','name').whereIn('id',modules);
 }
-exports.loadSchoolsByCourse = async({courses_id_selected})=>{
+exports.loadSchoolsByCourse = async({courses_selected})=>{
     return await con('course_school as cs')
                 .select('s.name','cs.course_id')
                 .join('schools as s','s.id','=','cs.school_id')
-                .whereIn('cs.course_id',courses_id_selected);
+                .whereIn('cs.course_id',courses_selected);
 }
