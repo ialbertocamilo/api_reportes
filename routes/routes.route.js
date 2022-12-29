@@ -16,6 +16,7 @@ router.post('/consolidado_cursos_v2', handler.consolidadoCursosv2)
 router.post('/segmentation', handler.segmentation)
 
 router.post('/consolidado_temas', handler.consolidadoTemas)
+router.post('/consolidado_temas_v3', handler.consolidadoTemasV3)
 router.post('/avance_curricula', handler.avanceCurricula)
 router.post('/visitas', handler.visitas)
 router.post('/reinicios', handler.reinicios)

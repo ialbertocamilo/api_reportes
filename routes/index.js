@@ -63,7 +63,17 @@ module.exports = {
   },
   // * Consolidado por temas
   consolidadoTemas({ body }, res) {
-    // const children = fork('./controllers/consolidado_temas_v2.js')
+    const children = fork('./controllers/consolidado_temas_v2.js')
+    // const children = fork('./controllers/consolidado_temas_v3.js')
+
+    children.send(body)
+
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+  consolidadoTemasV3({ body }, res) {
     const children = fork('./controllers/consolidado_temas_v3.js')
 
     children.send(body)
