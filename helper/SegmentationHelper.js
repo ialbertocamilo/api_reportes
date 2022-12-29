@@ -345,6 +345,10 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 exports.loadCourses = async (
   { cursos = [], 
     escuelas = [],
+    
+    CursosActivos,
+    CursosInactivos,
+
     tipocurso }, workspaceId) => {
 
   let query = `
@@ -367,23 +371,26 @@ exports.loadCourses = async (
     inner join school_workspace as sw
       on sw.school_id = s.id
 
-    where c.active = 1 
-    and sw.workspace_id = ${workspaceId}  
-    and c.deleted_at is null 
+    where  
+      sw.workspace_id = ${workspaceId}  
+      and c.deleted_at is null 
   `;
+
+  // posible filtro en estado de curso
+  if(CursosActivos && !CursosInactivos) query += ` and c.active = 1`;
+  if(CursosInactivos && !CursosActivos) query += ` and c.active = 0`;
 
   if(cursos.length) query += ` and cs.course_id in (${cursos.join()})`;
   if(escuelas.length) query += ` and cs.school_id in (${escuelas.join()})`;
-  
-  if(!tipocurso) query += ` and tx.code not in ('free')`;
+  if(!tipocurso) query += ` and not tx.code = 'free'`;
   
   query += ` group by cs.course_id`;
 
-  const [rows] = await con.raw(query);
+  logtime(query);
 
+  const [rows] = await con.raw(query);
   return rows;
 };
-
 
 exports.loadCoursesV2 = async ({
   workspaceId = null,

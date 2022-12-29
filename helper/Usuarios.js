@@ -240,6 +240,7 @@ exports.getUserCriterionValues2 = async (userId, criterionNames) => {
 
   criterionNames.forEach((name) => {
     userValues.forEach((userCriterionValue) => {
+
       if (userCriterionValue.criterion_name === name) {
         // Get criterion value
 
@@ -255,6 +256,7 @@ exports.getUserCriterionValues2 = async (userId, criterionNames) => {
           criterion_name: name,
           criterion_value: value,
         });
+        // console.log('in push')
       }
     });
 

@@ -64,6 +64,9 @@ async function generateSegmentationReport({
   encuestaPendiente,
   tipocurso,
 
+  CursosActivos = false, // posible filtro en estado de curso
+  CursosInactivos = false, // posible filtro en estado de curso
+
   start: start_date,
   end: end_date,
   UsuariosActivos: activeUsers,
@@ -92,7 +95,9 @@ async function generateSegmentationReport({
   let users_to_export = [];
 
   //Load Courses
-  const courses = await loadCourses({ cursos, escuelas, tipocurso }, workspaceId);
+  const courses = await loadCourses({ cursos, escuelas, tipocurso,
+                                      CursosActivos, CursosInactivos }, 
+                                      workspaceId);
   const coursesStatuses = await loadCoursesStatuses();
 
 
@@ -105,8 +110,6 @@ async function generateSegmentationReport({
   if (desarrollo) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desarrollo') ) }
   if (encuestaPendiente) { StackChecks.push( getCourseStatusId(coursesStatuses, 'enc_pend') ) }
 
-  // console.log('StackChecks', StackChecks);
-
   for (const course of courses) {
     // Load workspace user criteria
 
@@ -117,8 +120,10 @@ async function generateSegmentationReport({
       modulos,
       start_date,
       end_date,
+      
       activeUsers,
       inactiveUsers,
+
       areas
     );
     logtime(`[loadUsersSegmentedv2]`);
@@ -137,11 +142,10 @@ async function generateSegmentationReport({
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
     
-    // console.log('compatibles_courses', compatibles_courses.length);
-
     if (compatibles_courses.length > 0 && users_null.length > 0) {
       logtime(`INICIO COMPATIBLES`);
 
+      // obtener usuarios por cursos compatibles
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
         pluck(compatibles_courses, "id")
@@ -153,6 +157,7 @@ async function generateSegmentationReport({
           continue;
         }
 
+        // encontrar usuario compatible
         const sc_compatible = sc_compatibles
           .filter(
             (row) =>
@@ -225,10 +230,7 @@ async function generateSegmentationReport({
       users_to_export = [...users_not_null, ...users_null];
     }
 
-    // const usersCriterionValues = await loadUsersCriteriaValues(
-    //   modulos,
-    //   pluck(users_to_export, 'id')
-    // );
+    //exportar usuarios (users_to_export);
     for (const user of users_to_export) {
 
       if(!StateChecks && !StackChecks.includes(user.course_status_id)) continue;
@@ -243,16 +245,10 @@ async function generateSegmentationReport({
       cellRow.push(user.active === 1 ? "Activo" : "Inactivo");
       cellRow.push(user.email);
 
-      // const userValues = getUserCriterionValues(
-      //   user.id,
-      //   workspaceCriteriaNames,
-      //   usersCriterionValues
-      // );
-      const userValues = await getUserCriterionValues2(
-        user.id,
-        workspaceCriteriaNames
-      );
+      // criterios de usuario
+      const userValues = await getUserCriterionValues2(user.id,workspaceCriteriaNames);
       userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+      // criterios de usuario
 
       const passed = user.course_passed || 0;
       const taken = user.taken || 0;

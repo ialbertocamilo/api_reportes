@@ -30,12 +30,13 @@ exports.getCriterianUserByCode = async (UserId, UserCode, Instance = false ) => 
 
 exports.loadCriterionValuesByUser = async (userId) => {
 
+		  // GROUP_CONCAT(cv.value_text SEPARATOR ', ') value_text,
 	let query = `
 	  select 
 		  cvu.user_id, 
 		  cv.criterion_id,
 		  c.name criterion_name,
-		  GROUP_CONCAT(cv.value_text SEPARATOR ', ') value_text,
+		  cv.value_text,
 		  cv.value_datetime,
 		  cv.value_date,
 		  cv.value_boolean,
@@ -53,5 +54,5 @@ exports.loadCriterionValuesByUser = async (userId) => {
   
 	const [rows] = await con.raw(query);
 	  
-	return [rows];
+	return rows;
   };

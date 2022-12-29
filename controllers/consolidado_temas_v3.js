@@ -20,7 +20,7 @@ const {
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadCoursesV2, loadUsersSegmentedv2, loadUsersSegmentedWithSummariesTopics, loadUsersSegmentedv2WithSummaryTopics } = require('../helper/SegmentationHelper')
-const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
+const { loadSummaryCoursesByUsersAndCoursesTopics } = require('../helper/Summaries')
 
 moment.locale('es')
 
@@ -87,9 +87,11 @@ async function exportarUsuariosDW({
 
   let users_to_export = [];
 
-  const courses = await loadCoursesV2({ workspaceId, schools: escuelas, courses: cursos, topics: temas });
+  const courses = await loadCoursesV2({ 
+    workspaceId, schools: escuelas, courses: cursos, topics: temas });
 
   console.log({ courses_count: pluck(courses, 'course_id') });
+  
   for (const course of courses) {
     console.log({ course });
 
@@ -136,13 +138,12 @@ async function exportarUsuariosDW({
        *  INNER join topics t on t.course_id = sc.course_id
           LEFT OUTER JOIN summary_topics st on st.topic_id = t.id
        */
-      const st_compatibles = await loadSummaryCoursesByUsersAndCourses(
+      const st_compatibles = await loadSummaryCoursesByUsersAndCoursesTopics(
         pluck(users_null, "id"),
         pluck(compatibles_courses, "id")
       )
 
       const compatibles_rows_grouped = await groupRowsByCourseId(users);
-
 
 
       for (const user of users) {
