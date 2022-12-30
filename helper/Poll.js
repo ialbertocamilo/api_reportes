@@ -19,7 +19,7 @@ exports.pollQuestionReportData =async({courses_selected,modules,poll,type_poll_q
     and pqa.course_id in (${courses_selected.toString()})
     and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()})
     ${where_between_dates}
-    order by pqa.created_at
+    order by "pqa.created_at"
     `
     const [rows]  = await con.raw(query);
     return rows;
