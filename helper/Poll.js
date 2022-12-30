@@ -8,7 +8,7 @@ exports.pollQuestionReportData =async({courses_selected,modules,poll,type_poll_q
         select_query = [...select_query,...['u.name','u.lastname','u.surname','u.document']]; 
     }
         
-    const where_between_dates = (date.start && date.end) ? `and pqa.created_at BETWEEN "${date.start}" and "${date.end}"` : ''; 
+    const where_between_dates = (date.start && date.end) ? `and pqa.created_at BETWEEN '${date.start}' and '${date.end}'` : ''; 
     const query = `
     select ${select_query} from  poll_question_answers pqa
     join users as u on u.id = pqa.user_id
@@ -17,7 +17,7 @@ exports.pollQuestionReportData =async({courses_selected,modules,poll,type_poll_q
     where u.active =1 and u.deleted_at is null
     and u.subworkspace_id in (${modules.toString()})
     and pqa.course_id in (${courses_selected.toString()})
-    and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()}) ${where_between_dates}`
+    and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()}) ${where_between_dates}`;
     const [rows]  = await con.raw(query);
     return rows;
     // return await con('poll_question_answers as pqa')
