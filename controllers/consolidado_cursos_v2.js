@@ -118,13 +118,13 @@ async function generateSegmentationReport({
     const users = await loadUsersSegmentedv2(
       course.course_id,
       modulos,
+      areas,
+
       start_date,
       end_date,
       
       activeUsers,
-      inactiveUsers,
-
-      areas
+      inactiveUsers
     );
     logtime(`[loadUsersSegmentedv2]`);
 
@@ -142,6 +142,8 @@ async function generateSegmentationReport({
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
     
+
+    // console.log('compatibles_courses',{compatibles_courses, users_null_length: users_null.length})
     if (compatibles_courses.length > 0 && users_null.length > 0) {
       logtime(`INICIO COMPATIBLES`);
 

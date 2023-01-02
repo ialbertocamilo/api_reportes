@@ -67,18 +67,6 @@ exports.loadSummaryCoursesByUsersAndCoursesTopics = async (
         cs.course_id,
         c.name course_name, 
         s.name school_name,
-        sc.user_id,
-        sc.grade_average, 
-        sc.advanced_percentage,
-        sc.views course_views, 
-        sc.passed course_passed, 
-        sc.assigned, 
-        sc.completed,
-        sc.last_time_evaluated_at, 
-        sc.restarts course_restarts, 
-        sc.taken, 
-        sc.reviewed,
-        sc.status_id course_status_id
 
       from 
 
