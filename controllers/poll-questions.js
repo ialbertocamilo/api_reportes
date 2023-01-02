@@ -69,7 +69,7 @@ function parseResponseUser(response,type_poll_question){
             } catch (e) {
                 return '-';
             }
-        case 'multiple':
+        case 'opcion-multiple':
             const parse_response = JSON.parse(response)[0];
             return parse_response
         default : 
