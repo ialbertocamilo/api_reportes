@@ -8,6 +8,7 @@ const CARPETA_DESCARGA = process.env.CARPETA_DESCARGA.replace(/^\/|\/$/g, "");
 
 module.exports = {
   PORT: process.env.PORT || 3000,
+  DB_PORT: process.env.DB_PORT || 3306,
   DATABASE: process.env.DB_NAME,
   HOST: process.env.DB_HOST,
   USER: process.env.DB_USER,

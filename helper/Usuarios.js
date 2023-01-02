@@ -123,7 +123,8 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
         cvu.user_id, 
         cv.criterion_id,
         c.name criterion_name,
-        GROUP_CONCAT(cv.value_text SEPARATOR ', ') value_text,
+        group_concat(cv.value_text separator ', ') value_text,
+        if (c.code = 'cycle', 1, 0) is_cycle,
         cv.value_datetime,
         cv.value_date,
         cv.value_boolean,
@@ -195,9 +196,14 @@ exports.getUserCriterionValues = (
       if (userCriterionValue.criterion_name === name) {
         // Get criterion value
 
-        let value;
-        if (userCriterionValue.value_text)
-          value = userCriterionValue.value_text;
+        let value = userCriterionValue.value_text
+        if (userCriterionValue.is_cycle == 1) {
+          if (value.includes(',')) {
+            // Takes the last cycle
+            const cycles = value.split(',')
+            value = value.split(',')[cycles.length - 1]
+          }
+        }
         //if (userCriterionValue.value_datetime) value = moment(userCriterionValue.value_datetime).format('DD/MM/YYYY H:mm:ss')
         // if (userCriterionValue.value_date) value = moment(userCriterionValue.value_date).format('DD/MM/YYYY')
         // if (userCriterionValue.value_boolean === 1) value = 'Sí'

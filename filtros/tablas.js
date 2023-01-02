@@ -79,21 +79,25 @@ module.exports = {
 
   /**
    * Load workspace's courses
-   * @param schoolId
+   * @param {string} schoolIds separated by commas
    * @returns {Promise<*>}
    */
-  async loadSchoolCourses(schoolId) {
-    if(!schoolId){
-      return [];
+  async loadSchoolCourses (schoolIds) {
+    if (!schoolIds) {
+      return []
     }
+
     const [rows] = await con.raw(`
       select
         c.*
-      from courses c inner join course_school cs on c.id = cs.course_id
-      where cs.school_id = :schoolId and 
-            c.active = 1 and c.deleted_at is null
-    `, { schoolId }
-    )
+      from courses c 
+          inner join course_school cs on c.id = cs.course_id
+      where 
+          cs.school_id in (${schoolIds}) and 
+          c.active = 1 and 
+          c.deleted_at is null
+    `)
+
     return rows
   },
   /**
@@ -117,17 +121,17 @@ module.exports = {
   },
   /**
    * Load course's topics
-   * @param courseId
+   * @param {string} coursesIds separated by commas
    * @returns {Promise<*>}
    */
-  async loadCourseTopics(courseId) {
+  async loadCourseTopics (coursesIds) {
     const [rows] = await con.raw(`
       select
         *
       from topics
-      where course_id = :courseId
-    `, { courseId }
-    )
+      where course_id in (${coursesIds})
+    `)
+
     return rows
   },
   /**
@@ -165,10 +169,10 @@ module.exports = {
   },
   /**
    * Load checklist from specific course
-   * @param courseId
+   * @param {string} coursesIds separated by commas
    * @returns {Promise<*>}
    */
-  async loadCourseChecklists(courseId) {
+  async loadCourseChecklists (coursesIds) {
     const [rows] = await con.raw(`
       select
         c.id,
@@ -178,11 +182,11 @@ module.exports = {
           checklist_relationships cr 
             inner join checklists c on c.id = cr.checklist_id
       where
-          cr.course_id = :courseId and
+          cr.course_id in (${coursesIds}) and
           c.active = 1
       
       group by c.id
-    `, { courseId })
+    `)
 
     return rows
   },
@@ -429,17 +433,17 @@ module.exports = {
     return temas[0]
   },
 
-  async loadSubworkspaceById(subworkspaceId) {
+  async loadSubworkspaceById (subworkspacesIds) {
     const [rows] = await con.raw(`
       SELECT
        *
       FROM workspaces
       WHERE 
         parent_id is not null
-        AND id = :subworkspaceId
+        AND id in (${subworkspacesIds})
         AND deleted_at is null 
-    `, { subworkspaceId });
-    return rows[0];
+    `)
+    return rows
   },
 
   async loadCriterionValuesByParentId(criterionValuesParentId, criterionCode) {
@@ -520,7 +524,7 @@ module.exports = {
     const recommendations = [
       'Podrás encontrar todos los cursos completados en las empresas que estuviste',
       'Aparecerá "Revisado" cuando el curso no tuvo evaluación',
-      'Aparecerá la nota cuando si hubo por lo menos una evaluación',
+      'Aparecerá la nota solo si hubo por lo menos una evaluación',
       'Usa el buscador para encontrar un curso específico'
     ]
 

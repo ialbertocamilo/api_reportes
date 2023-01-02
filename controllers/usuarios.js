@@ -22,7 +22,7 @@ const defaultHeaders = [
   'ULTIMA SESIÓN'
 ]
 
-async function exportarUsuariosDW ({ workspaceId, modulos, 
+async function exportarUsuariosDW ({ workspaceId, modulos,
                                      UsuariosActivos, UsuariosInactivos,
                                      careers, areas }) {
   // When no modules are provided, get its ids using its parent id

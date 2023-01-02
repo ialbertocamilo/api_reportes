@@ -213,5 +213,14 @@ module.exports = {
       children.kill()
     })
 
+  },
+  /*Encuestas*/
+  poolQuestions({body},res){
+    const children = fork('./controllers/poll-questions.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
   }
 }

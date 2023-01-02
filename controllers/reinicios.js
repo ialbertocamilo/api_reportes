@@ -93,13 +93,13 @@ async function Reinicios ({ workspaceId, admin, tipo, start, end }) {
  * Load users with its courses and schools
  * @param workspaceId
  * @param modulesIds
- * @param adminId
+ * @param adminIds
  * @param start
  * @param end
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithRestarts (
-  workspaceId, modulesIds, adminId, tipo, start, end
+  workspaceId, modulesIds, adminIds, tipo, start, end
 ) {
   // Base query
 
@@ -127,10 +127,10 @@ async function loadUsersWithRestarts (
       sw.workspace_id = ${workspaceId} 
   `
 
-  if (adminId) {
-    query += ` and st.restarter_id = ${adminId}`
-  }else {
-    query += ` and st.restarter_id is not null`
+  if (adminIds) {
+    query += ` and st.restarter_id in ( ${adminIds} )`
+  } else {
+    query += ' and st.restarter_id is not null'
   }
 
   if (start && end) {

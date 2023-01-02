@@ -34,5 +34,6 @@ router.post('/checklist_detallado', handler.checklist_detallado)
 router.post('/videoteca', handler.videoteca)
 router.post('/vademecum', handler.vademecum)
 router.post('/diplomas', handler.diplomas)
+router.post('/poll-questions', handler.poolQuestions)
 
 module.exports = router
