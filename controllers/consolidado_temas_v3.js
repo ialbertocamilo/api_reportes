@@ -10,13 +10,15 @@ const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck, logtime } = require('../helper/Helper')
+const { pluck, logtime, groupArrayOfObjects } = require('../helper/Helper')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
   loadEvaluationTypes, getCourseStatusName, getTopicStatusName,
   loadCoursesStatuses,
-  loadTopicsByCourseId
+  loadCompatiblesId,
+  loadTopicsByCourseId,
+  loadTopicsByCourseUniqueId
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadCoursesV2, loadUsersSegmentedv2, loadUsersSegmentedWithSummariesTopics, loadUsersSegmentedv2WithSummaryTopics } = require('../helper/SegmentationHelper')
@@ -45,10 +47,23 @@ let headers = [
 ]
 
 async function exportarUsuariosDW({
-  workspaceId,
-  modulos, UsuariosActivos, UsuariosInactivos, escuelas,
-  cursos, temas, revisados, aprobados, desaprobados, realizados, porIniciar,
-  activeTopics, inactiveTopics, end, start, validador, areas, tipocurso
+  workspaceId, modulos, 
+  escuelas, cursos, temas, areas,
+  
+  revisados, 
+  aprobados, 
+  desaprobados, 
+  realizados, 
+  porIniciar,
+  tipocurso,
+
+  CursosActivos = false, CursosInactivos = false,
+  UsuariosActivos, UsuariosInactivos,
+  activeTopics, inactiveTopics,
+
+  start: start_date,
+  end: end_date,
+  validador
 }) {
   // Generate Excel file header
 
@@ -74,135 +89,152 @@ async function exportarUsuariosDW({
   }
 
   // Load user topic statuses
-
   const userTopicsStatuses = await loadTopicsStatuses()
 
   // Load user course statuses
-
   const userCourseStatuses = await loadCoursesStatuses()
 
   // Load evaluation types
-
   const evaluationTypes = await loadEvaluationTypes()
 
   let users_to_export = [];
 
-  const courses = await loadCoursesV2({ 
-    workspaceId, schools: escuelas, courses: cursos, topics: temas });
+  const courses = await loadCoursesV2({
+      escuelas, cursos, temas,
+      CursosActivos, CursosInactivos,
+      tipocurso
+    }, workspaceId);
 
-  console.log({ courses_count: pluck(courses, 'course_id') });
-  
+  console.log(courses);
   for (const course of courses) {
-    console.log({ course });
-
-    const topics = await loadTopicsByCourseId(course.course_id);
+    logtime('CURRENT COURSE:', `${course.course_id} - ${course.course_name}`);
+    // const topics = await loadTopicsByCourseUniqueId(course.course_id);
 
     // Cargar summary courses cruzados con left outer join con summary topics
     // User- Summary Course Data - Summary Topic Data
-    const users = await loadUsersSegmentedv2WithSummaryTopics(course.course_id, temas, modulos, start, end, UsuariosActivos, UsuariosInactivos);
+    // const users = await loadUsersSegmentedv2WithSummaryTopics(course.course_id, temas, modulos, start, end, UsuariosActivos, UsuariosInactivos);
+    const users = await loadUsersSegmentedv2WithSummaryTopics(
+      course.course_id, 
+      modulos, 
+      areas,
+
+      start_date, 
+      end_date, 
+
+      UsuariosActivos, 
+      UsuariosInactivos
+    );
+
+    const users_null = users.filter((us) => us.sc_created_at == null);
+    const users_not_null = users.filter((us) => us.sc_created_at != null);
+
+    const rows_grouped = groupArrayOfObjects(users_null, 'id');
+
+    // console.log({users_not_null}, rows_grouped);
+    // console.log('rows_grouped', rows_grouped);
+
+    // /**
+    //  * Crear funcion para agrupar los summaries por course_id
+    //  * 
+    //  * [
+    //  *  {
+    //  *    user_id 
+    //  *    course_id
+    //  *    topics: [ todos los sumarry topics con su data]
+    // *     .....
+    //  *  }
+    //  * ]
+    //  * 
+    //  */
+    // const rows_grouped = groupRowsByCourseId(users);
+    // // console.log({ course, users_count: users.length });
 
 
-    /**
-     * Crear funcion para agrupar los summaries por course_id
-     * 
-     * [
-     *  {
-     *    user_id 
-     *    course_id
-     *    topics: [ todos los sumarry topics con su data]
-    *     .....
-     *  }
-     * ]
-     * 
-     */
-    const rows_grouped = await groupRowsByCourseId(users);
-
-    // console.log({ course, users_count: users.length });
-
-
-    const users_null = rows_grouped.filter((us) => us.created_at == null);
-    const users_not_null = rows_grouped.filter((us) => us.created_at != null);
     users_to_export = users_not_null;
-
-
 
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
-    if (compatibles_courses.length > 0) {
+    console.log('compatibles_courses', compatibles_courses, users_null.length);
 
+    if (compatibles_courses.length > 0 && users_null.length > 0) {
 
-      // Modificar o duplicar la funcion Summaries.loadSummaryCoursesByUsersAndCourses
-      // Agregar los join necesarios para cruzar data con summary topics
-      /**
-       *  INNER join topics t on t.course_id = sc.course_id
-          LEFT OUTER JOIN summary_topics st on st.topic_id = t.id
-       */
+    //   // Modificar o duplicar la funcion Summaries.loadSummaryCoursesByUsersAndCourses
+    //   // Agregar los join necesarios para cruzar data con summary topics
+    //   /**
+    //    *  INNER join topics t on t.course_id = sc.course_id
+    //       LEFT OUTER JOIN summary_topics st on st.topic_id = t.id
+    //    */
+
+      console.log('keys rows_grouped', Object.keys(rows_grouped));
+
       const st_compatibles = await loadSummaryCoursesByUsersAndCoursesTopics(
-        pluck(users_null, "id"),
+        Object.keys(rows_grouped),
         pluck(compatibles_courses, "id")
       )
 
-      const compatibles_rows_grouped = await groupRowsByCourseId(users);
+      console.log('st_compatibles', st_compatibles)
+
+    //   const compatibles_rows_grouped = groupRowsByCourseId(st_compatibles);
 
 
-      for (const user of users) {
-        if (user.created_at) {
-          users_to_export.push(user);
-          continue;
-        }
+    //   for (const user of rows_grouped) {
+    //     if (user.created_at) {
+    //       users_to_export.push(user);
+    //       continue;
+    //     }
 
-        const sc_compatible = compatibles_rows_grouped
-          .filter(
-            (row) =>
-              row.user_id == user.id &&
-              pluck_compatibles_courses.includes(row.course_id)
-          )
-          .sort()[0];
-
-
-        if (!sc_compatible) {
-          users_to_export.push(user);
-          continue;
-        }
-
-        let user_temp = {
-          user_id: null,
-          criterios: await getUserCriterionValues(),
-          topics: [],
-        };
-        sc_compatible.topics.forEach(summary_topic => {
-
-          let user_temp = {};
-
-          // Armar objeto con datos usuarios, course, topic
-
-          user_temp.topics.push(user_temp);
-        });
-
-        users_to_export.push(user_temp);
+    //     const sc_compatible = compatibles_rows_grouped
+    //       .filter(
+    //         (row) =>
+    //           row.user_id == user.id &&
+    //           pluck_compatibles_courses.includes(row.course_id)
+    //       )
+    //       .sort()[0];
 
 
-      }
+    //     if (!sc_compatible) {
+    //       users_to_export.push(user);
+    //       continue;
+    //     }
+
+    //     let user_temp = {
+    //       user_id: null,
+    //       criterios: await getUserCriterionValues(),
+    //       topics: [],
+    //     };
+    //     sc_compatible.topics.forEach(summary_topic => {
+
+    //       let user_temp = {};
+
+    //       // Armar objeto con datos usuarios, course, topic
+
+    //       user_temp.topics.push(user_temp);
+    //     });
+
+    //     users_to_export.push(user_temp);
+
+
+    //   }
 
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
 
-    for (const user of users_to_export) {
+    // for (const user of users_to_export) {
 
 
-      user.topics.forEach(topics => {
+    //   user.topics.forEach(topics => {
 
 
-        // Push each row
+    //     // Push each row
 
 
 
-      });
+    //   });
 
 
-    }
+    // }
 
 
   }
@@ -216,4 +248,3 @@ async function exportarUsuariosDW({
     process.send({ alert: 'No se encontraron resultados' })
   }
 }
-
