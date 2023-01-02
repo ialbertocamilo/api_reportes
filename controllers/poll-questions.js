@@ -3,7 +3,6 @@ process.on('message', (requestData) => {
 });
 
 require('../error');
-const config = require('../config.js')
 const moment = require('moment');
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
 const { response } = require('../response');
@@ -50,7 +49,7 @@ async function exportReportPollQuestion(filters) {
 
     if (worksheet._rowZero > 1){
         workbook.commit().then(() => {
-            process.send(response({ createAt, modulo: 'Poll-questions' }));
+            process.send(response({ createAt, modulo: 'Reporte-Encuestas' }));
         });
         //process.send({ modulo: 'Diplomas response_if', summaries });
     } else {
@@ -67,6 +66,12 @@ function parseResponseUser(response,type_poll_question){
                 const parse_response = JSON.parse(response);
                 return parse_response[0] ? parse_response[0].resp_cal : '-';
             } catch (e) {
+                return '-';
+            }
+        case 'opcion-multiple':
+            try {
+                return JSON.parse(response).join();
+            } catch (error) {
                 return '-';
             }
         default : 
