@@ -81,7 +81,7 @@ exports.loadUsersSegmentedv2 = async (
   end_date = null,
 
   activeUsers = false,
-  inactiveUsers = false,
+  inactiveUsers = false
 ) => {
   // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
   const segments = await con("segments_values as sv")
@@ -135,10 +135,10 @@ exports.loadUsersSegmentedv2 = async (
     // USERS FILTERS
     const queryJoin = start_date || end_date ? `INNER` : `LEFT OUTER`;
     const start_date_query = start_date
-      ? ` and date(sc.created_at) >= '${start_date}'`
+      ? ` and date(sc.updated_at) >= '${start_date}'`
       : ``;
     const end_date_query = end_date
-      ? ` and date(sc.created_at) <= '${end_date}'`
+      ? ` and date(sc.updated_at) <= '${end_date}'`
       : ``;
 
     const modules_query =
@@ -146,8 +146,9 @@ exports.loadUsersSegmentedv2 = async (
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 
-    const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
-    const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    let where_active_users = '';
+    if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
+    if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
     
     // filtro para areas
     let join_criterions_values_user_area = '';
@@ -183,7 +184,6 @@ exports.loadUsersSegmentedv2 = async (
         from users u
         
           ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} 
-          ${start_date_query} ${end_date_query}
           LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
           ${join_criterions_values_user} 
 
@@ -191,10 +191,12 @@ exports.loadUsersSegmentedv2 = async (
 
         where 
           u.deleted_at is null
-          ${user_active_query} ${user_inactive_query}
+          ${where_active_users}
           ${modules_query} 
 
           ${where_criterions_values_user_area}
+
+          ${start_date_query} ${end_date_query}
           `
     // logtime(query);
     const [rows] = await con.raw(query);
@@ -272,10 +274,10 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
     // USERS FILTERS
     const queryJoin = start_date || end_date ? `inner` : `left`;
     const start_date_query = start_date
-      ? ` and date(sc.created_at) >= '${start_date}'`
+      ? ` and date(st.updated_at) >= '${start_date}'`
       : ``;
     const end_date_query = end_date
-      ? ` and date(sc.created_at) <= '${end_date}'`
+      ? ` and date(st.updated_at) <= '${end_date}'`
       : ``;
 
     const modules_query =
@@ -283,8 +285,12 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 
-    const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
-    const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    // const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
+    // const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    let where_active_users = '';
+    if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
+    if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
+
 
     // filtro para areas
     let join_criterions_values_user_area = '';
@@ -303,7 +309,6 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
     // filtro para areas
 
     let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ``;
-
     let where_active_topics = '';
     if(activeTopics && !inactiveTopics) where_active_topics += `and t.active = 1`; 
     if(!activeTopics && inactiveTopics) where_active_topics += `and t.active = 0`; 
@@ -348,18 +353,17 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
           ${join_criterions_values_user} 
           ${join_criterions_values_user_area}
 
-          ${start_date_query} ${end_date_query}
-
         where 
           u.deleted_at is null
-          ${user_active_query} 
-          ${user_inactive_query}
+          ${where_active_users}
           
           ${modules_query}
           ${where_criterions_values_user_area}
           
           ${where_in_topics}
           ${where_active_topics}
+          
+          ${start_date_query} ${end_date_query}
     `;  
 
     // logtime(query);
