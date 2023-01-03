@@ -26,7 +26,7 @@ const defaultHeaders = [
   'Dni', 
   'Apellidos y Nombres', 
   'Género',
-  'Vademecum',
+  'Contenido',
   'Visitas',
   'Última Visita'
 ];
