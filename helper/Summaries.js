@@ -65,8 +65,8 @@ exports.loadSummaryCoursesByUsersAndCoursesTopics = async (
 
      select   
         cs.course_id,
-        c.name course_name, 
-        s.name school_name,
+        sc.user_id,
+        c.name course_name
 
       from 
 
@@ -78,14 +78,6 @@ exports.loadSummaryCoursesByUsersAndCoursesTopics = async (
           on s.id = cs.school_id 
         join summary_courses sc 
           on sc.course_id = c.id and cs.course_id = c.id 
-        
-        inner join topics t 
-          on t.course_id = sc.course_id 
-
-        left outer join summary_topics st 
-          on st.topic_id = t.id 
-        left outer join taxonomies tx 
-          on tx.id = sc.status_id
 
         where 
           c.active = 1 and s.active = 1
@@ -94,7 +86,7 @@ exports.loadSummaryCoursesByUsersAndCoursesTopics = async (
           and sc.user_id in (${users_id.join()})
       `;
   
-  logtime(query);
+  // logtime(query);
 
   const [rows] = await con.raw(query);
   return rows;

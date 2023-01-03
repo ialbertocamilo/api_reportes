@@ -11,7 +11,10 @@ const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios
 const moment = require('moment')
 const { con } = require('../db')
 const { pluck, logtime, groupArrayOfObjects } = require('../helper/Helper')
-const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
+const { loadUsersCriteriaValues, 
+        getUserCriterionValues,
+        getUserCriterionValues2, 
+        addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
   loadEvaluationTypes, getCourseStatusName, getTopicStatusName,
@@ -34,7 +37,7 @@ let headers = [
   'REINICIOS CURSO',
   'TIPO CURSO',
   'TEMA',
-  'RESULTADO TEMA',
+  'RESULTADO TEMA', // convalidado
   'ESTADO TEMA',
   'NOTA TEMA',
   'REINICIOS TEMA',
@@ -43,7 +46,8 @@ let headers = [
   'TIPO TEMA',
   'VISITAS TEMA',
   'PJE. MINIMO APROBATORIO',
-  'ULTIMA EVALUACIÓN'
+  'ULTIMA EVALUACIÓN',
+  'ESTADO COMPATIBLE' // nombre del curso
 ]
 
 async function exportarUsuariosDW({
@@ -87,7 +91,6 @@ async function exportarUsuariosDW({
   if (modulos.length === 0) {
     modulos = await getSuboworkspacesIds(workspaceId)
   }
-
   // Load user topic statuses
   const userTopicsStatuses = await loadTopicsStatuses()
 
@@ -105,144 +108,160 @@ async function exportarUsuariosDW({
       tipocurso
     }, workspaceId);
 
-  console.log(courses);
-  for (const course of courses) {
-    logtime('CURRENT COURSE:', `${course.course_id} - ${course.course_name}`);
-    // const topics = await loadTopicsByCourseUniqueId(course.course_id);
+  // === filtro de checks === 
+  const StateChecks = (revisados && aprobados && desaprobados &&
+                       realizados && porIniciar);
+  let StackChecks = [];
 
-    // Cargar summary courses cruzados con left outer join con summary topics
-    // User- Summary Course Data - Summary Topic Data
-    // const users = await loadUsersSegmentedv2WithSummaryTopics(course.course_id, temas, modulos, start, end, UsuariosActivos, UsuariosInactivos);
+  if (revisados) { StackChecks.push(getTopicStatusId(userTopicsStatuses, 'revisado'))  }
+  if (aprobados) { StackChecks.push(getTopicStatusId(userTopicsStatuses, 'aprobado')) }
+  if (desaprobados) { StackChecks.push(getTopicStatusId(userTopicsStatuses, 'desaprobado')) }
+  if (realizados) { StackChecks.push(getTopicStatusId(userTopicsStatuses, 'realizado')) }
+  if (porIniciar) { StackChecks.push(getTopicStatusId(userTopicsStatuses, 'por-iniciar')) }
+  // ===filtro de checks ===
+
+  /* console.log('courses_indexes', { courses_ids: pluck(courses, "course_id"),
+                                   modulos_ids: modulos });*/
+
+  for (const course of courses) {
+    logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
+
+    // datos de usuario - temas
     const users = await loadUsersSegmentedv2WithSummaryTopics(
       course.course_id, 
       modulos, 
       areas,
+      temas,
 
       start_date, 
       end_date, 
 
       UsuariosActivos, 
-      UsuariosInactivos
+      UsuariosInactivos,
+
+      activeTopics,
+      inactiveTopics
     );
 
     const users_null = users.filter((us) => us.sc_created_at == null);
     const users_not_null = users.filter((us) => us.sc_created_at != null);
-
-    const rows_grouped = groupArrayOfObjects(users_null, 'id');
-
-    // console.log({users_not_null}, rows_grouped);
-    // console.log('rows_grouped', rows_grouped);
-
-    // /**
-    //  * Crear funcion para agrupar los summaries por course_id
-    //  * 
-    //  * [
-    //  *  {
-    //  *    user_id 
-    //  *    course_id
-    //  *    topics: [ todos los sumarry topics con su data]
-    // *     .....
-    //  *  }
-    //  * ]
-    //  * 
-    //  */
-    // const rows_grouped = groupRowsByCourseId(users);
-    // // console.log({ course, users_count: users.length });
-
-
     users_to_export = users_not_null;
 
+    // agrupa usuarios por id
+    const users_topics_grouped = groupArrayOfObjects(users_null, 'id'); 
+
+    // obtener cursos compatibles segun 'course_id'
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
-    console.log('compatibles_courses', compatibles_courses, users_null.length);
-
     if (compatibles_courses.length > 0 && users_null.length > 0) {
+      const stack_ids_users = Object.keys(users_topics_grouped);
 
-    //   // Modificar o duplicar la funcion Summaries.loadSummaryCoursesByUsersAndCourses
-    //   // Agregar los join necesarios para cruzar data con summary topics
-    //   /**
-    //    *  INNER join topics t on t.course_id = sc.course_id
-    //       LEFT OUTER JOIN summary_topics st on st.topic_id = t.id
-    //    */
-
-      console.log('keys rows_grouped', Object.keys(rows_grouped));
-
+      // summary_topics verifica si es compatible
       const st_compatibles = await loadSummaryCoursesByUsersAndCoursesTopics(
-        Object.keys(rows_grouped),
-        pluck(compatibles_courses, "id")
-      )
+        stack_ids_users,
+        pluck_compatibles_courses
+      );
 
-      console.log('st_compatibles', st_compatibles)
+      for(const index of stack_ids_users) {
+        const CurrentUser = users_topics_grouped[index];
 
-    //   const compatibles_rows_grouped = groupRowsByCourseId(st_compatibles);
+        if(CurrentUser[0].sc_created_at) {
+          CurrentUser.forEach((item) => users_to_export.push(item)); // usertopics          
+          continue;
+        }
 
+        //verificar compatible con 'user_id' y 'course_id'
+        const st_compatible = st_compatibles.filter((row) => {
+          return row.user_id == index && pluck_compatibles_courses.includes(row.course_id);
+        }).sort()[0]; 
 
-    //   for (const user of rows_grouped) {
-    //     if (user.created_at) {
-    //       users_to_export.push(user);
-    //       continue;
-    //     }
+        if(!st_compatible) {
+          CurrentUser.forEach((item) => users_to_export.push(item)); // usertopics          
+          continue;
+        }
+        
+        CurrentUser.forEach((item) => {
+          const additionalData = {
+                                  course_status_name: 'Convalidado', 
+                                  topic_status_name: 'Convalidado',
+                                  compatible: st_compatible.course_name 
+                                 };
 
-    //     const sc_compatible = compatibles_rows_grouped
-    //       .filter(
-    //         (row) =>
-    //           row.user_id == user.id &&
-    //           pluck_compatibles_courses.includes(row.course_id)
-    //       )
-    //       .sort()[0];
-
-
-    //     if (!sc_compatible) {
-    //       users_to_export.push(user);
-    //       continue;
-    //     }
-
-    //     let user_temp = {
-    //       user_id: null,
-    //       criterios: await getUserCriterionValues(),
-    //       topics: [],
-    //     };
-    //     sc_compatible.topics.forEach(summary_topic => {
-
-    //       let user_temp = {};
-
-    //       // Armar objeto con datos usuarios, course, topic
-
-    //       user_temp.topics.push(user_temp);
-    //     });
-
-    //     users_to_export.push(user_temp);
-
-
-    //   }
+          users_to_export.push({...item, ...additionalData }); // usertopics
+        });      
+      }
 
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
 
-    // for (const user of users_to_export) {
+    // recorrido para exportar
+    for (const user of users_to_export) { 
+      
+      // === filtro de checks === 
+      if(!StateChecks && !StackChecks.includes(user.topic_status_id)) continue;
+      const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
 
+      const cellRow = []
 
-    //   user.topics.forEach(topics => {
+      cellRow.push(user.name)
+      cellRow.push(user.lastname)
+      cellRow.push(user.surname)
+      cellRow.push(user.document)
+      cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
 
+      // criterios de usuario
+      const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+      userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+      // criterios de usuario
 
-    //     // Push each row
+      cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
+      cellRow.push(course.school_name)
+      cellRow.push(course.course_name)
 
+      // estado para - 'RESULTADO DE CURSO'
+      if(!user.course_status_name) {
+        cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id) || "No iniciado" );
+      }else {
+        cellRow.push(user.course_status_name);
+      }
 
-    //   });
+      cellRow.push(user.course_restarts || '-')
+      cellRow.push(course.course_type || '-')
+      cellRow.push(user.topic_name)
 
+      // estado para - 'RESULTADO DE TEMA'
+      if(!user.topic_status_name) {
+        cellRow.push(getTopicStatusName(userTopicsStatuses, user.topic_status_id) || 'No iniciado')
+      }else{
+        cellRow.push(user.topic_status_name)
+      }
 
-    // }
+      cellRow.push(user.topic_active === 1 ? 'ACTIVO' : 'INACTIVO')
 
+      cellRow.push(user.topic_grade || '-')
+      cellRow.push(user.topic_restarts || '-')
+      cellRow.push(user.topic_attempts || '-')
+      cellRow.push(user.topic_assessable ? 'Sí' : 'No')
 
+      cellRow.push(getEvaluationTypeName(evaluationTypes, user.type_evaluation_id))
+
+      cellRow.push(user.topic_views || '-')
+      cellRow.push(user.minimum_grade || '-')
+      cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
+
+      cellRow.push(user.compatible || `-`);
+      
+      // añadir fila 
+      worksheet.addRow(cellRow).commit()
+    }
   }
-
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'ConsolidadoTemas' }))
+      process.send(response({ createAt, modulo: 'ConsolidadoCompatibleTemas' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })

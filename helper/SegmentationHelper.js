@@ -149,7 +149,7 @@ exports.loadUsersSegmentedv2 = async (
     const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
     const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
     
-
+    // filtro para areas
     let join_criterions_values_user_area = '';
     let where_criterions_values_user_area = '';
 
@@ -163,21 +163,22 @@ exports.loadUsersSegmentedv2 = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
+    // filtro para areas
     
     let query = `
         select 
-            u.id, u.name,
-            u.lastname, u.surname,
-            u.email, u.document, 
-            u.active, u.last_login,
+          u.id, u.name,
+          u.lastname, u.surname,
+          u.email, u.document, 
+          u.active, u.last_login,
 
-            sc.grade_average, sc.advanced_percentage,
-            sc.status_id, sc.created_at as sc_created_at,
-            sc.views as course_views, sc.passed as course_passed, 
-            sc.assigned, sc.completed,
-            sc.last_time_evaluated_at, sc.restarts,
-            sc.taken, sc.reviewed,
-            sc.status_id as course_status_id
+          sc.grade_average, sc.advanced_percentage,
+          sc.status_id, sc.created_at as sc_created_at,
+          sc.views as course_views, sc.passed as course_passed, 
+          sc.assigned, sc.completed,
+          sc.last_time_evaluated_at, sc.restarts,
+          sc.taken, sc.reviewed,
+          sc.status_id as course_status_id
 
         from users u
         
@@ -195,7 +196,6 @@ exports.loadUsersSegmentedv2 = async (
 
           ${where_criterions_values_user_area}
           `
-
     // logtime(query);
     const [rows] = await con.raw(query);
 
@@ -203,8 +203,6 @@ exports.loadUsersSegmentedv2 = async (
       users = [...users, ...rows];
     }
   }
-  // logtime(`FIN METHOD : [loadUsersSegmentedv2]`)
-
   return uniqueElements(users, "id");
 };
 
@@ -213,12 +211,16 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   course_id,
   modules = [],
   areas = [],
+  temas = [],
 
   start_date = null,
   end_date = null,
   
   activeUsers = false,
-  inactiveUsers = false
+  inactiveUsers = false,
+
+  activeTopics = false,
+  inactiveTopics = false
 ) => {
   // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
   const segments = await con("segments_values as sv")
@@ -268,7 +270,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
     });
 
     // USERS FILTERS
-    const queryJoin = start_date || end_date ? `INNER` : `LEFT OUTER`;
+    const queryJoin = start_date || end_date ? `inner` : `left`;
     const start_date_query = start_date
       ? ` and date(sc.created_at) >= '${start_date}'`
       : ``;
@@ -284,6 +286,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
     const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
     const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
 
+    // filtro para areas
     let join_criterions_values_user_area = '';
     let where_criterions_values_user_area = '';
 
@@ -297,6 +300,13 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
+    // filtro para areas
+
+    let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ``;
+
+    let where_active_topics = '';
+    if(activeTopics && !inactiveTopics) where_active_topics += `and t.active = 1`; 
+    if(!activeTopics && inactiveTopics) where_active_topics += `and t.active = 0`; 
 
     /**
      * Comprobar que retorne 
@@ -305,49 +315,54 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
     let query = `
         select 
-            u.id, u.name,
-            u.lastname, u.surname, u.email, 
-            u.document, u.active, u.last_login,
+          u.id, u.name,
+          u.lastname, u.surname, u.email, 
+          u.document, u.active, u.last_login,
+          
+          sc.status_id as course_status_id,
+          sc.restarts course_restarts,
 
-            t.id as pk_topic_id,
-            st.topic_id,
-            t.name AS topic_name,
-            st.views,
-            st.restarts,
-            st.downloads,
-            st.grade,
-            
-            sc.grade_average, sc.advanced_percentage,
-            sc.status_id, sc.created_at as sc_created_at,
-            sc.views as course_views, sc.passed as course_passed, 
-            sc.assigned, sc.completed,
-            sc.last_time_evaluated_at, sc.restarts, 
-            sc.taken, sc.reviewed,
-            sc.status_id as course_status_id
+          t.name topic_name,
+          t.active topic_active,
+          t.assessable topic_assessable,
+          t.type_evaluation_id,
+
+          st.grade topic_grade,
+          st.attempts topic_attempts,
+          st.restarts topic_restarts,
+          st.views topic_views,
+          st.status_id topic_status_id,
+          st.last_time_evaluated_at topic_last_time_evaluated_at,
+          json_extract(c.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
 
         from users u
         
           ${queryJoin} join summary_courses sc 
             on sc.user_id = u.id and sc.course_id = ${course_id}
-          inner join topics t 
-            on t.course_id = sc.course_id
-          left  join summary_topics st 
+          left join courses c 
+            on c.id = ${course_id}
+          left join topics t 
+            on t.course_id = c.id
+          left join summary_topics st 
             on st.topic_id = t.id and st.user_id = u.id
-
           ${join_criterions_values_user} 
           ${join_criterions_values_user_area}
 
           ${start_date_query} ${end_date_query}
 
         where 
-            u.deleted_at is null
-            ${user_active_query} ${user_inactive_query}
-            ${modules_query}
-            ${where_criterions_values_user_area}
-    `;
+          u.deleted_at is null
+          ${user_active_query} 
+          ${user_inactive_query}
+          
+          ${modules_query}
+          ${where_criterions_values_user_area}
+          
+          ${where_in_topics}
+          ${where_active_topics}
+    `;  
 
-    logtime(query);
-
+    // logtime(query);
     const [ rows ] = await con.raw(query);
 
     if (rows.length > 0) {
@@ -357,42 +372,6 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   // logtime(`FIN METHOD : [loadUsersSegmentedv2]`)
   return users;
 };
-
-/* select
-        u.id, u.name,
-        u.lastname, u.surname, u.email,
-        u.document, u.active, u.last_login,
-        
-        t.id as pk_topic_id,
-        st.topic_id,
-        t.name AS topic_name,
-        st.views,
-        st.restarts,
-        st.downloads,
-        st.grade,
-        
-    sc.course_id,
-        sc.grade_average, sc.advanced_percentage,
-        sc.status_id, sc.created_at as sc_created_at,
-        sc.views as course_views, sc.passed as course_passed,
-        sc.assigned, sc.completed,
-        sc.last_time_evaluated_at, sc.restarts,
-        sc.taken, sc.reviewed,
-        sc.status_id as course_status_id
-
-    from users u
-    
-        inner join summary_courses sc on sc.user_id = u.id and sc.course_id = 18
-        inner join topics t on t.course_id = sc.course_id
-        left  join summary_topics st on st.topic_id = t.id and st.user_id = u.id
-        inner join taxonomies tx on tx.id = sc.status_id
-        inner join criterion_value_user as cvu0 on u.id = cvu0.user_id and cvu0.criterion_value_id in (1,2,3)
-
-    where
-        u.deleted_at is null
-        and u.active = 1
-        and u.subworkspace_id in (2,3,4)*/
-
 
 exports.loadCourses = async (
   { cursos = [], 
@@ -414,14 +393,14 @@ exports.loadCourses = async (
 
     from course_school as cs
 
-    inner join courses as c 
-      on c.id = cs.course_id
-    inner join schools as s
-      on s.id = cs.school_id
-    inner join taxonomies as tx
-      on tx.id = c.type_id 
-    inner join school_workspace as sw
-      on sw.school_id = s.id
+      inner join courses as c 
+        on c.id = cs.course_id
+      inner join schools as s
+        on s.id = cs.school_id
+      inner join taxonomies as tx
+        on tx.id = c.type_id 
+      inner join school_workspace as sw
+        on sw.school_id = s.id
 
     where  
       sw.workspace_id = ${workspaceId}  
@@ -430,7 +409,7 @@ exports.loadCourses = async (
 
   // posible filtro en estado de curso
   if(CursosActivos && !CursosInactivos) query += ` and c.active = 1`;
-  if(CursosInactivos && !CursosActivos) query += ` and c.active = 0`;
+  if(!CursosActivos && CursosInactivos) query += ` and c.active = 0`;
 
   if(cursos.length) query += ` and cs.course_id in (${cursos.join()})`;
   if(escuelas.length) query += ` and cs.school_id in (${escuelas.join()})`;
@@ -465,16 +444,16 @@ exports.loadCoursesV2 = async (
 
     from course_school as cs
 
-    inner join courses as c 
-      on c.id = cs.course_id
-    inner join schools as s
-      on s.id = cs.school_id
-    inner join taxonomies as tx
-      on tx.id = c.type_id 
-    inner join school_workspace as sw
-      on sw.school_id = s.id
-    inner join topics as t
-        on t.course_id = c.id
+      inner join courses as c 
+        on c.id = cs.course_id
+      inner join schools as s
+        on s.id = cs.school_id
+      inner join taxonomies as tx
+        on tx.id = c.type_id 
+      inner join school_workspace as sw
+        on sw.school_id = s.id
+      inner join topics as t
+          on t.course_id = c.id
     
     where  
       sw.workspace_id = ${workspaceId}  
@@ -491,53 +470,7 @@ exports.loadCoursesV2 = async (
   if(!tipocurso) query += ` and not tx.code = 'free'`;
   
   query += ` group by cs.course_id`;
-
   // logtime(query);
-
   const [rows] = await con.raw(query);
   return rows;
-
-  /*// JOIN statements
-  schools = schools.filter((el) => el != null);
-  courses = courses.filter((el) => el != null);
-  topics = topics.filter((el) => el != null);
-
-  let query = `
-    SELECT 
-
-      c.name as course_name,
-      c.id as course_id
-
-    FROM courses as c 
-  `;
-
-  if (workspaceId)
-    query += `INNER JOIN course_workspace as cw ON cw.course_id = c.id `;
-
-  if (schools.length > 0)
-    query += `INNER JOIN course_school as cs ON cs.course_id = c.id `;
-
-  if (topics.length > 0)
-    query += `INNER JOIN topics as t ON t.course_id = c.id `;
-
-  // WHERE statements
-  query += `WHERE c.deleted_at IS NULL `;
-
-  if (workspaceId)
-    query += `AND cw.workspace_id = ${workspaceId} `;
-
-  if (schools.length > 0)
-    query += `AND cs.school_id IN (${schools.join(',')}) `;
-
-  if (courses.length > 0)
-    query += `AND c.id IN (${courses.join(',')}) `;
-
-  if (topics.length > 0)
-    query += `AND t.course_id IN (${topics.join(',')}) `;
-
-  const [rows] = await con.raw(query);
-  return rows;
-
-  */
-  // console.log({ query });
 }
