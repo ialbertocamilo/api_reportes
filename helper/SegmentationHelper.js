@@ -417,7 +417,7 @@ exports.loadCourses = async (
   
   query += ` group by cs.course_id`;
 
-  logtime(query);
+  // logtime(query);
 
   const [rows] = await con.raw(query);
   return rows;
