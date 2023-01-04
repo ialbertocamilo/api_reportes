@@ -168,11 +168,7 @@ exports.loadUsersSegmentedv2 = async (
     
     let query = `
         select 
-          u.id, u.name,
-          u.lastname, u.surname,
-          u.email, u.document, 
-          u.active, u.last_login,
-
+          u.id,
           sc.grade_average, sc.advanced_percentage,
           sc.status_id, sc.created_at as sc_created_at,
           sc.views as course_views, sc.passed as course_passed, 
@@ -184,7 +180,6 @@ exports.loadUsersSegmentedv2 = async (
         from users u
         
           ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} 
-          LEFT OUTER join taxonomies t1 on t1.id = sc.status_id
           ${join_criterions_values_user} 
 
           ${join_criterions_values_user_area}
@@ -421,7 +416,7 @@ exports.loadCourses = async (
   
   query += ` group by cs.course_id`;
 
-  // logtime(query);
+  logtime(query);
 
   const [rows] = await con.raw(query);
   return rows;

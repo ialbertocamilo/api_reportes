@@ -110,7 +110,6 @@ async function exportarUsuariosDW ({
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
 
     // Add user's criterion values
-
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 

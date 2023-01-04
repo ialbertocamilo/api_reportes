@@ -326,3 +326,26 @@ exports.loadUsersIdsWithCriterionValues = async (
 
   return pluck(users, "id");
 };
+
+exports.loadUsersBySubWorspaceIds = async (
+    subWorkspaceIds, indexId = false) => {
+
+   const [users] = await con.raw(
+    ` 
+      select
+        u.id, u.name,
+        u.lastname, u.surname, u.email,
+        u.document, u.active, u.last_login
+      from users u where
+        u.subworkspace_id IN (${subWorkspaceIds.join()})
+  `);
+
+  let StackUsers = {};
+  if(indexId) {
+    for(const user of users) {
+      StackUsers[user.id] = user;
+    }
+  }
+
+  return indexId ? StackUsers : users;
+};

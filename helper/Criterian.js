@@ -50,6 +50,8 @@ exports.loadCriterionValuesByUser = async (userId) => {
 	  where
 		c.show_in_reports = 1
 		and u.id = ${userId}
+
+		group by cv.criterion_id 
 	  `;
   
 	const [rows] = await con.raw(query);

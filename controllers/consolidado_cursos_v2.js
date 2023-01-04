@@ -26,6 +26,7 @@ const {
   getWorkspaceCriteria,
 } = require("../helper/Criterios");
 const {
+  loadUsersBySubWorspaceIds,
   loadUsersCriteriaValues,
   getUserCriterionValues,
   getUserCriterionValues2,
@@ -100,6 +101,7 @@ async function generateSegmentationReport({
                                       workspaceId);
   const coursesStatuses = await loadCoursesStatuses();
 
+  // console.log('courses_count', courses.length)
 
   // === filtro de checks === 
   const StateChecks = (aprobados && desaprobados &&
@@ -110,7 +112,12 @@ async function generateSegmentationReport({
   if (desaprobados) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desaprobado') ) }
   if (desarrollo) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desarrollo') ) }
   if (encuestaPendiente) { StackChecks.push( getCourseStatusId(coursesStatuses, 'enc_pend') ) }
-  // ===filtro de checks ===
+  // === filtro de checks ===
+
+  // === precargar usuarios y criterios
+  const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true);
+  let StackUserCriterios = [];
+  // === precargar usuarios y criterios
 
   for (const course of courses) {
     // Load workspace user criteria
@@ -130,32 +137,29 @@ async function generateSegmentationReport({
     );
     logtime(`[loadUsersSegmentedv2]`);
 
-    const users_null = users.filter((us) => us.sc_created_at == null);
-    const users_not_null = users.filter((us) => us.sc_created_at != null);
-    
+    // filtro para usuarios nulos y no nulos
+    const { users_null, users_not_null } = getUsersNullAndNotNull(users);
     users_to_export = users_not_null;
 
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
-    
 
-    // console.log('compatibles_courses',{compatibles_courses, users_null_length: users_null.length})
     if (compatibles_courses.length > 0 && users_null.length > 0) {
       logtime(`INICIO COMPATIBLES`);
 
-      // obtener usuarios por cursos compatibles
+      // summary_course verifica si es compatible
       const sc_compatibles = await loadSummaryCoursesByUsersAndCourses(
         pluck(users_null, "id"),
-        pluck(compatibles_courses, "id")
+        pluck_compatibles_courses
       );
 
       for (const user of users_null) {
         if (user.sc_created_at) {
-          users_to_export.push(user);
+          users_to_export.push(user); //usercourse
           continue;
         }
 
-        // encontrar usuario compatible
+        //verificar compatible con 'user_id' y 'course_id'
         const sc_compatible = sc_compatibles
           .filter(
             (row) =>
@@ -165,64 +169,18 @@ async function generateSegmentationReport({
           .sort()[0];
 
         if (!sc_compatible) {
-          users_to_export.push(user);
+          users_to_export.push(user); //usercourse
           continue;
         }
 
-        const { id, name, 
-                lastname, 
-                surname, 
-                document, 
-                email, 
-                active, 
-                last_login } = user;
-          
-        const { school_name, 
-                  
-                course_name, 
-                course_status_id, 
-                course_passed,
-                course_restarts, 
-                course_views,
-
-                grade_average, 
-                advanced_percentage,
-                assigned, 
-                completed,
-                taken, 
-                reviewed, 
-                last_time_evaluated_at
-
-              } = sc_compatible;
-
-        const temp = { 
-            id, name, 
-            lastname, 
-            surname, 
-            document, 
-            email,
-            active, 
-            last_login,
-
-            school_name, 
-            course_name, 
-            course_status_id,
-            course_passed, 
-            course_restarts, 
-            course_views,
-
-            grade_average, 
-            advanced_percentage,
-            assigned, 
-            completed,
-            taken, reviewed,
-            last_time_evaluated_at,
-            
-            compatible: `${course_name}.`
+        const additionalData = {
+          course_status_name: 'Convalidado',
+          compatible: sc_compatible.course_name
         };
 
-        users_to_export.push({...temp, course_status_name: 'Convalidado' });
+        users_to_export.push({...user, ...additionalData}); // usercourse
       }
+
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
@@ -234,18 +192,30 @@ async function generateSegmentationReport({
       if(!StateChecks && !StackChecks.includes(user.course_status_id)) continue;
 
       const cellRow = [];
-      const lastLogin = moment(user.last_login).format("DD/MM/YYYY H:mm:ss");
 
-      cellRow.push(user.name);
-      cellRow.push(user.lastname);
-      cellRow.push(user.surname);
-      cellRow.push(user.document);
-      cellRow.push(user.active === 1 ? "Activo" : "Inactivo");
-      cellRow.push(user.email);
+      // encontrar usuario por 'id'
+      const { id } = user;
+      const userStore = StackUsersData[id];
+      const lastLogin = moment(userStore.last_login).format("DD/MM/YYYY H:mm:ss");
+      cellRow.push(userStore.name);
+      cellRow.push(userStore.lastname);
+      cellRow.push(userStore.surname);
+      cellRow.push(userStore.document);
+      cellRow.push(userStore.active === 1 ? "Activo" : "Inactivo");
+      cellRow.push(userStore.email);
+      // encontrar usuario por 'id'
 
       // criterios de usuario
-      const userValues = await getUserCriterionValues2(user.id,workspaceCriteriaNames);
-      userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+      if(StackUserCriterios[id]) {
+        const StoreUserValues = StackUserCriterios[id];
+        StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+
+      } else {
+        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+        userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+
+        StackUserCriterios[id] = userValues; 
+      }
       // criterios de usuario
 
       const passed = user.course_passed || 0;
@@ -297,3 +267,21 @@ async function generateSegmentationReport({
     process.send({ alert: "No se encontraron resultados" });
   }
 }
+
+
+function getUsersNullAndNotNull(users) {
+
+  let users_null = [],
+      users_not_null = [];
+
+  for (const user of users) {
+    const { sc_created_at } = user;
+      
+    if (sc_created_at == null) users_null.push(user)
+    else users_not_null.push(user);
+  } 
+
+  return { users_null, users_not_null }; 
+}
+
+
