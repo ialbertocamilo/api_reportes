@@ -211,7 +211,8 @@ async function generateSegmentationReport({
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
       } else {
-        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+        const userValues = [{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'}];
+        
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
         StackUserCriterios[id] = userValues; 
