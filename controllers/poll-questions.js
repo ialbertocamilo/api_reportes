@@ -4,7 +4,7 @@ process.on('message', (requestData) => {
 
 require('../error');
 const moment = require('moment');
-const { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
+let { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
 const { response } = require('../response');
 const { pluck } = require('../helper/Helper.js')
 
