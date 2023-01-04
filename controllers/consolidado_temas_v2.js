@@ -85,7 +85,7 @@ async function exportarUsuariosDW ({
   // Load users from database and generate ids array
 
   const users = await loadUsersWithCoursesAndTopics(
-    workspaceId, userTopicsStatuses,
+    workspaceId, userTopicsStatuses, evaluationTypes,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
     activeTopics, inactiveTopics, start, end, areas, tipocurso
@@ -159,6 +159,7 @@ async function exportarUsuariosDW ({
  * Load users with its courses and schools
  * @param workspaceId
  * @param userTopicsStatuses
+ * @param evaluationTypes
  * @param {array} modulesIds
  * @param {boolean} activeUsers include active users
  * @param {boolean} inactiveUsers include inactive users
@@ -174,10 +175,12 @@ async function exportarUsuariosDW ({
  * @param inactiveTopics
  * @param start
  * @param end
+ * @param areas
+ * @param tipocurso
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithCoursesAndTopics (
-  workspaceId, userTopicsStatuses,
+  workspaceId, userTopicsStatuses, evaluationTypes,
   modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds, topicsIds,
   revisados, aprobados, desaprobados, realizados, porIniciar,
   activeTopics, inactiveTopics, start, end, areas, tipocurso
