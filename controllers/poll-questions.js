@@ -76,7 +76,8 @@ async function exportReportPollQuestion(filters) {
             // cellRow.push(poll_questions_answer.respuestas);
             cellRow.push(response_user);
             if(filters.type_poll_question.code =='califica'){
-                cellRow.push(values_question_type_califica.find(c=>c.numeric ==response_user ).value || '-');
+                const value_text = values_question_type_califica.find(c=>c.numeric ==response_user ); 
+                cellRow.push(value_text ? value_text.value : '-');
             }
             cellRow.push(moment(poll_questions_answer.created_at).format('DD/MM/YYYY H:mm:ss'));
             worksheet.addRow(cellRow).commit();
