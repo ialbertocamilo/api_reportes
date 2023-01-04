@@ -26,7 +26,9 @@ async function exportReportPollQuestion(filters) {
                                         loadSubWorkSpaces(filters),
                                         loadSchoolsByCourse(filters)
                                     ]);
+    let Rows = 0
     for (const poll_questions_answer of poll_questions_answers) {
+        Rows++;
         const response_user = parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question); 
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
         const schools_name = pluck(schools.filter(s=>s.course_id == poll_questions_answer.course_id),'name').join(',');
@@ -46,6 +48,10 @@ async function exportReportPollQuestion(filters) {
                 // cellRow.push(poll_questions_answer.respuestas);
                 cellRow.push(response_user_multiple);
                 cellRow.push(moment(poll_questions_answer.created_at).format('DD/MM/YYYY H:mm:ss'));
+                if (Rows === 1e6) {
+                    worksheet = workbook.addWorksheet('Hoja 2', { properties: { defaultColWidth: 18 } })
+                    await createHeaders(defaultHeaders.concat(['Escuela','Curso','Pregunta','Respuesta','Fecha']));
+                }
                 worksheet.addRow(cellRow).commit();
             }
         }else{
@@ -63,6 +69,10 @@ async function exportReportPollQuestion(filters) {
             // cellRow.push(poll_questions_answer.respuestas);
             cellRow.push(response_user);
             cellRow.push(moment(poll_questions_answer.created_at).format('DD/MM/YYYY H:mm:ss'));
+            if (Rows === 1e6) {
+                worksheet = workbook.addWorksheet('Hoja 2', { properties: { defaultColWidth: 18 } })
+                await createHeaders(defaultHeaders.concat(['Escuela','Curso','Pregunta','Respuesta','Fecha']));
+            }
             worksheet.addRow(cellRow).commit();
         }
     }
