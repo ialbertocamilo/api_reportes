@@ -27,12 +27,12 @@ async function exportReportPollQuestion(filters) {
                                         loadSchoolsByCourse(filters)
                                     ]);
     for (const poll_questions_answer of poll_questions_answers) {
-        const cellRow = [];
         const response_user = parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question); 
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
         const schools_name = pluck(schools.filter(s=>s.course_id == poll_questions_answer.course_id),'name').join(',');
         if(filters.type_poll_question.code == 'opcion-multiple' && response_user.length > 0){
             for (const response_user_multiple of response_user) {
+                const cellRow = [];
                 cellRow.push(workspace ? workspace.name : '-');
                 if(!es_anonimo){
                     cellRow.push(poll_questions_answer.name);
@@ -49,6 +49,7 @@ async function exportReportPollQuestion(filters) {
                 worksheet.addRow(cellRow).commit();
             }
         }else{
+            const cellRow = [];
             cellRow.push(workspace ? workspace.name : '-');
             if(!es_anonimo){
                 cellRow.push(poll_questions_answer.name);
