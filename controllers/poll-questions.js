@@ -31,7 +31,7 @@ async function exportReportPollQuestion(filters) {
         const response_user = parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question); 
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
         const schools_name = pluck(schools.filter(s=>s.course_id == poll_questions_answer.course_id),'name').join(',');
-        if(filters.type_poll_question == 'opcion-multiple' && response_user.length > 0){
+        if(filters.type_poll_question.code == 'opcion-multiple' && response_user.length > 0){
             for (const response_user_multiple of response_user) {
                 cellRow.push(workspace ? workspace.name : '-');
                 if(!es_anonimo){
