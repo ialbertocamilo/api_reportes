@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const tablas = require('./tablas')
+const { pluck } = require('../helper/Helper')
 router.get('/', async (req, res) => {
   res.send('Bienvenido a la api de filtros')
 })
@@ -9,15 +10,15 @@ router.get('/datosiniciales/:workspaceId', async (req, res) => {
   res.json(datos)
 })
 
-router.get('/courses/:schoolId', async (req, res) => {
+router.get('/courses/:schoolIds', async (req, res) => {
 
-  const datos = await tablas.loadSchoolCourses(req.params.schoolId)
+  const datos = await tablas.loadSchoolCourses(req.params.schoolIds)
   res.json(datos)
 })
 
-router.get('/courses/checklist/:courseId', async (req, res) => {
+router.get('/courses/checklist/:coursesIds', async (req, res) => {
 
-  const datos = await tablas.loadCourseChecklists(req.params.courseId)
+  const datos = await tablas.loadCourseChecklists(req.params.coursesIds)
   res.json(datos)
 })
 
@@ -26,9 +27,9 @@ router.post('/schools/courses', async (req, res) => {
   res.json(datos)
 })
 
-router.get('/topics/:courseId', async (req, res) => {
+router.get('/topics/:coursesIds', async (req, res) => {
 
-  const datos = await tablas.loadCourseTopics(req.params.courseId)
+  const datos = await tablas.loadCourseTopics(req.params.coursesIds)
   res.json(datos)
 })
 
@@ -137,12 +138,13 @@ router.post('/historial_usuario', async (req, res) => {
   res.json(data)
 })
 
-router.get(`/sub-workspace/:subworkspaceId/criterion-values/:criterionCode`, async (req, res) => {
-  const { subworkspaceId, criterionCode } = req.params;
-  const { criterion_value_id } = await tablas.loadSubworkspaceById(subworkspaceId);
-  const datos = await tablas.loadCriterionValuesByParentId([criterion_value_id], criterionCode)
+router.get('/sub-workspace/:subworkspacesIds/criterion-values/:criterionCode', async (req, res) => {
+  const { subworkspacesIds, criterionCode } = req.params
+  const subworkspaces = await tablas.loadSubworkspaceById(subworkspacesIds)
+  const criterionValuesIds = pluck(subworkspaces, 'criterion_value_id')
+  const datos = await tablas.loadCriterionValuesByParentId(criterionValuesIds, criterionCode)
   res.json(datos)
-});
+})
 
 router.post(`/criterion-values/:criterionCode`, async (req, res) => {
   const { criterionCode } = req.params;

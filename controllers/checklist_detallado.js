@@ -150,24 +150,23 @@ async function loadUsersCheckists (
   const staticCondition = ` where 
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
-          ca.school_id = :schoolId and
-          ca.course_id = :courseId and
+          ca.school_id in (${schoolId}) and
+          ca.course_id in (${courseId}) and
           ca.checklist_id = :checklistId 
-  `;
+  `
 
-  if(areas.length > 0) {
+  if (areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
                inner join criterion_values cv on cvu.criterion_value_id = cv.id`
 
-    query += staticCondition;
+    query += staticCondition
 
-    query += ` and ( cvu.criterion_value_id in ( `;
-    areas.forEach(cv => query += `${cv},`);
-    query = query.slice(0, -1);
+    query += ' and ( cvu.criterion_value_id in ( '
+    areas.forEach(cv => query += `${cv},`)
+    query = query.slice(0, -1)
 
-    query += `) `;
-    query += `) `;
-
+    query += ') '
+    query += ') '
   } else {
     query += staticCondition;
   }
@@ -190,7 +189,7 @@ async function loadUsersCheckists (
 
   // Execute query
   // logtime(query);
-  const [rows] = await con.raw(query, { checklistId, courseId, schoolId })
+  const [rows] = await con.raw(query, { checklistId })
   return rows
 }
 
