@@ -81,7 +81,7 @@ async function exportarUsuariosDW ({
   // Load evaluation types
 
   const evaluationTypes = await loadEvaluationTypes()
-
+  console.log(evaluationTypes);
   // Load users from database and generate ids array
 
   const users = await loadUsersWithCoursesAndTopics(
@@ -185,6 +185,7 @@ async function loadUsersWithCoursesAndTopics (
 ) {
   // Base query
   const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
+  console.log('prueba',taxonomy);
   let query = `
     select 
         u.*, 
