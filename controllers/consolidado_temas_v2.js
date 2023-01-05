@@ -80,15 +80,14 @@ async function exportarUsuariosDW ({
 
   // Load evaluation types
 
-  const evaluationTypes = await loadEvaluationTypes()
-
+  const evaluation_types = await loadEvaluationTypes()
   // Load users from database and generate ids array
 
   const users = await loadUsersWithCoursesAndTopics(
-    workspaceId, userTopicsStatuses, evaluationTypes,
+    workspaceId, userTopicsStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
-    activeTopics, inactiveTopics, start, end, areas, tipocurso
+    activeTopics, inactiveTopics, start, end, areas, tipocurso,evaluation_types
   )
   const usersIds = pluck(users, 'id')
 
@@ -135,7 +134,7 @@ async function exportarUsuariosDW ({
     cellRow.push(user.topic_attempts || '-')
     cellRow.push(user.topic_assessable ? 'Sí' : 'No')
 
-    cellRow.push(getEvaluationTypeName(evaluationTypes, user.type_evaluation_id))
+    cellRow.push(getEvaluationTypeName(evaluation_types, user.type_evaluation_id))
 
     cellRow.push(user.topic_views || '-')
     cellRow.push(user.minimum_grade || '-')
@@ -159,7 +158,6 @@ async function exportarUsuariosDW ({
  * Load users with its courses and schools
  * @param workspaceId
  * @param userTopicsStatuses
- * @param evaluationTypes
  * @param {array} modulesIds
  * @param {boolean} activeUsers include active users
  * @param {boolean} inactiveUsers include inactive users
@@ -175,18 +173,16 @@ async function exportarUsuariosDW ({
  * @param inactiveTopics
  * @param start
  * @param end
- * @param areas
- * @param tipocurso
  * @returns {Promise<*[]|*>}
  */
 async function loadUsersWithCoursesAndTopics (
-  workspaceId, userTopicsStatuses, evaluationTypes,
+  workspaceId, userTopicsStatuses,
   modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds, topicsIds,
   revisados, aprobados, desaprobados, realizados, porIniciar,
-  activeTopics, inactiveTopics, start, end, areas, tipocurso
+  activeTopics, inactiveTopics, start, end, areas, tipocurso, evaluation_types
 ) {
   // Base query
-  const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
+  const taxonomy = evaluation_types.find(type => type.code == 'qualified'); 
   let query = `
     select 
         u.*, 
@@ -220,11 +216,10 @@ async function loadUsersWithCoursesAndTopics (
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id
         inner join school_workspace sw on s.id = sw.school_id
-  
   `
   const workspaceCondition = ` where 
       u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId} `
+      sw.workspace_id = ${workspaceId} and t.type_evaluation_id = ${taxonomy.id}`
 
   if(areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
