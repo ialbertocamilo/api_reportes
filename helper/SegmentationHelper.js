@@ -62,7 +62,7 @@ exports.loadCourses = async ({cursos,escuelas}) => {
     .select('cs.course_id','c.name as course_name','sc.name as school_name')
     .join('courses as c','c.id','cs.course_id')
     .join('schools as sc','sc.id','cs.school_id')
-    .whereIn( where_courses.label,where_courses.value)
+    .whereIn( where_courses.label,[where_courses.value])
     .where('c.active',1)
     .where('c.deleted_at',null)
     .groupBy('cs.course_id')
