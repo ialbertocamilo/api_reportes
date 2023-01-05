@@ -14,6 +14,7 @@ const { pluck, logtime, groupArrayOfObjects } = require('../helper/Helper')
 const { loadUsersCriteriaValues, 
         getUserCriterionValues,
         getUserCriterionValues2, 
+        loadUsersBySubWorspaceIds,
         addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
@@ -21,6 +22,7 @@ const {
   loadCoursesStatuses,
   loadCompatiblesId,
   loadTopicsByCourseId,
+  loadTopicsByCoursesIds,
   loadTopicsByCourseUniqueId
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
@@ -120,13 +122,18 @@ async function exportarUsuariosDW({
   if (porIniciar) { StackChecks.push(getTopicStatusId(userTopicsStatuses, 'por-iniciar')) }
   // ===filtro de checks ===
 
-  /* console.log('courses_indexes', { courses_ids: pluck(courses, "course_id"),
-                                   modulos_ids: modulos });*/
+  // === precargar topics, usuarios y criterios ===
+  const StackTopicsData = await loadTopicsByCoursesIds( 
+                                pluck(courses, 'course_id'), true);
+  const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true);
+  let StackUserCriterios = [];
+  // === precargar topics, usuarios y criterios ===
 
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
     // datos de usuario - temas
+    logtime(`-- start: user segmentation --`);
     const users = await loadUsersSegmentedv2WithSummaryTopics(
       course.course_id, 
       modulos, 
@@ -142,9 +149,9 @@ async function exportarUsuariosDW({
       activeTopics,
       inactiveTopics
     );
+    logtime(`-- start: end segmentation --`);
 
-    const users_null = users.filter((us) => us.sc_created_at == null);
-    const users_not_null = users.filter((us) => us.sc_created_at != null);
+    const { users_null, users_not_null } = getUsersNullAndNotNull(users);
     users_to_export = users_not_null;
 
     // agrupa usuarios por id
@@ -201,19 +208,32 @@ async function exportarUsuariosDW({
       
       // === filtro de checks === 
       if(!StateChecks && !StackChecks.includes(user.topic_status_id)) continue;
-      const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
 
       const cellRow = []
 
-      cellRow.push(user.name)
-      cellRow.push(user.lastname)
-      cellRow.push(user.surname)
-      cellRow.push(user.document)
-      cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+      // encontrar usuario por 'id'
+      const { id } = user;
+      // console.log('user',user);
+      const userStore = StackUsersData[id];
+      const lastLogin = moment(userStore.last_login).format('DD/MM/YYYY H:mm:ss')
+      cellRow.push(userStore.name)
+      cellRow.push(userStore.lastname)
+      cellRow.push(userStore.surname)
+      cellRow.push(userStore.document)
+      cellRow.push(userStore.active === 1 ? 'Activo' : 'Inactivo')
+      // encontrar usuario por 'id'
 
       // criterios de usuario
-      const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
-      userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+      if(StackUserCriterios[id]) {
+        const StoreUserValues = StackUserCriterios[id];
+        StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+
+      } else {
+        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+        userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+
+        StackUserCriterios[id] = userValues; 
+      }
       // criterios de usuario
 
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
@@ -224,29 +244,34 @@ async function exportarUsuariosDW({
       // estado para - 'RESULTADO DE CURSO'
       if(!user.course_status_name) {
         cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id) || "No iniciado" );
-      }else {
+      } else {
         cellRow.push(user.course_status_name);
       }
 
       cellRow.push(user.course_restarts || '-')
       cellRow.push(course.course_type || '-')
-      cellRow.push(user.topic_name)
+      
+      // encontrar topic por 'id'
+      const { topic_id } = user;
+      const topicStore = StackTopicsData[topic_id];
 
-      // estado para - 'RESULTADO DE TEMA'
-      if(!user.topic_status_name) {
-        cellRow.push(getTopicStatusName(userTopicsStatuses, user.topic_status_id) || 'No iniciado')
-      }else{
-        cellRow.push(user.topic_status_name)
-      }
+      cellRow.push(topicStore.topic_name) // topicStore
 
-      cellRow.push(user.topic_active === 1 ? 'ACTIVO' : 'INACTIVO')
+        // estado para - 'RESULTADO DE TEMA'
+        if(!user.topic_status_name) {
+          cellRow.push(getTopicStatusName(userTopicsStatuses, user.topic_status_id) || 'No iniciado')
+        }else{
+          cellRow.push(user.topic_status_name)
+        }
+
+      cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
 
       cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
-      cellRow.push(user.topic_assessable ? 'Sí' : 'No')
+      cellRow.push(topicStore .topic_assessable ? 'Sí' : 'No') // topicStore
 
-      cellRow.push(getEvaluationTypeName(evaluationTypes, user.type_evaluation_id))
+      cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
       cellRow.push(user.topic_views || '-')
       cellRow.push(user.minimum_grade || '-')
@@ -266,4 +291,19 @@ async function exportarUsuariosDW({
   } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
+}
+
+function getUsersNullAndNotNull(users) {
+
+  let users_null = [],
+      users_not_null = [];
+
+  for (const user of users) {
+    const { sc_created_at } = user;
+      
+    if (sc_created_at == null) users_null.push(user)
+    else users_not_null.push(user);
+  }   
+
+  return { users_null, users_not_null }; 
 }

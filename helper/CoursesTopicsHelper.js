@@ -1,5 +1,5 @@
 const { con } = require("../db");
-const { uniqueElements } = require("./Helper");
+const { uniqueElements, setCustomIndexAtObject } = require("./Helper");
 /**
  * Filter user course status using its id, and return its name
  * @param userCourseStatuses
@@ -133,4 +133,21 @@ exports.loadTopicsByCourseId = async (courses_id) => {
   );
 
   return rows;
+}
+
+exports.loadTopicsByCoursesIds = async (
+    coursesIds, indexId = false) => {
+
+  const [ topics ] = await con.raw(`
+    select
+      t.id,
+      t.name topic_name,
+      t.active topic_active,
+      t.assessable topic_assessable,
+      t.type_evaluation_id
+    from topics t
+        inner join courses c on c.id = t.course_id
+    where c.id in (${coursesIds.join()})`); 
+
+  return indexId ? setCustomIndexAtObject(topics) : topics;
 }

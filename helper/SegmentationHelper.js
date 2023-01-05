@@ -315,17 +315,11 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
     let query = `
         select 
-          u.id, u.name,
-          u.lastname, u.surname, u.email, 
-          u.document, u.active, u.last_login,
-          
+          u.id,
+          t.id topic_id,
+
           sc.status_id as course_status_id,
           sc.restarts course_restarts,
-
-          t.name topic_name,
-          t.active topic_active,
-          t.assessable topic_assessable,
-          t.type_evaluation_id,
 
           st.grade topic_grade,
           st.attempts topic_attempts,
