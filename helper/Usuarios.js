@@ -1,6 +1,6 @@
 const { con } = require("../db");
 const moment = require("moment/moment");
-const { pluck, logtime } = require("./Helper");
+const { pluck, logtime, setCustomIndexAtObject } = require("./Helper");
 const { loadCriterionValuesByUser } = require("./Criterian");
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
@@ -334,12 +334,5 @@ exports.loadUsersBySubWorspaceIds = async (
         u.subworkspace_id IN (${subWorkspaceIds.join()})
   `);
 
-  let StackUsers = {};
-  if(indexId) {
-    for(const user of users) {
-      StackUsers[user.id] = user;
-    }
-  }
-
-  return indexId ? StackUsers : users;
+  return indexId ? setCustomIndexAtObject(users) : users;
 };
