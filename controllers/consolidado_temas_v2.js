@@ -80,14 +80,14 @@ async function exportarUsuariosDW ({
 
   // Load evaluation types
 
-  const evaluationTypes = await loadEvaluationTypes()
+  const evaluation_types = await loadEvaluationTypes()
   // Load users from database and generate ids array
 
   const users = await loadUsersWithCoursesAndTopics(
     workspaceId, userTopicsStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
-    activeTopics, inactiveTopics, start, end, areas, tipocurso,evaluationTypes
+    activeTopics, inactiveTopics, start, end, areas, tipocurso,evaluation_types
   )
   const usersIds = pluck(users, 'id')
 
@@ -134,7 +134,7 @@ async function exportarUsuariosDW ({
     cellRow.push(user.topic_attempts || '-')
     cellRow.push(user.topic_assessable ? 'Sí' : 'No')
 
-    cellRow.push(getEvaluationTypeName(evaluationTypes, user.type_evaluation_id))
+    cellRow.push(getEvaluationTypeName(evaluation_types, user.type_evaluation_id))
 
     cellRow.push(user.topic_views || '-')
     cellRow.push(user.minimum_grade || '-')
@@ -179,10 +179,10 @@ async function loadUsersWithCoursesAndTopics (
   workspaceId, userTopicsStatuses,
   modulesIds, activeUsers, inactiveUsers, schooldIds, coursesIds, topicsIds,
   revisados, aprobados, desaprobados, realizados, porIniciar,
-  activeTopics, inactiveTopics, start, end, areas, tipocurso, evaluationTypes
+  activeTopics, inactiveTopics, start, end, areas, tipocurso, evaluation_types
 ) {
   // Base query
-  const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
+  const taxonomy = evaluation_types.find(type => type.code == 'qualified'); 
   let query = `
     select 
         u.*, 
