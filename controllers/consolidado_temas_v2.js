@@ -88,8 +88,7 @@ async function exportarUsuariosDW ({
     workspaceId, userTopicsStatuses,
     modulos, UsuariosActivos, UsuariosInactivos, escuelas, cursos, temas,
     revisados, aprobados, desaprobados, realizados, porIniciar,
-    activeTopics, inactiveTopics, start, end, areas, tipocurso
-    ,evaluationTypes
+    activeTopics, inactiveTopics, start, end, areas, tipocurso,evaluationTypes
   )
   const usersIds = pluck(users, 'id')
 
@@ -184,8 +183,8 @@ async function loadUsersWithCoursesAndTopics (
   activeTopics, inactiveTopics, start, end, areas, tipocurso, evaluationTypes
 ) {
   // Base query
+  console.log('prueba',evaluationTypes);
   const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
-  console.log('prueba',taxonomy);
   let query = `
     select 
         u.*, 
