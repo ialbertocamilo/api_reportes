@@ -131,6 +131,15 @@ module.exports = {
       children.kill()
     })
   },
+  temasNoEvaluablesV2({ body }, res) {
+    const children = fork('./controllers/temas_no_evaluables_v2.js')
+    children.send(body)
+
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   // * Ranking
   ranking({ body }, res) {
     const children = fork('./controllers/ranking.js')

@@ -336,3 +336,18 @@ exports.loadUsersBySubWorspaceIds = async (
 
   return indexId ? setCustomIndexAtObject(users) : users;
 };
+
+exports.getUsersNullAndNotNull = (users) => {
+
+  let users_null = [],
+      users_not_null = [];
+
+  for (const user of users) {
+    const { sc_created_at } = user;
+      
+    if (sc_created_at == null) users_null.push(user)
+    else users_not_null.push(user);
+  }   
+
+  return { users_null, users_not_null }; 
+}
