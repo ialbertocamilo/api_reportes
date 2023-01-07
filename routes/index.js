@@ -159,6 +159,14 @@ module.exports = {
       children.kill()
     })
   },
+  supervisores_notas2({ body }, res) {
+    const children = fork('./controllers/supervisores_notas2.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   supervisores_avance_curricula({ body }, res) {
     const children = fork('./controllers/supervisores_avance_curricula.js')
     children.send(body)

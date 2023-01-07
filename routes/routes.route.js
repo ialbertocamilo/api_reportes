@@ -26,6 +26,7 @@ router.post('/ranking', handler.ranking)
 router.post('/user_uploads', handler.userUploads)
 
 router.post('/supervisores_notas', handler.supervisores_notas)
+router.post('/supervisores_notas2', handler.supervisores_notas2)
 router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
 
 router.post('/checklist_general', handler.checklist_general)

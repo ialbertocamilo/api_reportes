@@ -81,7 +81,8 @@ exports.loadUsersSegmentedv2 = async (
   end_date = null,
 
   activeUsers = false,
-  inactiveUsers = false
+  inactiveUsers = false,
+  userIds = []
 ) => {
   // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
   const segments = await con("segments_values as sv")
@@ -164,6 +165,12 @@ exports.loadUsersSegmentedv2 = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
+
+    let whereInUserIds = ''
+    if (userIds.length) {
+      whereInUserIds = ` and u.id in ( ${userIds.join(',')} )`
+    }
+
     // filtro para areas
     
     let query = `
@@ -188,7 +195,7 @@ exports.loadUsersSegmentedv2 = async (
           u.deleted_at is null
           ${where_active_users}
           ${modules_query} 
-
+          ${whereInUserIds}  
           ${where_criterions_values_user_area}
 
           ${start_date_query} ${end_date_query}
@@ -367,9 +374,9 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 };
 
 exports.loadCourses = async (
-  { cursos = [], 
+  {
+    cursos = [],
     escuelas = [],
-    
     CursosActivos,
     CursosInactivos,
 
