@@ -149,7 +149,7 @@ async function exportarUsuariosDW({
       activeTopics,
       inactiveTopics
     );
-    logtime(`-- start: end segmentation --`);
+    logtime(`-- end: user segmentation --`);
 
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
     users_to_export = users_not_null;
