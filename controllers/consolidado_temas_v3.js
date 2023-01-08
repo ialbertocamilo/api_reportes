@@ -49,7 +49,7 @@ let headers = [
   'VISITAS TEMA',
   'PJE. MINIMO APROBATORIO',
   'ULTIMA EVALUACIÓN',
-  'ESTADO COMPATIBLE' // nombre del curso
+  'CURSO COMPATIBLE' // nombre del curso
 ]
 
 async function exportarUsuariosDW({

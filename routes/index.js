@@ -121,6 +121,15 @@ module.exports = {
       children.kill()
     })
   },
+  evaluacionesAbiertasV2({ body }, res) {
+    const children = fork('./controllers/eva_abiertas_v2.js')
+    children.send(body)
+
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   // * Temas no evaluable
   temasNoEvaluables({ body }, res) {
     const children = fork('./controllers/temas_no_evaluables.js')

@@ -49,7 +49,7 @@ const headers = [
   "TEMAS COMPLETADOS",
   "AVANCE (%)",
   "ULTIMA EVALUACIÓN",
-  "ESTADO COMPATIBLE" // nombre del curso
+  "CURSO COMPATIBLE" // nombre del curso
 ];
 
 async function generateSegmentationReport({
@@ -173,12 +173,17 @@ async function generateSegmentationReport({
           continue;
         }
 
-        const additionalData = {
-          course_status_name: 'Convalidado',
-          compatible: sc_compatible.course_name
-        };
+        const { course_name, course_passed, grade_average, advanced_percentage } = sc_compatible;
 
-        users_to_export.push({...user, ...additionalData}); // usercourse
+        const additionalData = {
+          grade_average, 
+          advanced_percentage,
+          course_passed,
+          course_status_name: 'Convalidado',
+          compatible: course_name
+        }
+
+        users_to_export.push({ ...user, ...additionalData }); // usercourse
       }
 
     } else {
