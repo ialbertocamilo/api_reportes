@@ -220,14 +220,17 @@ async function exportarEvaluacionesAbiertas ({
         if(countLimit) {
           const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
 
-          answers.forEach((answer, index) => {
-            if (answer) {
-              const question = questions[index];
+          if(questions.length) {
 
-              cellRow.push(question ? strippedString(question.pregunta) : '-')
-              cellRow.push(answer ? strippedString(answer.respuesta) : '-')
-            }
-          });
+            answers.forEach((answer, index) => {
+              if (answer) {
+                const question = questions.find(q => q.id === answer.id);
+
+                cellRow.push((question) ? strippedString(question.pregunta) : '-')
+                cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-')
+              }
+            });
+          }
         }
 
       } else {
@@ -240,8 +243,6 @@ async function exportarEvaluacionesAbiertas ({
               
               cellRow.push((question) ? strippedString(question.pregunta) : '-')
               cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
-              
-              // if(answer && question) console.log('question, answer',{question, answer});
             }
           });
         }
@@ -283,6 +284,7 @@ async function getQuestionsByTopic(topic_id, countLimit) {
 
   let query = `select q.* from questions q 
                where q.topic_id = ${topic_id} 
+                     and q.type_id = 4567
                limit ${countLimit}`;
 
   // logtime(query);
