@@ -87,7 +87,7 @@ async function exportarEvaluacionesAbiertas ({
 
     // === Questions Answers FP / Others ===
     const answers = user.answers;
-    
+
     if(workspaceId === 25) {
       const countLimit = answers ? answers.length : 0;
       if(countLimit) {
@@ -287,7 +287,7 @@ async function loadUsersQuestions (
   query += ' group by u.id, t.id, st.id'
 
   // Execute query
-  // logtime(query);
+  logtime(query);
 
   const [rows] = await con.raw(query)
   return rows
