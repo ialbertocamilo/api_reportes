@@ -17,7 +17,8 @@ const { getUserCriterionValues,
         addActiveUsersCondition } = require('../helper/Usuarios')
 const { response } = require('../response')
 
-const { loadCoursesV2, loadUsersSegmentedv2WithSummaryTopicsQuestions } = require('../helper/SegmentationHelper')
+const { loadCoursesV2, 
+        loadUsersSegmentedv2WithSummaryTopicsEva } = require('../helper/SegmentationHelper')
 const { loadTopicsStatuses, 
         loadTopicsByCoursesIds,
         loadCompatiblesId,
@@ -29,8 +30,9 @@ let headers = [
   'CURSO',
   'TIPO CURSO',
   'TEMA',
-  'RESULTADO TEMA', //convalidado
-  'CURSO COMPATIBLE',
+  'TIPO TEMA',
+  'RESULTADO TEMA', // convalidado
+  'CURSO COMPATIBLE', // nombre del curso
   'PREGUNTAS'
 ]
 
@@ -92,7 +94,7 @@ async function exportarEvaluacionesAbiertas ({
 
     // datos de usuario - temas
     logtime(`-- start: user segmentation --`);
-    const users = await loadUsersSegmentedv2WithSummaryTopicsQuestions(
+    const users = await loadUsersSegmentedv2WithSummaryTopicsEva(
       course.course_id, 
       modulos, 
       areas,
@@ -201,6 +203,7 @@ async function exportarEvaluacionesAbiertas ({
       const topicStore = StackTopicsData[topic_id];
 
       cellRow.push(topicStore.topic_name) // topicStore
+      cellRow.push(topicStore.topic_assessable ? 'Evaluable' : 'No evaluable' ) // topicStore
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.topic_status_name) {
