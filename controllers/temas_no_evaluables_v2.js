@@ -17,7 +17,7 @@ const { getUserCriterionValues,
         addActiveUsersCondition } = require('../helper/Usuarios')
 const { response } = require('../response')
 
-const { loadCoursesV2, loadUsersSegmentedv2WithSummaryTopics } = require('../helper/SegmentationHelper')
+const { loadCoursesV2, loadUsersSegmentedv2WithSummaryTopicsNoEva } = require('../helper/SegmentationHelper')
 const { loadTopicsStatuses, 
         loadTopicsByCoursesIds,
         loadCompatiblesId,
@@ -29,6 +29,7 @@ const headers = [
   'ESCUELA',
   'CURSO',
   'TEMA',
+  'TIPO TEMA',
   'RESULTADO TEMA', // convalidado
   'ESTADO(TEMA)',
   'CANTIDAD DE VISITAS POR TEMA',
@@ -89,7 +90,7 @@ async function exportTemasNoEvaluables ({
 
     // datos de usuario - temas
     logtime(`-- start: user segmentation --`);
-    const users = await loadUsersSegmentedv2WithSummaryTopics(
+    const users = await loadUsersSegmentedv2WithSummaryTopicsNoEva(
       course.course_id, 
       modulos, 
       areas,
@@ -145,7 +146,6 @@ async function exportTemasNoEvaluables ({
         
         CurrentUser.forEach((item) => {
           const additionalData = {
-                                  course_status_name: 'Convalidado', 
                                   topic_status_name: 'Convalidado',
                                   compatible: st_compatible.course_name 
                                  };
@@ -196,6 +196,7 @@ async function exportTemasNoEvaluables ({
       const topicStore = StackTopicsData[topic_id];
 
       cellRow.push(topicStore.topic_name) // topicStore
+      cellRow.push(topicStore.topic_assessable ? 'Evaluable' : 'No evaluable' ) // topicStore
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.topic_status_name) {
@@ -205,7 +206,8 @@ async function exportTemasNoEvaluables ({
       }
       cellRow.push(topicStore.topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
       cellRow.push(user.topic_views || '-')
-
+      cellRow.push(user.compatible || `-`)
+      
       // añadir fila 
       worksheet.addRow(cellRow).commit()
     }

@@ -373,8 +373,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   return users;
 };
 
-
-exports.loadUsersSegmentedv2WithSummaryTopics = async (
+exports.loadUsersSegmentedv2WithSummaryTopicsNoEva = async (
   course_id,
   modules = [],
   areas = [],
@@ -488,24 +487,15 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
           u.id,
           t.id topic_id,
 
-          sc.status_id as course_status_id,
-          sc.restarts course_restarts,
-
           st.grade topic_grade,
-          st.attempts topic_attempts,
-          st.restarts topic_restarts,
           st.views topic_views,
-          st.status_id topic_status_id,
-          st.last_time_evaluated_at topic_last_time_evaluated_at,
-          json_extract(c.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
+          st.status_id topic_status_id
 
         from users u
         
-          ${queryJoin} join summary_courses sc 
-            on sc.user_id = u.id and sc.course_id = ${course_id}
-          left join courses c 
+          inner join courses c 
             on c.id = ${course_id}
-          left join topics t 
+          inner join topics t 
             on t.course_id = c.id
           left join summary_topics st 
             on st.topic_id = t.id and st.user_id = u.id
@@ -514,7 +504,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
         where 
           u.deleted_at is null
-          and t.assessable = 0
+          and t.assessable = 0 
           ${where_active_users}
           
           ${modules_query}
@@ -537,7 +527,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   return users;
 };
 
-exports.loadUsersSegmentedv2WithSummaryTopicsQuestions = async (
+exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
   course_id,
   modules = [],
   areas = [],
@@ -652,9 +642,6 @@ exports.loadUsersSegmentedv2WithSummaryTopicsQuestions = async (
           t.id topic_id,
           st.answers,
 
-          st.grade topic_grade,
-          st.attempts topic_attempts,
-          st.restarts topic_restarts,
           st.views topic_views,
           st.status_id topic_status_id
 
@@ -670,6 +657,7 @@ exports.loadUsersSegmentedv2WithSummaryTopicsQuestions = async (
 
         where 
           u.deleted_at is null 
+          and t.assessable = 1
           ${where_active_users}
           
           ${modules_query}
