@@ -84,8 +84,6 @@ async function exportarEvaluacionesAbiertas ({
       tipocurso
   }, workspaceId, false);
 
-  // console.log('courses', pluck(courses, 'course_id'));
-
   // === precargar topics, usuarios y criterios ===
   const StackTopicsData = await loadTopicsByCoursesIds( 
                                 pluck(courses, 'course_id'), true);
