@@ -32,8 +32,7 @@ let headers = [
   'TEMA',
   'TIPO TEMA',
   'RESULTADO TEMA', // convalidado
-  'CURSO COMPATIBLE', // nombre del curso
-  'PREGUNTAS'
+  'CURSO COMPATIBLE' // nombre del curso
 ]
 
 async function exportarEvaluacionesAbiertas ({
@@ -71,6 +70,11 @@ async function exportarEvaluacionesAbiertas ({
 
   const userTopicsStatuses = await loadTopicsStatuses();
   const questionsData = await loadQuestions(modulos);
+
+  const groupedQuestionData = groupArrayOfObjects(questionsData, 'topic_id');
+  const { altHeaders, maxQuestions } = getCreatedHeaders(groupedQuestionData, headers);
+  await createHeaders(headersEstaticos.concat(altHeaders));
+  // console.log(questionsData);
 
   let users_to_export = [];
 
@@ -215,25 +219,21 @@ async function exportarEvaluacionesAbiertas ({
       cellRow.push(user.compatible || `-`);
 
       // === Questions Answers FP / Others ===
-      // console.log('answers', { answers })
       const answers = user.answers;
 
       if(workspaceId === 25) {
         const countLimit = answers ? answers.length : 0;
         if(countLimit) {
-          const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
-
-          if(questions.length) {
-
-            answers.forEach((answer, index) => {
-              if (answer) {
-                const question = questions.find(q => q.id === answer.id);
-
-                cellRow.push((question) ? strippedString(question.pregunta) : '-')
-                cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-')
-              }
-            });
-          }
+          // const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
+          // if(questions.length) {
+          answers.forEach((answer, index) => {
+            if (answer) {
+              const question = questionsData.find(q => q.id === answer.id);
+              cellRow.push((question) ? strippedString(question.pregunta) : '-')
+              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-')
+            }
+          });
+          // }
         }
 
       } else {
@@ -243,7 +243,6 @@ async function exportarEvaluacionesAbiertas ({
           answers.forEach((answer, index) => {
             if (answer) {
               const question = questionsData.find(q => q.id === answer.id);
-              
               cellRow.push((question) ? strippedString(question.pregunta) : '-')
               cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
             }
@@ -251,21 +250,17 @@ async function exportarEvaluacionesAbiertas ({
         }
       }
 
-      // throw new Error('stop now');
-      // === Questions Answers FP / Others ===
-
-      // === if empty questions ===
-      // const emptyRows = (answers) ? maxQuestions - answers.length
-      //                             : maxQuestions;
-      // for (let i = 0; i < emptyRows; i++) {
-      //   cellRow.push('-');
-      //   cellRow.push('-');
-      // }
-      // // === if empty questions ===
-
+    // === if empty questions ===
+    const emptyRows = (answers) ? maxQuestions - answers.length
+                                : maxQuestions;
+    for (let i = 0; i < emptyRows; i++) {
+      cellRow.push('-');
+      cellRow.push('-');
+    }
+    // === if empty questions ===
 
       // añadir fila 
-      worksheet.addRow(cellRow).commit()
+      worksheet.addRow(cellRow).commit();
     }
   }
 
@@ -296,16 +291,14 @@ async function getQuestionsByTopic(topic_id, countLimit) {
   return rows;
 }
 
-function getCreatedHeaders(users, headers){
+function getCreatedHeaders(questions, headers){
   
   let maxQuestions = 0;
 
-  for (const user of users) {
-    const answers = user.answers;
-    if(answers) {
-      const countAnswers = answers.length; 
-      if(countAnswers > maxQuestions) maxQuestions = countAnswers;
-    }
+  for (const question in questions) {
+    const result = questions[question];
+    const countQuestions = result.length; 
+    if(countQuestions > maxQuestions) maxQuestions = countQuestions;
   }
 
   // === CONDITIONAL HEADERS ===
