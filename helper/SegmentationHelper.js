@@ -650,6 +650,7 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
             on c.id = ${course_id}
           inner join topics t 
             on t.course_id = c.id
+            
           left join summary_topics st 
             on st.topic_id = t.id and st.user_id = u.id
           ${join_criterions_values_user} 
