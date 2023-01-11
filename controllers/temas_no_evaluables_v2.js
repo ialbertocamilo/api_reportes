@@ -52,7 +52,8 @@ async function exportTemasNoEvaluables ({
   activeTopics, 
   inactiveTopics, 
 
-  start, end
+  start, end,
+  completed = true
 }) {
   // Generar cabeceras de excel
   const headersEstaticos = await getGenericHeaders(workspaceId);
@@ -103,21 +104,28 @@ async function exportTemasNoEvaluables ({
       UsuariosInactivos,
 
       activeTopics,
-      inactiveTopics
+      inactiveTopics,
+
+      completed
     );
     logtime(`-- end: user segmentation --`);
 
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
-    users_to_export = users_not_null;
+    console.log( 'total rows', users.length, 
+                              { users_null: users_null.length,
+                                users_not_null: users_not_null.length });
 
     // agrupa usuarios por id
     const users_topics_grouped = groupArrayOfObjects(users_null, 'id'); 
+    users_to_export = users_not_null;
 
     // obtener cursos compatibles segun 'course_id'
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
     if (compatibles_courses.length > 0 && users_null.length > 0) {
+      logtime(`INICIO COMPATIBLES`);
+
       const stack_ids_users = Object.keys(users_topics_grouped);
 
       // summary_topics verifica si es compatible
@@ -153,7 +161,7 @@ async function exportTemasNoEvaluables ({
           users_to_export.push({...item, ...additionalData }); // usertopics
         });      
       }
-
+      logtime(`FIN COMPATIBLES`);
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }

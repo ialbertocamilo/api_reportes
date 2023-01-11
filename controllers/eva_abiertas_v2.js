@@ -53,7 +53,9 @@ async function exportarEvaluacionesAbiertas ({
   inactiveTopics = false, 
 
   start, 
-  end 
+  end, 
+
+  completed = true
 }) {
   // Generate Excel file header
   const headersEstaticos = await getGenericHeaders(workspaceId)
@@ -109,21 +111,28 @@ async function exportarEvaluacionesAbiertas ({
       UsuariosInactivos,
 
       activeTopics,
-      inactiveTopics
+      inactiveTopics,
+
+      completed
     );
     logtime(`-- end: user segmentation --`);
 
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
-    users_to_export = users_not_null;
+    console.log( 'total rows', users.length, 
+                              { users_null: users_null.length,
+                                users_not_null: users_not_null.length });
 
-    // agrupa usuarios por id
+    // agrupa usuarios por id 
     const users_topics_grouped = groupArrayOfObjects(users_null, 'id'); 
+    users_to_export = users_not_null;
 
     // obtener cursos compatibles segun 'course_id'
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
     if (compatibles_courses.length > 0 && users_null.length > 0) {
+      logtime(`INICIO COMPATIBLES`);
+
       const stack_ids_users = Object.keys(users_topics_grouped);
 
       // summary_topics verifica si es compatible
@@ -160,6 +169,7 @@ async function exportarEvaluacionesAbiertas ({
         });      
       }
 
+      logtime(`FIN COMPATIBLES`);
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
@@ -248,17 +258,17 @@ async function exportarEvaluacionesAbiertas ({
         }
       }
 
-    // === if empty questions ===
+    // === para rellenar en preguntas ===
     const emptyRows = (answers) ? maxQuestions - answers.length
                                 : maxQuestions;
     for (let i = 0; i < emptyRows; i++) {
       cellRow.push('-');
       cellRow.push('-');
     }
-    // === if empty questions ===
+    // === para rellenar en preguntas ===
 
-      // añadir fila 
-      worksheet.addRow(cellRow).commit();
+    // añadir fila 
+    worksheet.addRow(cellRow).commit();
     }
   }
 

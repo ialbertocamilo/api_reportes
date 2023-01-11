@@ -3,11 +3,35 @@ const { con } = require("../db");
 const { loadTopicsByCourseId, getCourseStatusId } = require("./CoursesTopicsHelper");
 const {
   groupArrayOfObjects,
+  groupArrayOfObjects_v2,
   uniqueElements,
   pluckUnique,
   logtime,
   pluck,
 } = require("./Helper");
+
+const StackBuildQuery = {
+  // sides: relacion ('inner','left','right','cross')
+  // num: nro de tablas
+  setCustomSideJoin(sides, num) { 
+    const bySides = sides.split(',');
+    const countBySides = bySides.length;
+
+    if(countBySides > num) return console.error('error:sides es mayor a num'); //error
+    if(countBySides === num) return bySides;
+
+    // rellenamos hasta que iguale a num 
+    const diffSides = (num - countBySides);
+    const lastValue = bySides[countBySides - 1];
+
+    for (let i = 0; i < diffSides; i++) {
+      bySides.push(lastValue)
+    }
+
+    return bySides;
+  },
+
+};
 
 exports.loadUsersSegmented = async (course_id) => {
   // select `id` from `users`
@@ -81,76 +105,43 @@ exports.loadUsersSegmentedv2 = async (
   end_date = null,
 
   activeUsers = false,
-  inactiveUsers = false
+  inactiveUsers = false,
+
+  completed
 ) => {
-  // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
-  const segments = await con("segments_values as sv")
-    .select(
-      "sv.criterion_id",
-      "sv.starts_at",
-      "sv.finishes_at",
-      "sv.segment_id",
-      "sv.criterion_value_id",
-      "t.code"
-    )
-    .join("segments as sg", "sg.id", "sv.segment_id")
-    .join("criteria as c", "c.id", "sv.criterion_id")
-    .join("taxonomies as t", "t.id", "c.field_id")
-    .where("sg.model_type", "App\\Models\\Course")
-    .where("sg.model_id", course_id)
-    .where("sg.deleted_at", null)
-    .where("sv.deleted_at", null);
-  const segments_groupby = groupArrayOfObjects(
-    segments,
-    "segment_id",
-    "get_array"
-  );
+  const segments_groupby = await getCurrentSegmentsByCourseId(course_id);
   let users = [];
 
-  for (let segment of segments_groupby) {
-    const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
-    let join_criterions_values_user = "";
-    grouped.forEach((values, idx) => {
-      if (values[0].code != "date") {
-        const criterios_id = pluckUnique(
-          values,
-          "criterion_value_id"
-        ).toString();
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id})`;
-        // console.log('criterios_inner', join_criterions_values_user);
-      } else {
-        let select_date = "select id from criterion_values where ";
-        values.forEach((value, index) => {
-          const starts_at = moment(value.starts_at).format("YYYY-MM-DD");
-          const finishes_at = moment(value.finishes_at).format("YYYY-MM-DD");
-          select_date += ` ${index > 0 ? "or" : ""
-            } value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id
-            }`;
-        });
-        select_date += " and deleted_at is null";
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
-      }
-    });
+  // === para 'completed' es boolean
+  const StackSidesCompleted = completed ? 'left' : 'inner'; 
+  const [ first ] = StackBuildQuery.setCustomSideJoin(StackSidesCompleted, 1);
+  // === para 'completed' es boolean
 
-    // USERS FILTERS
-    const queryJoin = start_date || end_date ? `INNER` : `LEFT OUTER`;
+  for (let segment of segments_groupby) {
+    const join_criterions_values_user = getInnerCriteriosAtSegment(segment);
+
+    // === filtro para fecha ===
+    // const queryJoin = start_date || end_date ? `INNER` : `LEFT OUTER`;
     const start_date_query = start_date
       ? ` and date(sc.updated_at) >= '${start_date}'`
       : ``;
     const end_date_query = end_date
       ? ` and date(sc.updated_at) <= '${end_date}'`
       : ``;
+    // === filtro para fecha ===
 
     const modules_query =
       modules && modules.length > 0
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 
+    // === filtro para usuarios ===
     let where_active_users = '';
     if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
     if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
-    
-    // filtro para areas
+    // === filtro para usuarios ===
+
+    // === filtro para areas ===
     let join_criterions_values_user_area = '';
     let where_criterions_values_user_area = '';
 
@@ -164,7 +155,7 @@ exports.loadUsersSegmentedv2 = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
-    // filtro para areas
+    // === filtro para areas ===
     
     let query = `
         select 
@@ -179,7 +170,9 @@ exports.loadUsersSegmentedv2 = async (
 
         from users u
         
-          ${queryJoin} join summary_courses sc on sc.user_id = u.id and sc.course_id = ${course_id} 
+          ${first} join summary_courses sc 
+            on sc.user_id = u.id 
+            and sc.course_id = ${course_id} 
           ${join_criterions_values_user} 
 
           ${join_criterions_values_user_area}
@@ -200,6 +193,7 @@ exports.loadUsersSegmentedv2 = async (
       users = [...users, ...rows];
     }
   }
+
   return uniqueElements(users, "id");
 };
 
@@ -216,77 +210,44 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   inactiveUsers = false,
 
   activeTopics = false,
-  inactiveTopics = false
-) => {
-  // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
-  const segments = await con("segments_values as sv")
-    .select(
-      "sv.criterion_id",
-      "sv.starts_at",
-      "sv.finishes_at",
-      "sv.segment_id",
-      "sv.criterion_value_id",
-      "t.code"
-    )
-    .join("segments as sg", "sg.id", "sv.segment_id")
-    .join("criteria as c", "c.id", "sv.criterion_id")
-    .join("taxonomies as t", "t.id", "c.field_id")
-    .where("sg.model_type", "App\\Models\\Course")
-    .where("sg.model_id", course_id)
-    .where("sg.deleted_at", null)
-    .where("sv.deleted_at", null);
-  const segments_groupby = groupArrayOfObjects(
-    segments,
-    "segment_id",
-    "get_array"
-  );
-  let users = [];
-  for (let segment of segments_groupby) {
-    const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
-    let join_criterions_values_user = "";
-    grouped.forEach((values, idx) => {
-      if (values[0].code != "date") {
-        const criterios_id = pluckUnique(
-          values,
-          "criterion_value_id"
-        ).toString();
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
-      } else {
-        let select_date = "select id from criterion_values where ";
-        values.forEach((value, index) => {
-          const starts_at = moment(value.starts_at).format("YYYY-MM-DD");
-          const finishes_at = moment(value.finishes_at).format("YYYY-MM-DD");
-          select_date += ` ${index > 0 ? "or" : ""
-            } value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id
-            }`;
-        });
-        select_date += " and deleted_at is null";
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
-      }
-    });
+  inactiveTopics = false,
 
-    // USERS FILTERS
-    const queryJoin = start_date || end_date ? `inner` : `left`;
+  completed
+) => {
+  const segments_groupby = await getCurrentSegmentsByCourseId(course_id);
+  let users = [];
+
+  // === para 'completed' es boolean
+  const StackSidesCompleted = completed ? 'left,inner,inner,left': 'inner'; 
+  const [ first, second, 
+          third, fourth ] = StackBuildQuery.setCustomSideJoin(StackSidesCompleted, 4);
+  // === para 'completed' es boolean
+
+  for (let segment of segments_groupby) {
+    const join_criterions_values_user = getInnerCriteriosAtSegment(segment);
+
+    // === filtro para fecha ===
+    // const queryJoin = start_date || end_date ? `inner` : `left`;
     const start_date_query = start_date
       ? ` and date(st.updated_at) >= '${start_date}'`
       : ``;
     const end_date_query = end_date
       ? ` and date(st.updated_at) <= '${end_date}'`
       : ``;
+    // === filtro para fecha ===
 
     const modules_query =
       modules && modules.length > 0
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 
-    // const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
-    // const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    // === filtro para usuarios ===
     let where_active_users = '';
     if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
     if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
+    // === filtro para usuarios ===
 
-
-    // filtro para areas
+    // === filtro para areas ===
     let join_criterions_values_user_area = '';
     let where_criterions_values_user_area = '';
 
@@ -300,17 +261,14 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
-    // filtro para areas
+    // === filtro para areas ===
 
+    // === filtro para topics ===
     let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ``;
     let where_active_topics = '';
     if(activeTopics && !inactiveTopics) where_active_topics += `and t.active = 1`; 
     if(!activeTopics && inactiveTopics) where_active_topics += `and t.active = 0`; 
-
-    /**
-     * Comprobar que retorne 
-     * User Data - Summar Course Data (data o nulo) - Summary Topic Data (data o nulo)
-     */
+    // === filtro para topics ===
 
     let query = `
         select 
@@ -319,6 +277,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
           sc.status_id as course_status_id,
           sc.restarts course_restarts,
+          sc.created_at sc_created_at, 
 
           st.grade topic_grade,
           st.attempts topic_attempts,
@@ -330,13 +289,13 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
         from users u
         
-          ${queryJoin} join summary_courses sc 
+          ${first} join summary_courses sc 
             on sc.user_id = u.id and sc.course_id = ${course_id}
-          left join courses c 
+          ${second} join courses c 
             on c.id = ${course_id}
-          left join topics t 
+          ${third} join topics t 
             on t.course_id = c.id
-          left join summary_topics st 
+          ${fourth} join summary_topics st 
             on st.topic_id = t.id and st.user_id = u.id
           ${join_criterions_values_user} 
           ${join_criterions_values_user_area}
@@ -358,10 +317,14 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
     const [ rows ] = await con.raw(query);
 
     if (rows.length > 0) {
-      users = [...users, ...rows];
+      if (users.length) {
+        // funcion de MergeArrayByObjects
+        users = mergeArraysObjectGroupedKeys({current: rows, compared: users});
+      } else users = rows;
     }
+
   }
-  // logtime(`FIN METHOD : [loadUsersSegmentedv2]`)
+
   return users;
 };
 
@@ -378,77 +341,44 @@ exports.loadUsersSegmentedv2WithSummaryTopicsNoEva = async (
   inactiveUsers = false,
 
   activeTopics = false,
-  inactiveTopics = false
-) => {
-  // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
-  const segments = await con("segments_values as sv")
-    .select(
-      "sv.criterion_id",
-      "sv.starts_at",
-      "sv.finishes_at",
-      "sv.segment_id",
-      "sv.criterion_value_id",
-      "t.code"
-    )
-    .join("segments as sg", "sg.id", "sv.segment_id")
-    .join("criteria as c", "c.id", "sv.criterion_id")
-    .join("taxonomies as t", "t.id", "c.field_id")
-    .where("sg.model_type", "App\\Models\\Course")
-    .where("sg.model_id", course_id)
-    .where("sg.deleted_at", null)
-    .where("sv.deleted_at", null);
-  const segments_groupby = groupArrayOfObjects(
-    segments,
-    "segment_id",
-    "get_array"
-  );
-  let users = [];
-  for (let segment of segments_groupby) {
-    const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
-    let join_criterions_values_user = "";
-    grouped.forEach((values, idx) => {
-      if (values[0].code != "date") {
-        const criterios_id = pluckUnique(
-          values,
-          "criterion_value_id"
-        ).toString();
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
-      } else {
-        let select_date = "select id from criterion_values where ";
-        values.forEach((value, index) => {
-          const starts_at = moment(value.starts_at).format("YYYY-MM-DD");
-          const finishes_at = moment(value.finishes_at).format("YYYY-MM-DD");
-          select_date += ` ${index > 0 ? "or" : ""
-            } value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id
-            }`;
-        });
-        select_date += " and deleted_at is null";
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
-      }
-    });
+  inactiveTopics = false,
 
-    // USERS FILTERS
-    const queryJoin = start_date || end_date ? `inner` : `left`;
+  completed
+) => {
+ const segments_groupby = await getCurrentSegmentsByCourseId(course_id);
+  let users = [];
+
+  // === para 'completed' es boolean
+  const StackSidesCompleted = completed ? 'left,inner,inner,left': 'inner'; 
+  const [ first, second, 
+          third, fourth ] = StackBuildQuery.setCustomSideJoin(StackSidesCompleted, 4);
+  // === para 'completed' es boolean
+
+  for (let segment of segments_groupby) {
+    const join_criterions_values_user = getInnerCriteriosAtSegment(segment);
+
+    // === filtro para fecha ===
+    // const queryJoin = start_date || end_date ? `inner` : `left`;
     const start_date_query = start_date
       ? ` and date(st.updated_at) >= '${start_date}'`
       : ``;
     const end_date_query = end_date
       ? ` and date(st.updated_at) <= '${end_date}'`
       : ``;
+    // === filtro para fecha ===
 
     const modules_query =
       modules && modules.length > 0
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 
-    // const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
-    // const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    // === filtro para usuarios ===
     let where_active_users = '';
     if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
     if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
+    // === filtro para usuarios ===
 
-
-    // filtro para areas
+    // === filtro para areas ===
     let join_criterions_values_user_area = '';
     let where_criterions_values_user_area = '';
 
@@ -462,35 +392,38 @@ exports.loadUsersSegmentedv2WithSummaryTopicsNoEva = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
-    // filtro para areas
+    // === filtro para areas ===
 
+    // === filtro para topics ===
     let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ``;
     let where_active_topics = '';
     if(activeTopics && !inactiveTopics) where_active_topics += `and t.active = 1`; 
     if(!activeTopics && inactiveTopics) where_active_topics += `and t.active = 0`; 
-
-    /**
-     * Comprobar que retorne 
-     * User Data - Summar Course Data (data o nulo) - Summary Topic Data (data o nulo)
-     */
+    // === filtro para topics ===
 
     let query = `
         select 
           u.id,
           t.id topic_id,
 
+          sc.created_at as sc_created_at,
+
           st.grade topic_grade,
           st.views topic_views,
           st.status_id topic_status_id
 
         from users u
-        
-          inner join courses c 
+          
+          ${first} join summary_courses sc 
+            on sc.user_id = u.id 
+            and sc.course_id = ${course_id}
+          ${second} join courses c 
             on c.id = ${course_id}
-          inner join topics t 
+          ${third} join topics t 
             on t.course_id = c.id
-          left join summary_topics st 
+          ${fourth} join summary_topics st 
             on st.topic_id = t.id and st.user_id = u.id
+
           ${join_criterions_values_user} 
           ${join_criterions_values_user_area}
 
@@ -512,10 +445,14 @@ exports.loadUsersSegmentedv2WithSummaryTopicsNoEva = async (
     const [ rows ] = await con.raw(query);
 
     if (rows.length > 0) {
-      users = [...users, ...rows];
+
+      if (users.length) {
+        // funcion de MergeArrayByObjects
+        users = mergeArraysObjectGroupedKeys({current: rows, compared: users});
+      } else users = rows;
     }
   }
-  // logtime(`FIN METHOD : [loadUsersSegmentedv2]`)
+
   return users;
 };
 
@@ -532,77 +469,44 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
   inactiveUsers = false,
 
   activeTopics = false,
-  inactiveTopics = false
-) => {
-  // logtime(`INICIO METHOD : [loadUsersSegmentedv2]`)
-  const segments = await con("segments_values as sv")
-    .select(
-      "sv.criterion_id",
-      "sv.starts_at",
-      "sv.finishes_at",
-      "sv.segment_id",
-      "sv.criterion_value_id",
-      "t.code"
-    )
-    .join("segments as sg", "sg.id", "sv.segment_id")
-    .join("criteria as c", "c.id", "sv.criterion_id")
-    .join("taxonomies as t", "t.id", "c.field_id")
-    .where("sg.model_type", "App\\Models\\Course")
-    .where("sg.model_id", course_id)
-    .where("sg.deleted_at", null)
-    .where("sv.deleted_at", null);
-  const segments_groupby = groupArrayOfObjects(
-    segments,
-    "segment_id",
-    "get_array"
-  );
-  let users = [];
-  for (let segment of segments_groupby) {
-    const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
-    let join_criterions_values_user = "";
-    grouped.forEach((values, idx) => {
-      if (values[0].code != "date") {
-        const criterios_id = pluckUnique(
-          values,
-          "criterion_value_id"
-        ).toString();
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
-      } else {
-        let select_date = "select id from criterion_values where ";
-        values.forEach((value, index) => {
-          const starts_at = moment(value.starts_at).format("YYYY-MM-DD");
-          const finishes_at = moment(value.finishes_at).format("YYYY-MM-DD");
-          select_date += ` ${index > 0 ? "or" : ""
-            } value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id
-            }`;
-        });
-        select_date += " and deleted_at is null";
-        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
-      }
-    });
+  inactiveTopics = false,
 
-    // USERS FILTERS
-    const queryJoin = start_date || end_date ? `inner` : `left`;
+  completed
+) => {
+  const segments_groupby = await getCurrentSegmentsByCourseId(course_id);
+  let users = [];
+
+  // === para 'completed' es boolean
+  const StackSidesCompleted = completed ? 'left,inner,inner,left': 'inner'; 
+  const [ first, second, 
+          third, fourth ] = StackBuildQuery.setCustomSideJoin(StackSidesCompleted, 4);
+  // === para 'completed' es boolean
+
+  for (let segment of segments_groupby) {
+    const join_criterions_values_user = getInnerCriteriosAtSegment(segment);
+
+    // === filtro para fecha ===
+    // const queryJoin = start_date || end_date ? `inner` : `left`;
     const start_date_query = start_date
       ? ` and date(st.updated_at) >= '${start_date}'`
       : ``;
     const end_date_query = end_date
       ? ` and date(st.updated_at) <= '${end_date}'`
       : ``;
+    // === filtro para fecha ===
 
     const modules_query =
       modules && modules.length > 0
         ? `and u.subworkspace_id in (${modules.join()})`
         : ``;
 
-    // const user_active_query = activeUsers ? ` and u.active = 1 ` : ``;
-    // const user_inactive_query = inactiveUsers ? ` and u.active = 0 ` : ``;
+    // === filtro para usuarios ===
     let where_active_users = '';
     if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
     if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
+    // === filtro para usuarios ===
 
-
-    // filtro para areas
+    // === filtro para areas ===
     let join_criterions_values_user_area = '';
     let where_criterions_values_user_area = '';
 
@@ -616,17 +520,14 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
         where_criterions_values_user_area += ` 
           and cvu.criterion_value_id in ( ${areas.join()} )`
     }
-    // filtro para areas
+    // === filtro para areas ===
 
+    // === filtro para topics ===
     let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ``;
     let where_active_topics = '';
     if(activeTopics && !inactiveTopics) where_active_topics += `and t.active = 1`; 
     if(!activeTopics && inactiveTopics) where_active_topics += `and t.active = 0`; 
-
-    /**
-     * Comprobar que retorne 
-     * User Data - Summar Course Data (data o nulo) - Summary Topic Data (data o nulo)
-     */
+    // === filtro para topics ===
 
     let query = `
         select 
@@ -634,17 +535,23 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
           t.id topic_id,
           st.answers,
 
+          sc.created_at as sc_created_at,
+
           st.views topic_views,
           st.status_id topic_status_id
 
         from users u
-          inner join courses c 
+
+          ${first} join summary_courses sc 
+            on sc.user_id = u.id 
+            and sc.course_id = ${course_id}
+          ${second} join courses c 
             on c.id = ${course_id}
-          inner join topics t 
+          ${third} join topics t 
             on t.course_id = c.id
-            
-          left join summary_topics st 
+          ${fourth} join summary_topics st 
             on st.topic_id = t.id and st.user_id = u.id
+          
           ${join_criterions_values_user} 
           ${join_criterions_values_user_area}
 
@@ -666,12 +573,86 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
     const [ rows ] = await con.raw(query);
 
     if (rows.length > 0) {
-      users = [...users, ...rows];
+
+      if (users.length) {
+        // funcion de MergeArrayByObjects
+        users = mergeArraysObjectGroupedKeys({current: rows, compared: users});
+      } else users = rows;
     }
   }
   // logtime(`FIN METHOD : [loadUsersSegmentedv2]`)
   return users;
 };
+
+function mergeArraysObjectGroupedKeys({ current, compared },
+                                      currentKey = 'id',
+                                      comparedKey = 'id') {
+
+  const current_indexed = groupArrayOfObjects_v2(current, currentKey);
+  const compared_indexed = groupArrayOfObjects_v2(compared, comparedKey);
+
+  for(const value in current_indexed) {
+    const currentVal = compared_indexed[value];
+    if(!currentVal) compared.push(...current_indexed[value]);
+  }
+
+  return compared;
+}
+
+async function getCurrentSegmentsByCourseId(course_id) {
+  // logtime(`[---Load user segmented : ${course_id}---]`);
+  const segments = await con("segments_values as sv")
+    .select(
+      "sv.criterion_id",
+      "sv.starts_at",
+      "sv.finishes_at",
+      "sv.segment_id",
+      "sv.criterion_value_id",
+      "t.code"
+    )
+    .join("segments as sg", "sg.id", "sv.segment_id")
+    .join("criteria as c", "c.id", "sv.criterion_id")
+    .join("taxonomies as t", "t.id", "c.field_id")
+    .where("sg.model_type", "App\\Models\\Course")
+    .where("sg.model_id", course_id)
+    .where("sg.deleted_at", null)
+    .where("sv.deleted_at", null);
+  const segments_groupby = groupArrayOfObjects(
+    segments,
+    "segment_id",
+    "get_array"
+  );
+
+  return segments_groupby;
+}
+
+function getInnerCriteriosAtSegment(segment) {
+  // logtime(`[---Load user criterios segment : ${segment}---]`);
+  const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
+
+  let join_criterions_values_user = "";
+
+  grouped.forEach((values, idx) => {
+    if (values[0].code != "date") {
+      const criterios_id = pluckUnique( values, "criterion_value_id"
+      ).toString();
+      join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
+    } else {
+      let select_date = "select id from criterion_values where ";
+      values.forEach((value, index) => {
+        const starts_at = moment(value.starts_at).format("YYYY-MM-DD");
+        const finishes_at = moment(value.finishes_at).format("YYYY-MM-DD");
+        select_date += ` ${index > 0 ? "or" : ""
+          } value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id
+          }`;
+      });
+      select_date += " and deleted_at is null";
+      join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on u.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
+    }
+  });
+
+  return join_criterions_values_user;
+}
 
 exports.loadUsersSegmentedv2CountCourses = async (
   course_id,
