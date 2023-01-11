@@ -29,6 +29,7 @@ const {
   loadUsersBySubWorspaceIds,
   loadUsersCriteriaValues,
   getUserCriterionValues,
+  getUsersNullAndNotNull,
   getUserCriterionValues2,
 } = require("../helper/Usuarios");
 const { getSuboworkspacesIds } = require("../helper/Workspace");
@@ -36,20 +37,20 @@ const { getSuboworkspacesIds } = require("../helper/Workspace");
 // Headers for Excel file
 
 const headers = [
-  "ULTIMA SESIÓN",
-  "ESCUELA",
-  "CURSO",
-  "VISITAS",
-  "NOTA PROMEDIO",
-  "RESULTADO CURSO", // convalidado
-  "ESTADO CURSO",
-  "TIPO CURSO",
-  "REINICIOS CURSOS",
-  "TEMAS ASIGNADOS",
-  "TEMAS COMPLETADOS",
-  "AVANCE (%)",
-  "ULTIMA EVALUACIÓN",
-  "CURSO COMPATIBLE" // nombre del curso
+  'ULTIMA SESIÓN',
+  'ESCUELA',
+  'CURSO',
+  'VISITAS',
+  'NOTA PROMEDIO',
+  'RESULTADO CURSO', // convalidado
+  'ESTADO CURSO',
+  'TIPO CURSO',
+  'REINICIOS CURSOS',
+  'TEMAS ASIGNADOS',
+  'TEMAS COMPLETADOS',
+  'AVANCE (%)',
+  'ULTIMA EVALUACIÓN',
+  'CURSO COMPATIBLE' // nombre del curso
 ];
 
 async function generateSegmentationReport({
@@ -72,6 +73,7 @@ async function generateSegmentationReport({
   end: end_date,
   UsuariosActivos: activeUsers,
   UsuariosInactivos: inactiveUsers,
+  completed = true
 }) {
   // Generate Excel file header
   const headersEstaticos = await getGenericHeadersNotasXCurso(
@@ -120,10 +122,10 @@ async function generateSegmentationReport({
   // === precargar usuarios y criterios
 
   for (const course of courses) {
-    // Load workspace user criteria
+    logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
-    logtime(`CURSO => ${course.course_name}`);
-
+    // datos usuarios - cursos
+    logtime(`-- start: user segmentation --`);
     const users = await loadUsersSegmentedv2(
       course.course_id,
       modulos,
@@ -133,13 +135,18 @@ async function generateSegmentationReport({
       end_date,
       
       activeUsers,
-      inactiveUsers
+      inactiveUsers,
+
+      completed
     );
-    logtime(`[loadUsersSegmentedv2]`);
+    logtime(`-- end: user segmentation --`);
 
     // filtro para usuarios nulos y no nulos
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
     users_to_export = users_not_null;
+
+    console.log( 'total rows', { users_null: users_null.length,
+                                 users_not_null: users_not_null.length });
 
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
@@ -186,6 +193,7 @@ async function generateSegmentationReport({
         users_to_export.push({ ...user, ...additionalData }); // usercourse
       }
 
+      logtime(`FIN COMPATIBLES`);
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
@@ -273,21 +281,3 @@ async function generateSegmentationReport({
     process.send({ alert: "No se encontraron resultados" });
   }
 }
-
-
-function getUsersNullAndNotNull(users) {
-
-  let users_null = [],
-      users_not_null = [];
-
-  for (const user of users) {
-    const { sc_created_at } = user;
-      
-    if (sc_created_at == null) users_null.push(user)
-    else users_not_null.push(user);
-  } 
-
-  return { users_null, users_not_null }; 
-}
-
-

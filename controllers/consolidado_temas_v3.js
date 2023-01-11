@@ -13,6 +13,7 @@ const { con } = require('../db')
 const { pluck, logtime, groupArrayOfObjects } = require('../helper/Helper')
 const { loadUsersCriteriaValues, 
         getUserCriterionValues,
+        getUsersNullAndNotNull,
         getUserCriterionValues2, 
         loadUsersBySubWorspaceIds,
         addActiveUsersCondition } = require('../helper/Usuarios')
@@ -69,6 +70,7 @@ async function exportarUsuariosDW({
 
   start: start_date,
   end: end_date,
+  completed = true,
   validador
 }) {
   // Generate Excel file header
@@ -147,21 +149,27 @@ async function exportarUsuariosDW({
       UsuariosInactivos,
 
       activeTopics,
-      inactiveTopics
+      inactiveTopics,
+
+      completed
     );
     logtime(`-- end: user segmentation --`);
 
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
-    users_to_export = users_not_null;
+    console.log( 'total rows', { users_null: users_null.length,
+                                 users_not_null: users_not_null.length });
 
     // agrupa usuarios por id
     const users_topics_grouped = groupArrayOfObjects(users_null, 'id'); 
+    users_to_export = users_not_null;  
 
     // obtener cursos compatibles segun 'course_id'
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
     if (compatibles_courses.length > 0 && users_null.length > 0) {
+      logtime(`INICIO COMPATIBLES`);
+
       const stack_ids_users = Object.keys(users_topics_grouped);
 
       // summary_topics verifica si es compatible
@@ -197,8 +205,10 @@ async function exportarUsuariosDW({
 
           users_to_export.push({...item, ...additionalData }); // usertopics
         });      
+
       }
 
+      logtime(`FIN COMPATIBLES`);
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
@@ -291,19 +301,4 @@ async function exportarUsuariosDW({
   } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
-}
-
-function getUsersNullAndNotNull(users) {
-
-  let users_null = [],
-      users_not_null = [];
-
-  for (const user of users) {
-    const { sc_created_at } = user;
-      
-    if (sc_created_at == null) users_null.push(user)
-    else users_not_null.push(user);
-  }   
-
-  return { users_null, users_not_null }; 
 }

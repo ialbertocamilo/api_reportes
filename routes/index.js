@@ -52,7 +52,7 @@ module.exports = {
     })
   },
   // * Consolidado por curso con compatibles
-  consolidadoCursosv2({ body }, res) {
+  consolidadoCursosV2({ body }, res) {
     const children = fork('./controllers/consolidado_cursos_v2.js')
     children.send(body)
 
@@ -85,6 +85,14 @@ module.exports = {
   },
   avanceCurricula({ body }, res) {
     const children = fork('./controllers/avance_curricula.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+  avanceCurriculaV2({ body }, res) {
+    const children = fork('./controllers/avance_curricula_v2.js')
     children.send(body)
     children.on('message', (data) => {
       res.send(data)
