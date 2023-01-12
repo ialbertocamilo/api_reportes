@@ -124,3 +124,17 @@ exports.setCustomIndexAtObject = (data, key = 'id') => {
   return StackValues;
 }
 
+// solo en formato objeto
+exports.groupArrayOfObjects_v2 = (data, key = 'id') => {
+
+  const ResultData = {};
+
+  for(const value of data) {
+    const { [key]:index } = value;
+    
+    if(!ResultData[index]) ResultData[index] = [];
+    ResultData[index].push(value);
+  }
+
+  return ResultData;
+}

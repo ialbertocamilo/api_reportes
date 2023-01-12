@@ -1,8 +1,8 @@
 'use strict'
 process.on('message', req => {
-  exportTemasNoEvaluables(req)
+  exportarEvaluacionesAbiertas(req)
 })
-
+const moment = require('moment')
 const { con } = require('../db')
 
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
@@ -17,59 +17,66 @@ const { getUserCriterionValues,
         addActiveUsersCondition } = require('../helper/Usuarios')
 const { response } = require('../response')
 
-const { loadCoursesV2, loadUsersSegmentedv2WithSummaryTopicsNoEva } = require('../helper/SegmentationHelper')
+const { loadCoursesV2, 
+        loadUsersSegmentedv2WithSummaryTopicsEva } = require('../helper/SegmentationHelper')
 const { loadTopicsStatuses, 
         loadTopicsByCoursesIds,
         loadCompatiblesId,
         getTopicStatusName } = require('../helper/CoursesTopicsHelper')
 const { loadSummaryCoursesByUsersAndCoursesTopics } = require('../helper/Summaries')
-
-const headers = [
-  'TIPO DE CURSO',
+let headers = [
+  'ÚLTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
+  'TIPO CURSO',
   'TEMA',
   'TIPO TEMA',
   'RESULTADO TEMA', // convalidado
-  'ESTADO(TEMA)',
-  'CANTIDAD DE VISITAS POR TEMA',
   'CURSO COMPATIBLE' // nombre del curso
 ]
 
-async function exportTemasNoEvaluables ({
+async function exportarEvaluacionesAbiertas ({
   modulos = [], 
-  workspaceId, 
-  cursos, 
+  workspaceId,
+
   escuelas, 
-  areas,
-  temas,
+  cursos, 
+  temas, 
+  areas, 
 
   tipocurso,
 
   CursosActivos = false, CursosInactivos = false,
-  UsuariosActivos, UsuariosInactivos,
+  UsuariosActivos, UsuariosInactivos, 
+  
+  activeTopics = false, 
+  inactiveTopics = false, 
 
-  activeTopics, 
-  inactiveTopics, 
+  start, 
+  end, 
 
-  start, end,
   completed = true
 }) {
-  // Generar cabeceras de excel
-  const headersEstaticos = await getGenericHeaders(workspaceId);
-  await createHeaders(headersEstaticos.concat(headers));
+  // Generate Excel file header
+  const headersEstaticos = await getGenericHeaders(workspaceId)
+  await createHeaders(headersEstaticos.concat(headers))
 
-  // Cargar criterios segun workspace
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId);
-  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name');
+  // Load workspace criteria
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
-  // cargar modulos
+  // When no modules are provided, get its ids using its parent id
   if (modulos.length === 0) {
     modulos = await getSuboworkspacesIds(workspaceId)
   }
 
-  // Load user topic statuses
   const userTopicsStatuses = await loadTopicsStatuses();
+  const questionsData = await loadQuestions(modulos);
+
+  const groupedQuestionData = groupArrayOfObjects(questionsData, 'topic_id');
+  const { altHeaders, maxQuestions } = getCreatedHeaders(groupedQuestionData, headers);
+  await createHeaders(headersEstaticos.concat(altHeaders));
+  // console.log(questionsData);
 
   let users_to_export = [];
 
@@ -77,7 +84,7 @@ async function exportTemasNoEvaluables ({
       escuelas, cursos, temas,
       CursosActivos, CursosInactivos,
       tipocurso
-  }, workspaceId);
+  }, workspaceId, false);
 
   // === precargar topics, usuarios y criterios ===
   const StackTopicsData = await loadTopicsByCoursesIds( 
@@ -91,7 +98,7 @@ async function exportTemasNoEvaluables ({
 
     // datos de usuario - temas
     logtime(`-- start: user segmentation --`);
-    const users = await loadUsersSegmentedv2WithSummaryTopicsNoEva(
+    const users = await loadUsersSegmentedv2WithSummaryTopicsEva(
       course.course_id, 
       modulos, 
       areas,
@@ -115,7 +122,7 @@ async function exportTemasNoEvaluables ({
                               { users_null: users_null.length,
                                 users_not_null: users_not_null.length });
 
-    // agrupa usuarios por id
+    // agrupa usuarios por id 
     const users_topics_grouped = groupArrayOfObjects(users_null, 'id'); 
     users_to_export = users_not_null;
 
@@ -161,6 +168,7 @@ async function exportTemasNoEvaluables ({
           users_to_export.push({...item, ...additionalData }); // usertopics
         });      
       }
+
       logtime(`FIN COMPATIBLES`);
     } else {
       users_to_export = [...users_not_null, ...users_null];
@@ -175,6 +183,8 @@ async function exportTemasNoEvaluables ({
       const { id } = user;
       // console.log('user',user);
       const userStore = StackUsersData[id];
+      const lastLogin = moment(userStore.last_login).format('DD/MM/YYYY H:mm:ss');
+      
       cellRow.push(userStore.name)
       cellRow.push(userStore.lastname)
       cellRow.push(userStore.surname)
@@ -194,10 +204,11 @@ async function exportTemasNoEvaluables ({
         StackUserCriterios[id] = userValues; 
       }
       // criterios de usuario
+      cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
-      cellRow.push(course.course_type || '-')
       cellRow.push(course.school_name)
       cellRow.push(course.course_name)
+      cellRow.push(course.course_type || '-')
 
       // encontrar topic por 'id'
       const { topic_id } = user;
@@ -212,20 +223,152 @@ async function exportTemasNoEvaluables ({
       }else{
         cellRow.push(user.topic_status_name)
       }
-      cellRow.push(topicStore.topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
-      cellRow.push(user.topic_views || '-')
-      cellRow.push(user.compatible || `-`)
-      
-      // añadir fila 
-      worksheet.addRow(cellRow).commit()
+
+      cellRow.push(user.compatible || `-`);
+
+      // === Questions Answers FP / Others ===
+      const answers = user.answers;
+
+      if(workspaceId === 25) {
+        const countLimit = answers ? answers.length : 0;
+        if(countLimit) {
+          // const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
+          // if(questions.length) {
+          answers.forEach((answer, index) => {
+            if (answer) {
+              const question = questionsData.find(q => q.id === answer.id);
+              cellRow.push((question) ? strippedString(question.pregunta) : '-')
+              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-')
+            }
+          });
+          // }
+        }
+
+      } else {
+        // console.log('answers', answers);
+
+        if (answers) {
+          answers.forEach((answer, index) => {
+            if (answer) {
+              const question = questionsData.find(q => q.id === answer.id);
+              cellRow.push((question) ? strippedString(question.pregunta) : '-')
+              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
+            }
+          });
+        }
+      }
+
+    // === para rellenar en preguntas ===
+    const emptyRows = (answers) ? maxQuestions - answers.length
+                                : maxQuestions;
+    for (let i = 0; i < emptyRows; i++) {
+      cellRow.push('-');
+      cellRow.push('-');
+    }
+    // === para rellenar en preguntas ===
+
+    // añadir fila 
+    worksheet.addRow(cellRow).commit();
     }
   }
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'Temas no evaluables' }))
+      process.send(response({ createAt, modulo: 'EvaluacionAbierta' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
+
+}
+
+const strippedString = (value) => {
+  return value.replace(/(<([^>]+)>)/gi, '')
+}
+
+async function getQuestionsByTopic(topic_id, countLimit) {
+
+  let query = `select q.* from questions q 
+               where q.topic_id = ${topic_id} 
+                     and q.type_id = 4567
+               limit ${countLimit}`;
+
+  // logtime(query);
+
+  const [rows] = await con.raw(query);
+  return rows;
+}
+
+function getCreatedHeaders(questions, headers){
+  
+  let maxQuestions = 0;
+
+  for (const question in questions) {
+    const result = questions[question];
+    const countQuestions = result.length; 
+    if(countQuestions > maxQuestions) maxQuestions = countQuestions;
+  }
+
+  // === CONDITIONAL HEADERS ===
+  const MakeLoopColumns = (num, keys) => {
+    let loopColumns = [];
+    
+    for (let i = 0; i < num; i++) {
+      let stack = [];
+      
+      for(const val of keys) {
+        let current = `${val} ${i + 1}`;        
+        stack.push(current);
+      }
+      loopColumns.push(...stack); 
+    }
+
+    return loopColumns;
+  };
+
+  const StaticKeysColumns = ['Pregunta','Respuesta']; //cols loop
+  
+  if(maxQuestions > 1) {
+    const conditionHeaders = MakeLoopColumns(maxQuestions, StaticKeysColumns);
+    headers = [...headers, ...conditionHeaders];
+
+  } else headers = [...headers, ...StaticKeysColumns]; 
+
+  return { altHeaders: headers, maxQuestions };
+  // === CONDITIONAL HEADERS ===
+}
+
+/**
+ * Load questions with written answers
+ * @param modulesIds
+ * @returns {Promise<*>}
+ */
+async function loadQuestions (modulesIds) {
+
+  const questionTypes = await con('taxonomies')
+    .where('group', 'question')
+    .where('code', 'written-answer')
+  const type = questionTypes[0]
+
+  const query = `
+    select *
+    from
+        questions
+    where
+        questions.type_id = :typeId
+      and
+        topic_id in (
+            select t.id 
+            from topics t 
+                inner join summary_topics st on st.topic_id = t.id
+                inner join users u on st.user_id = u.id
+            where
+                u.subworkspace_id in (${modulesIds.join()})
+            group by t.id
+        )
+  `
+  // logtime(query)
+
+  const [rows] = await con.raw(query, { typeId: type.id })
+  return rows
 }
