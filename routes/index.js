@@ -23,6 +23,16 @@ module.exports = {
       children.kill()
     })
   },
+  // * Notas usuario
+  notasUsuario2({ body }, res) {
+    const children = fork('./controllers/notas_usuario2.js')
+    children.send(body)
+
+    children.on('message', datos => {
+      res.send(datos)
+      children.kill()
+    })
+  },
   // * Historial usuario
   historialUsuario ({ body }, res) {
     const children = fork('./controllers/historial_usuario.js')
@@ -224,6 +234,17 @@ module.exports = {
   /* diplomas */
   diplomas({ body }, res) {
     const children = fork('./controllers/diplomas.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+
+  },
+
+  /* diplomas */
+  diplomas2({ body }, res) {
+    const children = fork('./controllers/diplomas2.js')
     children.send(body)
     children.on('message', (data) => {
       res.send(data)

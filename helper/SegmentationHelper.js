@@ -474,3 +474,28 @@ exports.loadCoursesV2 = async (
   const [rows] = await con.raw(query);
   return rows;
 }
+
+/**
+ * Load module's courses according segmentation
+ * @param moduleId
+ * @returns {Promise<array>}
+ */
+exports.loadModuleCoursesIds = async (moduleId) => {
+  const query = `
+      select distinct model_id as course_id
+
+      from segments s
+
+      where s.model_type like '%Course'
+        and active = 1
+        and id in (
+            select distinct segment_id
+            from segments_values sv
+            where criterion_id = 1 -- module criterion
+                and criterion_value_id = :moduleId -- module
+      )
+  `
+  const [rows] = await con.raw(query, { moduleId })
+
+  return pluck(rows, 'course_id')
+}

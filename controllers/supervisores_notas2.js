@@ -41,24 +41,6 @@ const headers = [
   'ESTADO COMPATIBLE' // nombre del curso
 ]
 
-/*
-
-{
-    ✔️ "workspaceId" : 25,
-    "supervisorId": 60704,
-    ✔️ "escuelas": [],
-    ✔️ "cursos": [],
-
-    ✔️ "UsuariosActivos": true,
-    ✔️ "UsuariosInactivos": true,
-
-    ✔️ "aprobados": true,
-    ✔️ "desaprobados": true,
-    ✔️ "desarrollo": true,
-    ✔️ "encuestaPendiente" : true
-}
- */
-
 async function generateSegmentationReport ({
   workspaceId,
   supervisorId,

@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   res.send({ response: 'Bienvenido a la api Node 3.0.0' })
 })
 
-router.post('/notas_usuario', handler.notasUsuario)
+router.post('/notas_usuario', handler.notasUsuario2)
 router.post('/historial_usuario', handler.historialUsuario)
 router.post('/usuarios', handler.usuarios)
 router.post('/consolidado_cursos', handler.consolidadoCursos)
@@ -37,6 +37,7 @@ router.post('/checklist_detallado', handler.checklist_detallado)
 router.post('/videoteca', handler.videoteca)
 router.post('/vademecum', handler.vademecum)
 router.post('/diplomas', handler.diplomas)
+router.post('/diplomas2', handler.diplomas2)
 router.post('/poll-questions', handler.poolQuestions)
 
 module.exports = router

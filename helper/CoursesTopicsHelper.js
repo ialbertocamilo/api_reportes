@@ -1,5 +1,5 @@
 const { con } = require("../db");
-const { uniqueElements, setCustomIndexAtObject } = require("./Helper");
+const { uniqueElements, setCustomIndexAtObject, pluck } = require("./Helper");
 /**
  * Filter user course status using its id, and return its name
  * @param userCourseStatuses
@@ -113,6 +113,48 @@ exports.loadCompatiblesId = async (course_id) => {
   return uniqueElements(rows);
 };
 
+/**
+ * Get the ids of the compatibles courses
+ * @param coursesIds
+ */
+exports.loadCompatiblesIds = async (coursesIds) => {
+
+  if (!Array.isArray(coursesIds)) return []
+
+  const [rows_a] = await con.raw(
+    `
+        select 
+          comp.course_a_id as id
+        from 
+            compatibilities comp
+                join courses c_a on c_a.id = comp.course_a_id 
+                            and c_a.active = 1
+        where
+            comp.course_b_id in (${coursesIds.join(',')})
+    `
+  )
+
+  const [rows_b] = await con.raw(
+    `
+    select 
+      comp.course_b_id as id
+    from 
+        compatibilities comp
+            join courses c_b on c_b.id = comp.course_b_id 
+                        and c_b.active = 1
+    where
+        comp.course_a_id in (${coursesIds.join(',')})
+    `
+  );
+
+  const rows = [...rows_a, ...rows_b]
+
+  const ids = pluck(uniqueElements(rows), 'id')
+
+  // Remove courses ids, to keep only compatible ids
+
+  return ids.filter(compatibleId => !coursesIds.includes(compatibleId))
+}
 
 exports.loadTopicsByCourseId = async (courses_id) => {
   courses_id = courses_id.filter(el => el != null);

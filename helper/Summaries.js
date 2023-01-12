@@ -6,14 +6,15 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
   courses_id) => {
 
   courses_id = courses_id.filter((val) => val != null);
-  users_id = users_id.filter((val) => val != null);              
+  users_id = users_id.filter((val) => val != null);
 
   let query =  `
 
      select   
         cs.course_id,
         c.name course_name, 
-        sc.user_id
+        sc.user_id,
+        sc.grade_average
 
       from 
 
@@ -30,7 +31,7 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
 
         where 
           c.active = 1 and s.active = 1
-          and sc.status_id = 4568
+          and sc.status_id = 4568 -- aprobados
           and sc.course_id in (${courses_id.join()})
           and sc.user_id in (${users_id.join()})
       `;
