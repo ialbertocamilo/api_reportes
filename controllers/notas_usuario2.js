@@ -9,7 +9,7 @@ const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
 const { loadCoursesStatuses, getCourseStatusName, loadCompatiblesIds
 } = require('../helper/CoursesTopicsHelper')
-const { strippedString, pluck } = require('../helper/Helper')
+const { strippedString } = require('../helper/Helper')
 const { loadModuleCoursesIds } = require('../helper/SegmentationHelper')
 const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
 
@@ -46,11 +46,13 @@ async function notasUsuario2 ({ document }) {
       userSummaryCourses.push(summaryCourses[0])
     } else {
       // Look for compatible course with "aprobado" status
+
       const compatiblesCoursesIds = await loadCompatiblesIds([courseId])
       if (compatiblesCoursesIds.length) {
         const compatiblesUserSummaryCourses = await loadSummaryCoursesByUsersAndCourses([user.id], compatiblesCoursesIds)
 
         // Get summary course with the highest grade
+
         let highestGrade = 0
         let highestGradeIndex = -1
         if (compatiblesUserSummaryCourses.length) {
@@ -63,44 +65,15 @@ async function notasUsuario2 ({ document }) {
           }
 
           if (highestGrade > 0) {
-            userSummaryCourses.push(compatiblesUserSummaryCourses[highestGradeIndex])
+            const compatible = compatiblesUserSummaryCourses[highestGradeIndex]
+            compatible.convalidado_de = compatible.course_name
+            compatible.course_name = await getCourseName(courseId)
+            userSummaryCourses.push(compatible)
           }
         }
       }
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // Get user's summary courses
-
-  // let userSummaryCourses = await loadUserSummaryCourses(
-  //   user.id, moduleCoursesIds, false, false
-  // )
-
-  // Get summary courses from compatible courses
-
-  // const coursesIds = pluck(userSummaryCourses, 'course_id')
-  // let compatiblesUserSummaryCourses = []
-  // if (Array.isArray(coursesIds)) {
-  //   const compatiblesCoursesIds = await loadCompatiblesIds(coursesIds)
-  //   compatiblesUserSummaryCourses = await loadUserSummaryCourses(user.id, compatiblesCoursesIds, true, true)
-  // }
-  //
-  // userSummaryCourses = [
-  //   ...userSummaryCourses,
-  //   ...compatiblesUserSummaryCourses
-  // ]
 
   // When user has no summary courses,
   // stop execution and return response
@@ -270,36 +243,11 @@ async function getModuleIdFromSubworkspace (subworkspaceId) {
   return workspaces ? workspaces[0].criterion_value_id : null
 }
 
-/**
- *
- *
- * @param userId
- * @param coursesIds
- * @param isCompatible
- * @param aprobadosOnly
- * @returns {Promise<*>}
- */
-async function loadUserSummaryCourses (userId, coursesIds, isCompatible, aprobadosOnly) {
-  const whereAprobadosOnly = aprobadosOnly
-    ? 'sc.status_id = 4568 and '
-    : ''
-
-  const [userSummaryCourses] = await con.raw(`
-    select
-        sc.*,
-        c.name course_name,
-        ${isCompatible ? '1' : '0'} is_compatible
-    
-    from summary_courses sc
-        inner join courses c on sc.course_id = c.id
-    
-    where
-        ${whereAprobadosOnly}
-        sc.user_id = :userId and 
-        c.id in (${coursesIds.join(',')})
-   `,
-  { userId: userId }
+async function getCourseName(courseId) {
+  const [courses] = await con.raw(`
+    select * from courses where id = :courseId
+  `, { courseId }
   )
 
-  return userSummaryCourses
+  return courses ? courses[0].name : null
 }
