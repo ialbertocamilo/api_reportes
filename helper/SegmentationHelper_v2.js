@@ -255,7 +255,7 @@ exports.loadUsersSegmentedv2 = async (
    const StacksUsersIds = pluck(LoadUsersData, 'id');
   	// === extraer ids de usuarios segmentados ===
 	logtime('end: user ids segmentation');
-	
+
   	// === para 'completed' es boolean
   	const StackSidesCompleted = completed ? 'left': 'inner'; 
   	const [ first ] = StackBuildQuery.setCustomSideJoin(StackSidesCompleted, 4);
@@ -263,10 +263,10 @@ exports.loadUsersSegmentedv2 = async (
 
   	// === filtro para fecha ===
   	const start_date_query = start_date
-    ? ` and date(st.updated_at) >= '${start_date}'`
+    ? ` and date(sc.updated_at) >= '${start_date}'`
     : ``;
   	const end_date_query = end_date
-    ? ` and date(st.updated_at) <= '${end_date}'`
+    ? ` and date(sc.updated_at) <= '${end_date}'`
     : ``;
   	// === filtro para fecha ===
 
@@ -282,7 +282,7 @@ exports.loadUsersSegmentedv2 = async (
 	      sc.views as course_views, sc.passed as course_passed, 
 	      sc.assigned, sc.completed,
 	      sc.last_time_evaluated_at, sc.restarts,
-	      sc.taken, sc.reviewed,
+	      sc.taken, sc.reviewed, sc.assigned,
 	      sc.status_id as course_status_id
 
 	   from users u
@@ -463,18 +463,18 @@ exports.loadUsersSegmentedv2WithSummaryTopicsNoEva = async (
   	// logtime('start: users_test');
   	function buildQueryUsersIds(userValues) {
     const query = `
-    select 
-      u.id,
-      t.id topic_id,
+	   select 
+	      u.id,
+	      t.id topic_id,
 
-      sc.created_at as sc_created_at,
+	      sc.created_at as sc_created_at,
 
-      st.grade topic_grade,
-      st.views topic_views,
-      st.status_id topic_status_id
+	      st.grade topic_grade,
+	      st.views topic_views,
+	      st.status_id topic_status_id
 
-    from users u
-       ${first} join summary_courses sc 
+	   from users u
+	       ${first} join summary_courses sc 
             on sc.user_id = u.id 
             and sc.course_id = ${course_id}
           ${second} join courses c 

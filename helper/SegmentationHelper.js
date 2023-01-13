@@ -165,7 +165,7 @@ exports.loadUsersSegmentedv2 = async (
           sc.views as course_views, sc.passed as course_passed, 
           sc.assigned, sc.completed,
           sc.last_time_evaluated_at, sc.restarts,
-          sc.taken, sc.reviewed,
+          sc.taken, sc.reviewed, sc.assigned,
           sc.status_id as course_status_id
 
         from users u
