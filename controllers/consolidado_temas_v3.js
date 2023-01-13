@@ -27,7 +27,12 @@ const {
   loadTopicsByCourseUniqueId
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
-const { loadCoursesV2, loadUsersSegmentedv2, loadUsersSegmentedWithSummariesTopics, loadUsersSegmentedv2WithSummaryTopics } = require('../helper/SegmentationHelper')
+const { loadCoursesV2, 
+        loadUsersSegmentedv2, 
+        loadUsersSegmentedWithSummariesTopics, 
+        loadUsersSegmentedv2WithSummaryTopics } 
+        = require('../helper/SegmentationHelper_v2')
+        // = require('../helper/SegmentationHelper')
 const { loadSummaryCoursesByUsersAndCoursesTopics } = require('../helper/Summaries')
 
 moment.locale('es')

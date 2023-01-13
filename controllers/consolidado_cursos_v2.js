@@ -12,6 +12,7 @@ const {
   loadUsersSegmented,
   loadUsersSegmentedv2,
 } = require("../helper/SegmentationHelper");
+// } = require("../helper/SegmentationHelper_v2");
 const {
   loadCoursesStatuses,
   loadCompatiblesId,
