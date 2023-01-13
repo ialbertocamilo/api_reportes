@@ -11,7 +11,8 @@ const {
   loadCourses,
   loadUsersSegmented,
   loadUsersSegmentedv2,
-} = require("../helper/SegmentationHelper");
+} = require("../helper/SegmentationHelper_v2");
+// } = require("../helper/SegmentationHelper");
 const {
   loadCoursesStatuses,
   loadCompatiblesId,
