@@ -13,6 +13,7 @@ const {
   loadUsersSegmentedv2,
 // } = require("../helper/SegmentationHelper");
 } = require("../helper/SegmentationHelper_v2");
+
 const {
   loadCoursesStatuses,
   loadCompatiblesId,
@@ -181,17 +182,17 @@ async function generateSegmentationReport({
           continue;
         }
 
-        const { course_name, course_passed, grade_average, advanced_percentage } = sc_compatible;
+        const { course_name, ...RestCompatible} = sc_compatible;
 
         const additionalData = {
-          grade_average, 
-          advanced_percentage,
-          course_passed,
+          ...user,
+          ...RestCompatible,
           course_status_name: 'Convalidado',
           compatible: course_name
         }
-
-        users_to_export.push({ ...user, ...additionalData }); // usercourse
+        console.log('additionalData', { user, additionalData } );
+        
+        users_to_export.push(additionalData); // usercourse
       }
 
       logtime(`FIN COMPATIBLES`);
@@ -253,7 +254,7 @@ async function generateSegmentationReport({
       cellRow.push(course.course_active === 1 ? "Activo" : "Inactivo");
       cellRow.push(course.course_type || "-");
       cellRow.push(user.course_restarts || "-");
-      cellRow.push(user.assigned || 0);
+      cellRow.push(user.assigned || '-');
       cellRow.push(Math.round(completed) || 0);
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"

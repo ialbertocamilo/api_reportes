@@ -13,10 +13,13 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
      select   
         cs.course_id,
         c.name course_name,
-        sc.passed as course_passed,
-        sc.grade_average, 
-        sc.advanced_percentage,
-        sc.user_id
+        sc.grade_average, sc.advanced_percentage,
+        sc.status_id, sc.created_at as sc_created_at,
+        sc.views as course_views, sc.passed as course_passed, 
+        sc.assigned, sc.completed,
+        sc.last_time_evaluated_at, sc.restarts,
+        sc.taken, sc.reviewed, sc.assigned,
+        sc.status_id as course_status_id
 
       from 
 
