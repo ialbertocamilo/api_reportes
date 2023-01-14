@@ -11,6 +11,7 @@ const {
   loadCourses,
   loadUsersSegmented,
   loadUsersSegmentedv2,
+  getCountTopics
 // } = require("../helper/SegmentationHelper");
 } = require("../helper/SegmentationHelper_v2");
 
@@ -143,6 +144,8 @@ async function generateSegmentationReport({
     );
     logtime(`-- end: user segmentation --`);
 
+    const countTopics = await getCountTopics(course.course_id);
+
     // filtro para usuarios nulos y no nulos
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
     users_to_export = users_not_null;
@@ -163,10 +166,6 @@ async function generateSegmentationReport({
       );
 
       for (const user of users_null) {
-        if (user.sc_created_at) {
-          users_to_export.push(user); //usercourse
-          continue;
-        }
 
         //verificar compatible con 'user_id' y 'course_id'
         const sc_compatible = sc_compatibles
@@ -187,11 +186,12 @@ async function generateSegmentationReport({
         const additionalData = {
           ...user,
           ...RestCompatible,
+          assigned: countTopics,
+          course_passed: countTopics,
           course_status_name: 'Convalidado',
           compatible: course_name
         }
-        console.log('additionalData', { user, additionalData } );
-        
+        // console.log('additionalData', { user, additionalData } );
         users_to_export.push(additionalData); // usercourse
       }
 

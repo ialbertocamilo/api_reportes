@@ -704,3 +704,17 @@ exports.loadCoursesV2 = async (
   const [rows] = await con.raw(query);
   return rows;
 }
+
+exports.getCountTopics = async (course_id) => {
+  const [ count ] = await con.raw(`
+      select 
+        count(*) as counter
+      from 
+        topics t 
+      where 
+        t.course_id = ${course_id}
+        and t.deleted_at is null
+        and t.active = 1`);
+
+  return count[0].counter;
+}
