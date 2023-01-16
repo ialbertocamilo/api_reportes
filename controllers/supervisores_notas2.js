@@ -38,7 +38,9 @@ const headers = [
   'TEMAS COMPLETADOS',
   'AVANCE (%)',
   'ULTIMA EVALUACIÓN',
-  'ESTADO COMPATIBLE' // nombre del curso
+  'CURSO COMPATIBLE', // nombre del curso
+  'NOTA COMPATIBLE',
+  'PROGRESO COMPATIBLE'
 ]
 
 async function generateSegmentationReport ({
@@ -55,10 +57,13 @@ async function generateSegmentationReport ({
   CursosActivos = false, // posible filtro en estado de curso
   CursosInactivos = false // posible filtro en estado de curso
 }) {
+  const criteriaIds = workspaceId === 25
+    ? [1, 5, 13, 4, 40, 41]
+    : [1, 5, 13, 4]
+
   // Generate Excel file header
   const headersEstaticos = await getGenericHeadersNotasXCurso(
-    workspaceId,
-    [1, 5, 13, 4, 40, 41]
+    workspaceId, criteriaIds
   )
   await createHeaders(headersEstaticos.concat(headers))
 
@@ -152,7 +157,8 @@ async function generateSegmentationReport ({
 
         const additionalData = {
           course_status_name: 'Convalidado',
-          compatible: sc_compatible.course_name
+          compatible: sc_compatible.course_name,
+          compatible_grade_average: sc_compatible.grade_average
         }
 
         users_to_export.push({ ...user, ...additionalData }) // usercourse
@@ -185,8 +191,10 @@ async function generateSegmentationReport ({
         const StoreUserValues = StackUserCriterios[id]
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || '-'))
       } else {
-        const userValues = [{ criterion_value: '-' }, { criterion_value: '-' }, { criterion_value: '-' }, { criterion_value: '-' }, { criterion_value: '-' }, { criterion_value: '-' }]
-
+        const userValues = []
+        for (let i = 0; i < criteriaIds.length; i++) {
+          userValues.push({ criterion_value: '-' })
+        }
         userValues.forEach((item) => cellRow.push(item.criterion_value || '-'))
 
         StackUserCriterios[id] = userValues
@@ -225,6 +233,8 @@ async function generateSegmentationReport ({
           : '-'
       )
       cellRow.push(user.compatible || '-')
+      cellRow.push(user.compatible_grade_average || '-')
+      cellRow.push(user.compatible ? '100%' : '-')
 
       // añadir fila
       worksheet.addRow(cellRow).commit()
@@ -235,7 +245,7 @@ async function generateSegmentationReport ({
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'ConsolidadoCompatibleCursos' }))
+      process.send(response({ createAt, modulo: 'SupervisoresNotas' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })
