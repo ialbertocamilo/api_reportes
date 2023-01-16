@@ -10,13 +10,12 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
 
   let query =  `
 
-     select   
+     select
+        sc.user_id,
         cs.course_id,
         c.name course_name,
-        sc.passed as course_passed,
         sc.grade_average, 
-        sc.advanced_percentage,
-        sc.user_id
+        sc.advanced_percentage
 
       from 
 

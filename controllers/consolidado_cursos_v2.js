@@ -11,7 +11,10 @@ const {
   loadCourses,
   loadUsersSegmented,
   loadUsersSegmentedv2,
-} = require("../helper/SegmentationHelper");
+  getCountTopics
+// } = require("../helper/SegmentationHelper");
+} = require("../helper/SegmentationHelper_v2");
+
 const {
   loadCoursesStatuses,
   loadCompatiblesId,
@@ -141,6 +144,8 @@ async function generateSegmentationReport({
     );
     logtime(`-- end: user segmentation --`);
 
+    const countTopics = await getCountTopics(course.course_id);
+
     // filtro para usuarios nulos y no nulos
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
     users_to_export = users_not_null;
@@ -161,10 +166,6 @@ async function generateSegmentationReport({
       );
 
       for (const user of users_null) {
-        if (user.sc_created_at) {
-          users_to_export.push(user); //usercourse
-          continue;
-        }
 
         //verificar compatible con 'user_id' y 'course_id'
         const sc_compatible = sc_compatibles
@@ -180,17 +181,18 @@ async function generateSegmentationReport({
           continue;
         }
 
-        const { course_name, course_passed, grade_average, advanced_percentage } = sc_compatible;
+        const { course_name, ...RestCompatible} = sc_compatible;
 
         const additionalData = {
-          grade_average, 
-          advanced_percentage,
-          course_passed,
+          ...user,
+          ...RestCompatible,
+          assigned: countTopics,
+          course_passed: countTopics,
           course_status_name: 'Convalidado',
           compatible: course_name
         }
-
-        users_to_export.push({ ...user, ...additionalData }); // usercourse
+        // console.log('additionalData', { user, additionalData } );
+        users_to_export.push(additionalData); // usercourse
       }
 
       logtime(`FIN COMPATIBLES`);
@@ -224,8 +226,7 @@ async function generateSegmentationReport({
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
       } else {
-        const userValues = [{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'},{criterion_value:'-'}];
-        
+        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
         StackUserCriterios[id] = userValues; 
@@ -253,7 +254,7 @@ async function generateSegmentationReport({
       cellRow.push(course.course_active === 1 ? "Activo" : "Inactivo");
       cellRow.push(course.course_type || "-");
       cellRow.push(user.course_restarts || "-");
-      cellRow.push(user.assigned || 0);
+      cellRow.push(user.assigned || '-');
       cellRow.push(Math.round(completed) || 0);
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"

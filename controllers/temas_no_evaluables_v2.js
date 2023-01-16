@@ -17,7 +17,10 @@ const { getUserCriterionValues,
         addActiveUsersCondition } = require('../helper/Usuarios')
 const { response } = require('../response')
 
-const { loadCoursesV2, loadUsersSegmentedv2WithSummaryTopicsNoEva } = require('../helper/SegmentationHelper')
+const { loadCoursesV2, 
+        loadUsersSegmentedv2WithSummaryTopicsNoEva } 
+        = require('../helper/SegmentationHelper_v2')
+        // = require('../helper/SegmentationHelper')
 const { loadTopicsStatuses, 
         loadTopicsByCoursesIds,
         loadCompatiblesId,
