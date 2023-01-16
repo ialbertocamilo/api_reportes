@@ -221,7 +221,7 @@ async function loadUsersWithVisits (
   // Add type_course 
   if(schools.length) query += ` and s.id in(${schools.join()}) `;
   if(courses.length) query += ` and c.id in(${courses.join()}) `;
-  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(!tipocurso) query += ` and not tx.code = 'free'`;
 
   /*if (start && end) {
     query += ` and (

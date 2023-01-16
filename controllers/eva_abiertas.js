@@ -252,7 +252,7 @@ async function loadUsersQuestions (
   } 
 
   // Add type_course and dates at ('created_at')
-  if(tipocurso) query +=  ` and tax.code = 'free'` 
+  if(!tipocurso) query += ` and not tax.code = 'free'`
   if(start) query += ` and date(st.updated_at) >= '${start}'`
   if(end) query += ` and date(st.updated_at) <= '${end}'`
 
@@ -287,7 +287,7 @@ async function loadUsersQuestions (
   query += ' group by u.id, t.id, st.id'
 
   // Execute query
-  logtime(query);
+  // logtime(query);
 
   const [rows] = await con.raw(query)
   return rows
