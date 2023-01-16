@@ -206,7 +206,7 @@ async function loadUsersWithCourses (
   } 
 
   // Add type_course and dates at ('created_at')
-  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(!tipocurso) query += ` and not tx.code = 'free'`
   if(start) query += ` and date(sc.updated_at) >= '${start}'`
   if(end) query += ` and date(sc.updated_at) <= '${end}'`
 
