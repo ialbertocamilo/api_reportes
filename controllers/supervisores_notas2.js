@@ -40,7 +40,9 @@ const headers = [
   'ULTIMA EVALUACIÓN',
   'CURSO COMPATIBLE', // nombre del curso
   'NOTA COMPATIBLE',
-  'PROGRESO COMPATIBLE'
+  'PROGRESO COMPATIBLE',
+  'TEMAS ASIGNADOS COMPATIBLES',
+  'TEMAS COMPLETADOS COMPATIBLES'
 ]
 
 async function generateSegmentationReport ({
@@ -158,7 +160,9 @@ async function generateSegmentationReport ({
         const additionalData = {
           course_status_name: 'Convalidado',
           compatible: sc_compatible.course_name,
-          compatible_grade_average: sc_compatible.grade_average
+          compatible_grade_average: sc_compatible.grade_average,
+          compatible_assigned: sc_compatible.assigned,
+          compatible_passed: sc_compatible.passed
         }
 
         users_to_export.push({ ...user, ...additionalData }) // usercourse
@@ -235,6 +239,10 @@ async function generateSegmentationReport ({
       cellRow.push(user.compatible || '-')
       cellRow.push(user.compatible_grade_average || '-')
       cellRow.push(user.compatible ? '100%' : '-')
+      cellRow.push(user.compatible_assigned || '-')
+      cellRow.push(user.compatible_passed || '-')
+
+      // Get topics count
 
       // añadir fila
       worksheet.addRow(cellRow).commit()
