@@ -38,7 +38,8 @@ const headers = [
   'TEMAS COMPLETADOS',
   'AVANCE (%)',
   'ULTIMA EVALUACIÓN',
-  'CURSO COMPATIBLE' // nombre del curso
+  'CURSO COMPATIBLE', // nombre del curso
+
   // 'NOTA COMPATIBLE',
   // 'PROGRESO COMPATIBLE',
   // 'TEMAS ASIGNADOS COMPATIBLES',
@@ -162,8 +163,8 @@ async function generateSegmentationReport ({
           course_status_name: 'Convalidado',
           compatible: sc_compatible.course_name,
           compatible_grade_average: sc_compatible.grade_average,
-          compatible_assigned: sc_compatible.assigned,
-          compatible_passed: sc_compatible.passed
+          compatible_completed: sc_compatible.completed,
+          compatible_assigned: sc_compatible.assigned
         }
 
         users_to_export.push({ ...user, ...additionalData }) // usercourse
@@ -215,7 +216,11 @@ async function generateSegmentationReport ({
       cellRow.push(course.school_name)
       cellRow.push(course.course_name)
       cellRow.push(user.course_views || '-')
-      cellRow.push(user.course_passed > 0 ? user.grade_average : '-')
+      cellRow.push(
+        user.course_passed > 0
+          ? user.grade_average
+          : user.compatible_grade_average || '-'
+      )
 
       // estado para - 'RESULTADO DE TEMA'
       if (!user.course_status_name) {
@@ -227,10 +232,20 @@ async function generateSegmentationReport ({
       cellRow.push(course.course_active === 1 ? 'Activo' : 'Inactivo')
       cellRow.push(course.course_type || '-')
       cellRow.push(user.course_restarts || '-')
-      cellRow.push(user.assigned || 0)
-      cellRow.push(Math.round(completed) || 0)
       cellRow.push(
-        user.advanced_percentage ? user.advanced_percentage + '%' : '0%'
+        user.compatible
+        ? user.compatible_assigned
+        : user.assigned
+      )
+      cellRow.push(
+        user.compatible
+        ? Math.round(user.compatible_completed)
+        : Math.round(completed) || 0
+      )
+      cellRow.push(
+        user.advanced_percentage
+          ? user.advanced_percentage + '%'
+          : user.compatible ? '100%' : '0%'
       )
       cellRow.push(
         user.last_time_evaluated_at
@@ -238,10 +253,6 @@ async function generateSegmentationReport ({
           : '-'
       )
       cellRow.push(user.compatible || '-')
-      // cellRow.push(user.compatible_grade_average || '-')
-      // cellRow.push(user.compatible ? '100%' : '-')
-      // cellRow.push(user.compatible_assigned || '-')
-      // cellRow.push(user.compatible_passed || '-')
 
       // Get topics count
 
