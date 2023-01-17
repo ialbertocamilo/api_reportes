@@ -233,17 +233,20 @@ async function exportarEvaluacionesAbiertas ({
 
       if(workspaceId === 25) {
         const countLimit = answers ? answers.length : 0;
+        
         if(countLimit) {
-          // const questions = await getQuestionsByTopic(user.topic_id, countLimit);   
-          // if(questions.length) {
-          answers.forEach((answer, index) => {
-            if (answer) {
-              const question = questionsData.find(q => q.id === answer.id);
-              cellRow.push((question) ? strippedString(question.pregunta) : '-')
-              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-')
-            }
-          });
-          // }
+          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
+          
+          if(questions.length) {
+            answers.forEach((answer, index) => {
+              if (answer) {
+                const question = questions[index];
+
+                cellRow.push(question ? strippedString(question.pregunta) : '-')
+                cellRow.push(answer ? strippedString(answer.respuesta) : '-')
+              }
+            });
+          }
         }
 
       } else {
@@ -352,6 +355,8 @@ async function loadQuestions (modulesIds) {
     .where('code', 'written-answer')
   const type = questionTypes[0]
 
+  console.log(type);
+  
   const query = `
     select *
     from
