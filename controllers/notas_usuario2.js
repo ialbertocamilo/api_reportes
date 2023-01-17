@@ -156,8 +156,9 @@ async function notasUsuario2 ({ document }) {
     courseObj.visitas = summaryCourse.views
     courseObj.reinicios = summaryCourse.restarts ? summaryCourse.restarts : '-'
     courseObj.temas = topicsArray
+    courseObj.convalidado_de = summaryCourse.convalidado_de
     // courseObj.resultado = +summaryCourse.advance_percentage === 100 ? 'Completado' : 'En desarrollo'
-    courseObj.resultado = courseObj.convalidado_de
+    courseObj.resultado = summaryCourse.convalidado_de
       ? 'Convalidado'
       : getCourseStatusName(userCourseStatuses, summaryCourse.status_id)
     courseResults.push(courseObj)
