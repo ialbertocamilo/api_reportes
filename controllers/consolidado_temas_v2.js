@@ -14,6 +14,7 @@ const { pluck, logtime } = require('../helper/Helper')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
+
   loadEvaluationTypes, getCourseStatusName, getTopicStatusName,
   loadCoursesStatuses
 } = require('../helper/CoursesTopicsHelper')
@@ -182,7 +183,7 @@ async function loadUsersWithCoursesAndTopics (
   activeTopics, inactiveTopics, start, end, areas, tipocurso
 ) {
   // Base query
-  const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
+  // const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
   let query = `
     select 
         u.*, 
@@ -241,7 +242,7 @@ async function loadUsersWithCoursesAndTopics (
   } 
 
   // Add type_course and dates at ('created_at')
-  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(!tipocurso) query += ` and not tx.code = 'free'`
   if(start) query += ` and date(st.updated_at) >= '${start}'`
   if(end) query += ` and date(st.updated_at) <= '${end}'`
 
