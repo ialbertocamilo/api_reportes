@@ -17,6 +17,9 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
         sc.grade_average, 
         sc.advanced_percentage,
         sc.assigned,
+        sc.views,
+        sc.restarts,
+        sc.status_id,
         (sc.passed + sc.taken + sc.reviewed) as completed
 
       from 
