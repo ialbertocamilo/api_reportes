@@ -76,6 +76,9 @@ async function exportarEvaluacionesAbiertas ({
   const questionsData = await loadQuestions(modulos);
 
   const groupedQuestionData = groupArrayOfObjects(questionsData, 'topic_id');
+
+  // console.log('questionsData, groupedQuestionData:', { questionsData, groupedQuestionData});
+
   const { altHeaders, maxQuestions } = getCreatedHeaders(groupedQuestionData, headers);
   await createHeaders(headersEstaticos.concat(altHeaders));
   // console.log(questionsData);
@@ -230,26 +233,38 @@ async function exportarEvaluacionesAbiertas ({
 
       // === Questions Answers FP / Others ===
       const answers = user.answers;
-
-      if(workspaceId === 25) {
-        const countLimit = answers ? answers.length : 0;
+      const countLimit = answers ? answers.length : 0;
         
-        if(countLimit) {
-          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
-          
-          if(questions.length) {
-            answers.forEach((answer, index) => {
-              if (answer) {
-                const question = questions[index];
+      let answers_q_check = 0;
 
-                cellRow.push(question ? strippedString(question.pregunta) : '-')
-                cellRow.push(answer ? strippedString(answer.respuesta) : '-')
-              }
-            });
-          }
+      if(countLimit) {
+        const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
+        
+        if(questions.length) {
+          answers_q_check = questions.length;
+
+          answers.forEach((answer, index) => {
+            if (answer) {
+              const question = question.find((q) => q.id === answer.id);
+
+              cellRow.push(question ? strippedString(question.pregunta) : '-');
+              cellRow.push(answer ? strippedString(answer.respuesta) : '-');
+            }
+          });
         }
 
-      } else {
+      }
+      // === para rellenar en preguntas ===
+      const emptyRows = (answers) ? maxQuestions - answers_q_check
+                                  : maxQuestions;
+                                  
+      for (let i = 0; i < emptyRows; i++) {
+        cellRow.push('-');
+        cellRow.push('-');
+      }
+      // === para rellenar en preguntas ===
+
+  /*  } else {
         // console.log('answers', answers);
 
         if (answers) {
@@ -261,16 +276,8 @@ async function exportarEvaluacionesAbiertas ({
             }
           });
         }
-      }
+      } */
 
-    // === para rellenar en preguntas ===
-    const emptyRows = (answers) ? maxQuestions - answers.length
-                                : maxQuestions;
-    for (let i = 0; i < emptyRows; i++) {
-      cellRow.push('-');
-      cellRow.push('-');
-    }
-    // === para rellenar en preguntas ===
 
     // añadir fila 
     worksheet.addRow(cellRow).commit();
@@ -355,7 +362,7 @@ async function loadQuestions (modulesIds) {
     .where('code', 'written-answer')
   const type = questionTypes[0]
 
-  console.log(type);
+  // console.log(type);
   
   const query = `
     select *
