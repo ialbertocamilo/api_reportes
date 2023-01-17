@@ -107,10 +107,17 @@ exports.loadUsersSegmentedv2 = async (
   activeUsers = false,
   inactiveUsers = false,
 
-  completed
+  completed,
+  supervisedUsersIds = []
 ) => {
   const segments_groupby = await getCurrentSegmentsByCourseId(course_id);
-  let users = [];
+  let users = []
+
+  // supervisor users only
+  let supervisorUsersCondition = ''
+  if (supervisedUsersIds.length > 0) {
+    supervisorUsersCondition = ` and u.id in (${supervisedUsersIds.join(',')})`
+  }
 
   // === para 'completed' es boolean
   const StackSidesCompleted = completed ? 'left' : 'inner'; 
@@ -181,7 +188,7 @@ exports.loadUsersSegmentedv2 = async (
           u.deleted_at is null
           ${where_active_users}
           ${modules_query} 
-
+          ${supervisorUsersCondition}
           ${where_criterions_values_user_area}
 
           ${start_date_query} ${end_date_query}

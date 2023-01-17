@@ -38,11 +38,11 @@ const headers = [
   'TEMAS COMPLETADOS',
   'AVANCE (%)',
   'ULTIMA EVALUACIÓN',
-  'CURSO COMPATIBLE', // nombre del curso
-  'NOTA COMPATIBLE',
-  'PROGRESO COMPATIBLE',
-  'TEMAS ASIGNADOS COMPATIBLES',
-  'TEMAS COMPLETADOS COMPATIBLES'
+  'CURSO COMPATIBLE' // nombre del curso
+  // 'NOTA COMPATIBLE',
+  // 'PROGRESO COMPATIBLE',
+  // 'TEMAS ASIGNADOS COMPATIBLES',
+  // 'TEMAS COMPLETADOS COMPATIBLES'
 ]
 
 async function generateSegmentationReport ({
@@ -118,6 +118,7 @@ async function generateSegmentationReport ({
       endDate,
       activeUsers,
       inactiveUsers,
+      true,
       supervisedUsersIds
     )
 
@@ -237,10 +238,10 @@ async function generateSegmentationReport ({
           : '-'
       )
       cellRow.push(user.compatible || '-')
-      cellRow.push(user.compatible_grade_average || '-')
-      cellRow.push(user.compatible ? '100%' : '-')
-      cellRow.push(user.compatible_assigned || '-')
-      cellRow.push(user.compatible_passed || '-')
+      // cellRow.push(user.compatible_grade_average || '-')
+      // cellRow.push(user.compatible ? '100%' : '-')
+      // cellRow.push(user.compatible_assigned || '-')
+      // cellRow.push(user.compatible_passed || '-')
 
       // Get topics count
 
