@@ -243,9 +243,13 @@ async function exportarEvaluacionesAbiertas ({
         if(questions.length) {
           answers_q_check = questions.length;
 
+          //logger line
+          if(course.course_id === 1227) {
+            console.log('questions, answers', { questions, answers });
+          }
           answers.forEach((answer, index) => {
             if (answer) {
-              const question = question.find((q) => q.id === answer.id);
+              const question = questions.find((q) => q.id === answer.id);
 
               cellRow.push(question ? strippedString(question.pregunta) : '-');
               cellRow.push(answer ? strippedString(answer.respuesta) : '-');
