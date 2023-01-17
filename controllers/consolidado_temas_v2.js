@@ -183,7 +183,7 @@ async function loadUsersWithCoursesAndTopics (
   activeTopics, inactiveTopics, start, end, areas, tipocurso
 ) {
   // Base query
-  const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
+  // const taxonomy = evaluationTypes.find(type => type.code == 'qualified'); 
   let query = `
     select 
         u.*, 
