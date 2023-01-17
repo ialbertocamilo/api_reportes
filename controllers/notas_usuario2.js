@@ -157,7 +157,9 @@ async function notasUsuario2 ({ document }) {
     courseObj.reinicios = summaryCourse.restarts ? summaryCourse.restarts : '-'
     courseObj.temas = topicsArray
     // courseObj.resultado = +summaryCourse.advance_percentage === 100 ? 'Completado' : 'En desarrollo'
-    courseObj.resultado = getCourseStatusName(userCourseStatuses, summaryCourse.status_id);
+    courseObj.resultado = courseObj.convalidado_de
+      ? 'Convalidado'
+      : getCourseStatusName(userCourseStatuses, summaryCourse.status_id)
     courseResults.push(courseObj)
   }
 
