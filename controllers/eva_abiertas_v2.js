@@ -253,15 +253,18 @@ async function exportarEvaluacionesAbiertas ({
 
                 //logger data
                 if(!question) {
-                  throw new Error(`Ooops ${course.course_id} - ${course.name}-
-                                   # ${question}
-                                   # ${answer}`);
-                } else {
-                  console.log(`question - answer`, { question: question.pregunta, answer: answer.respuesta });
-                }
+                  console.log('error :', {question, answer});
 
-                cellRow.push(question.pregunta ? strippedString(question.pregunta) : '-');
-                cellRow.push((answer.respuesta && question.pregunta) ? strippedString(answer.respuesta) : '-');
+                  throw new Error(`Ooops C:${course.course_id} - 
+                                         C:${course.course_name} - 
+                                         U:${user.id} - 
+                                         T:${user.topic_id}`);
+                
+                } 
+                console.log(`question - answer`, { question, answer });
+
+                cellRow.push(question ? strippedString(question.pregunta) : '-');
+                cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
               }
             });
           }
@@ -274,7 +277,7 @@ async function exportarEvaluacionesAbiertas ({
           answers_q_check = questions.length;
           
           // por id para farmacias peruanas
-          answers.forEach((answer, index) => {
+          answers.forEach((answer) => {
             if (answer) {
               const question = questions.find((q) => q.id === answer.id);
 
