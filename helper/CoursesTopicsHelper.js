@@ -120,6 +120,7 @@ exports.loadCompatiblesId = async (course_id) => {
 exports.loadCompatiblesIds = async (coursesIds) => {
 
   if (!Array.isArray(coursesIds)) return []
+  if (coursesIds.length === 0) return []
 
   const [rows_a] = await con.raw(
     `
