@@ -555,6 +555,7 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
 
   	const ArrayStackUserIds = calcStackByNumber(StacksUsersIds, 1000);   
 
+
   	// logtime('start: users_test');
   	function buildQueryUsersIds(userValues) {
     const second_query = `
@@ -581,12 +582,14 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
 
     where 
       u.id in (${userValues.join()})
+      and t.type_evaluation_id = 4577
       and t.assessable = 1
       
       ${where_in_topics}
       ${where_active_topics}
       
       ${start_date_query} ${end_date_query}`;
+      // t.type_evaluation_id = 4557 = tipo de evluacion: 'abierta'
 
       // logtime(second_query);
    	return second_query;
