@@ -240,33 +240,30 @@ async function exportarEvaluacionesAbiertas ({
 
         if(countLimit) {
           // por indice para farmacias peruanas
-          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>   q_topic_id === topic_id );
+          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
           answers_q_check = questions.length;
 
           // const questions = await getQuestionsByTopic(topic_id, countLimit);   
           // answers_q_check = questions.length;
                     
           if(questions.length) {
-            answers.forEach((answer, index) => {
-              if (answer) {
-                const question = questions[index];
+            questions.forEach((question, index) => {
+              const answer = answers[index];
 
-                //logger data
-                if(!question) {
-                  console.log('error :', {question, answer});
+             /* if(!question) {
+                console.log('error :', {question, answer});
+                throw new Error(`Ooops C:${course.course_id} - 
+                                       C:${course.course_name} - 
+                                       U:${user.id} - 
+                                       T:${user.topic_id}`);
+              
+              } */
+              
+              console.log(`question - answer`, { question, answer });
 
-                  throw new Error(`Ooops C:${course.course_id} - 
-                                         C:${course.course_name} - 
-                                         U:${user.id} - 
-                                         T:${user.topic_id}`);
-                
-                } 
-                console.log(`question - answer`, { question, answer });
-
-                cellRow.push(question ? strippedString(question.pregunta) : '-');
-                cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
-              }
-            });
+              cellRow.push(question ? strippedString(question.pregunta) : '-');
+              cellRow.push((answer && answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
+            }); 
           }
         }
 
