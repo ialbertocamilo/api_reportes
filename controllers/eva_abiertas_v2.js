@@ -233,48 +233,50 @@ async function exportarEvaluacionesAbiertas ({
 
       // === Questions Answers FP / Others ===
       const answers = user.answers;
-      const countLimit = answers ? answers.length : 0;
-        
       let answers_q_check = 0;
 
-      if(countLimit) {
-        // extraer preguntas segun 'topic_id'
-        const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
-        
-        if(questions.length) {
+      if(workspaceId === 25) {
+        const countLimit = answers ? answers.length : 0;
+
+        if(countLimit) {
+          // por indice para farmacias peruanas
+          const questions = await getQuestionsByTopic(topic_id, countLimit);   
           answers_q_check = questions.length;
+          
+          answers.forEach((answer, index) => {
+            if (answer) {
+              const question = questions[index];
 
-          if(workspaceId === 25) {
-            // por indice para farmacias peruanas
-            answers.forEach((answer, index) => {
-              if (answer) {
-                const question = questions[index];
+              /*if(!question) {
+                throw new Error(`Ooops ${course.course_id} - ${course.name}-
+                                 # ${question.pregunta} - ${question}
+                                 # ${answer.respuesta} - ${answer}`);
+              } else {
+                console.log(`question - answer`, { question, answer });
+              }*/
 
-                if(!question) {
-                  throw new Error(`Ooops ${course.course_id} - ${course.name}-
-                                   # ${question.pregunta} - ${question}
-                                   # ${answer.respuesta} - ${answer}`);
-                } else {
-                  console.log(`question - answer`, { question, answer });
-                }
-
-                cellRow.push(question ? strippedString(question.pregunta) : '-');
-                cellRow.push(answer ? strippedString(answer.respuesta) : '-');
-              }
-            });
-          } else {
-            // por id para farmacias peruanas
-            answers.forEach((answer, index) => {
-              if (answer) {
-                const question = questions.find((q) => q.id === answer.id);
-
-                cellRow.push(question ? strippedString(question.pregunta) : '-');
-                cellRow.push(answer ? strippedString(answer.respuesta) : '-');
-              }
-            });
-          }
+              cellRow.push(question ? strippedString(question.pregunta) : '-');
+              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
+            }
+          });
         }
 
+      } else {
+        if(answers) {
+          // extraer preguntas segun 'topic_id'
+          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>   q_topic_id === topic_id );
+          answers_q_check = questions.length;
+          
+          // por id para farmacias peruanas
+          answers.forEach((answer, index) => {
+            if (answer) {
+              const question = questions.find((q) => q.id === answer.id);
+
+              cellRow.push(question ? strippedString(question.pregunta) : '-');
+              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
+            }
+          });
+        }
       }
       // === para rellenar en preguntas ===
       const emptyRows = (answers) ? maxQuestions - answers_q_check
