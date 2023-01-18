@@ -588,6 +588,7 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
       
       ${start_date_query} ${end_date_query}`;
 
+      // logtime(second_query);
    	return second_query;
    }
 

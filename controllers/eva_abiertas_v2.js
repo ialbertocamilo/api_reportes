@@ -238,23 +238,39 @@ async function exportarEvaluacionesAbiertas ({
       let answers_q_check = 0;
 
       if(countLimit) {
+        // extraer preguntas segun 'topic_id'
         const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
         
         if(questions.length) {
           answers_q_check = questions.length;
 
-          //logger line
-          if(course.course_id === 1227) {
-            console.log('questions, answers', { questions, answers });
-          }
-          answers.forEach((answer, index) => {
-            if (answer) {
-              const question = questions.find((q) => q.id === answer.id);
+          if(workspaceId === 25) {
+            // por indice para farmacias peruanas
+            answers.forEach((answer, index) => {
+              if (answer) {
+                const question = questions[index];
 
-              cellRow.push(question ? strippedString(question.pregunta) : '-');
-              cellRow.push(answer ? strippedString(answer.respuesta) : '-');
-            }
-          });
+                if(!question) {
+                  throw new Error(`Ooops ${course.course_id} - ${course.name}`);
+                } else {
+                  console.log(`question - answer`, { question, answer });
+                }
+
+                cellRow.push(question ? strippedString(question.pregunta) : '-');
+                cellRow.push(answer ? strippedString(answer.respuesta) : '-');
+              }
+            });
+          } else {
+            // por id para farmacias peruanas
+            answers.forEach((answer, index) => {
+              if (answer) {
+                const question = questions.find((q) => q.id === answer.id);
+
+                cellRow.push(question ? strippedString(question.pregunta) : '-');
+                cellRow.push(answer ? strippedString(answer.respuesta) : '-');
+              }
+            });
+          }
         }
 
       }
@@ -366,7 +382,7 @@ async function loadQuestions (modulesIds) {
     .where('code', 'written-answer')
   const type = questionTypes[0]
 
-  // console.log(type);
+  console.log(type);
   
   const query = `
     select *
@@ -385,7 +401,7 @@ async function loadQuestions (modulesIds) {
             group by t.id
         )
   `
-  // logtime(query)
+  logtime(query)
 
   const [rows] = await con.raw(query, { typeId: type.id })
   return rows
