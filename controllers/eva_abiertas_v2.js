@@ -242,23 +242,26 @@ async function exportarEvaluacionesAbiertas ({
           // por indice para farmacias peruanas
           const questions = await getQuestionsByTopic(topic_id, countLimit);   
           answers_q_check = questions.length;
-          
-          answers.forEach((answer, index) => {
-            if (answer) {
-              const question = questions[index];
+                    
+          if(questions.length) {
+            answers.forEach((answer, index) => {
+              if (answer) {
+                const question = questions[index];
 
-              /*if(!question) {
-                throw new Error(`Ooops ${course.course_id} - ${course.name}-
-                                 # ${question.pregunta} - ${question}
-                                 # ${answer.respuesta} - ${answer}`);
-              } else {
-                console.log(`question - answer`, { question, answer });
-              }*/
+                //logger data
+                if(!question) {
+                  throw new Error(`Ooops ${course.course_id} - ${course.name}-
+                                   # ${question.pregunta} - ${question}
+                                   # ${answer.respuesta} - ${answer}`);
+                } else {
+                  console.log(`question - answer`, { question.pregunta, answer.answer });
+                }
 
-              cellRow.push(question ? strippedString(question.pregunta) : '-');
-              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
-            }
-          });
+                cellRow.push(question ? strippedString(question.pregunta) : '-');
+                cellRow.push((answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
+              }
+            });
+          }
         }
 
       } else {
@@ -318,7 +321,7 @@ async function exportarEvaluacionesAbiertas ({
 
 }
 
-const strippedString = (value) => {
+function strippedString(value) {
   return value.replace(/(<([^>]+)>)/gi, '')
 }
 
