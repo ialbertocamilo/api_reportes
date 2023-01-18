@@ -135,6 +135,8 @@ async function exportarEvaluacionesAbiertas ({
     const compatibles_courses = await loadCompatiblesId(course.course_id);
     const pluck_compatibles_courses = pluck(compatibles_courses, "id");
 
+
+
     if (compatibles_courses.length > 0 && users_null.length > 0) {
       logtime(`INICIO COMPATIBLES`);
 
@@ -259,7 +261,7 @@ async function exportarEvaluacionesAbiertas ({
               
               } */
               
-              console.log(`question - answer`, { question, answer });
+              // console.log(`question - answer`, { question, answer });
 
               cellRow.push(question ? strippedString(question.pregunta) : '-');
               cellRow.push((answer && answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
