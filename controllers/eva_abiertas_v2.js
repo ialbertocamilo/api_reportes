@@ -251,7 +251,9 @@ async function exportarEvaluacionesAbiertas ({
                 const question = questions[index];
 
                 if(!question) {
-                  throw new Error(`Ooops ${course.course_id} - ${course.name}`);
+                  throw new Error(`Ooops ${course.course_id} - ${course.name}-
+                                   # ${question.pregunta} - ${question}
+                                   # ${answer.respuesta} - ${answer}`);
                 } else {
                   console.log(`question - answer`, { question, answer });
                 }
