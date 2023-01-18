@@ -257,8 +257,8 @@ async function exportarEvaluacionesAbiertas ({
                   console.log(`question - answer`, { question.pregunta, answer.answer });
                 }
 
-                cellRow.push(question ? strippedString(question.pregunta) : '-');
-                cellRow.push((answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
+                cellRow.push(question.pregunta ? strippedString(question.pregunta) : '-');
+                cellRow.push((answer.respuesta && question.pregunta) ? strippedString(answer.respuesta) : '-');
               }
             });
           }
