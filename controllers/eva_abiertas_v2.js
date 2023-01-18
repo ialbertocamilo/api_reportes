@@ -233,26 +233,53 @@ async function exportarEvaluacionesAbiertas ({
 
       // === Questions Answers FP / Others ===
       const answers = user.answers;
-      const countLimit = answers ? answers.length : 0;
-        
       let answers_q_check = 0;
 
-      if(countLimit) {
-        const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
-        
-        if(questions.length) {
-          answers_q_check = questions.length;
+      if(workspaceId === 25) {
+        const countLimit = answers ? answers.length : 0;
 
+        if(countLimit) {
+          // por indice para farmacias peruanas
+          const questions = await getQuestionsByTopic(topic_id, countLimit);   
+          answers_q_check = questions.length;
+                    
+          if(questions.length) {
+            answers.forEach((answer, index) => {
+              if (answer) {
+                const question = questions[index];
+
+                //logger data
+                if(!question) {
+                  throw new Error(`Ooops ${course.course_id} - ${course.name}-
+                                   # ${question.pregunta} - ${question}
+                                   # ${answer.respuesta} - ${answer}`);
+                } else {
+                  console.log(`question - answer`, { question.pregunta, answer.answer });
+                }
+
+                cellRow.push(question ? strippedString(question.pregunta) : '-');
+                cellRow.push((answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
+              }
+            });
+          }
+        }
+
+      } else {
+        if(answers) {
+          // extraer preguntas segun 'topic_id'
+          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>   q_topic_id === topic_id );
+          answers_q_check = questions.length;
+          
+          // por id para farmacias peruanas
           answers.forEach((answer, index) => {
             if (answer) {
-              const question = question.find((q) => q.id === answer.id);
+              const question = questions.find((q) => q.id === answer.id);
 
               cellRow.push(question ? strippedString(question.pregunta) : '-');
-              cellRow.push(answer ? strippedString(answer.respuesta) : '-');
+              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
             }
           });
         }
-
       }
       // === para rellenar en preguntas ===
       const emptyRows = (answers) ? maxQuestions - answers_q_check
@@ -294,7 +321,7 @@ async function exportarEvaluacionesAbiertas ({
 
 }
 
-const strippedString = (value) => {
+function strippedString(value) {
   return value.replace(/(<([^>]+)>)/gi, '')
 }
 
@@ -362,7 +389,7 @@ async function loadQuestions (modulesIds) {
     .where('code', 'written-answer')
   const type = questionTypes[0]
 
-  // console.log(type);
+  console.log(type);
   
   const query = `
     select *
@@ -381,7 +408,7 @@ async function loadQuestions (modulesIds) {
             group by t.id
         )
   `
-  // logtime(query)
+  logtime(query)
 
   const [rows] = await con.raw(query, { typeId: type.id })
   return rows
