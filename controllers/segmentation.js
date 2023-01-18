@@ -26,12 +26,13 @@ const headers = [
 
 async function generateSegmentationReport ({
   cursos,
-  escuelas
+  escuelas,
+  workspaceId
 }) {
   // Generate Excel file header
   await createHeaders(headers)
   //Load Courses
-  const courses = await loadCourses({cursos,escuelas}); 
+  const courses = await loadCourses({cursos,escuelas},workspaceId); 
   const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
     const users = await loadUsersSegmented(course.course_id)
