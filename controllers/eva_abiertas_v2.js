@@ -240,8 +240,11 @@ async function exportarEvaluacionesAbiertas ({
 
         if(countLimit) {
           // por indice para farmacias peruanas
-          const questions = await getQuestionsByTopic(topic_id, countLimit);   
+          const questions = questionsData.filter( ({topic_id: q_topic_id}) =>   q_topic_id === topic_id );
           answers_q_check = questions.length;
+
+          // const questions = await getQuestionsByTopic(topic_id, countLimit);   
+          // answers_q_check = questions.length;
                     
           if(questions.length) {
             answers.forEach((answer, index) => {
@@ -251,14 +254,14 @@ async function exportarEvaluacionesAbiertas ({
                 //logger data
                 if(!question) {
                   throw new Error(`Ooops ${course.course_id} - ${course.name}-
-                                   # ${question.pregunta} - ${question}
-                                   # ${answer.respuesta} - ${answer}`);
+                                   # ${question}
+                                   # ${answer}`);
                 } else {
-                  console.log(`question - answer`, { question.pregunta, answer.answer });
+                  console.log(`question - answer`, { question: question.pregunta, answer: answer.respuesta });
                 }
 
-                cellRow.push(question ? strippedString(question.pregunta) : '-');
-                cellRow.push((answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
+                cellRow.push(question.pregunta ? strippedString(question.pregunta) : '-');
+                cellRow.push((answer.respuesta && question.pregunta) ? strippedString(answer.respuesta) : '-');
               }
             });
           }
@@ -389,7 +392,7 @@ async function loadQuestions (modulesIds) {
     .where('code', 'written-answer')
   const type = questionTypes[0]
 
-  console.log(type);
+  // console.log(type);
   
   const query = `
     select *
@@ -408,7 +411,7 @@ async function loadQuestions (modulesIds) {
             group by t.id
         )
   `
-  logtime(query)
+  // logtime(query)
 
   const [rows] = await con.raw(query, { typeId: type.id })
   return rows
