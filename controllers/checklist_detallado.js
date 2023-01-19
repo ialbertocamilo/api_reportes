@@ -135,7 +135,7 @@ async function loadUsersCheckists (
           c.name course_name,
           tx.name as course_type,
           checklists.title checklists_title,
-          count(checklist_id) assigned_checklists,
+          count(ca.checklist_id) assigned_checklists,
           sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
           
       from
