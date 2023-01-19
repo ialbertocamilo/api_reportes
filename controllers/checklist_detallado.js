@@ -96,6 +96,8 @@ async function generateReport ({
     cellRow.push(user.course_type)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
+    cellRow.push(user.assigned_checklists)
+    cellRow.push(user.completed_checklists)
 
     // Add activities values
     const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
@@ -142,7 +144,8 @@ async function loadUsersCheckists (
               inner join users trainers on ca.coach_id = trainers.id
               inner join users u on u.id = ca.student_id
               inner join schools s on s.id = ca.school_id
-              inner join courses c on c.id = ca.course_id
+              inner join checklist_relationships cr on cr.checklist_id = ca.checklist_id
+              inner join courses c on c.id = cr.course_id
               inner join taxonomies tx on tx.id = c.type_id
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
@@ -151,7 +154,7 @@ async function loadUsersCheckists (
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
           ca.school_id in (${schoolId}) and
-          ca.course_id in (${courseId}) and
+          cr.course_id in (${courseId}) and
           ca.checklist_id = :checklistId 
   `
 
