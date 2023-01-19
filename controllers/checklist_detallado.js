@@ -96,8 +96,8 @@ async function generateReport ({
     cellRow.push(user.course_type)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
-    cellRow.push(user.assigned_checklists)
-    cellRow.push(user.completed_checklists)
+    // cellRow.push(user.assigned_checklists)
+    // cellRow.push(user.completed_checklists)
 
     // Add activities values
     const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
