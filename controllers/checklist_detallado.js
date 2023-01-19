@@ -18,10 +18,10 @@ const headers = [
   'Documento (entrenador)',
   'Nombre (entrenador)',
   'Escuela',
-  'Curso',
+  'Curso(s) Asignado',
   'Tipo Curso',
   'Checklist',
-  'Avance de Checklist',
+  'Porcentaje de cumplimiento',
  // 'Estado de entrenador de usuario'
 ]
 
@@ -149,14 +149,14 @@ async function loadUsersCheckists (
               inner join taxonomies tx on tx.id = c.type_id
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
-
+  //a checklist could be associated with one or more courses
   const staticCondition = ` where 
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
-          ca.school_id in (${schoolId}) and
-          cr.course_id in (${courseId}) and
           ca.checklist_id = :checklistId 
-  `
+          `
+    // ca.school_id in (${schoolId}) and 
+    // cr.course_id in (${courseId}) and
 
   if (areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
