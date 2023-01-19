@@ -73,15 +73,6 @@ async function exportarEvaluacionesAbiertas ({
   }
 
   const userTopicsStatuses = await loadTopicsStatuses();
-  const questionsData = await loadQuestions(modulos);
-
-  const groupedQuestionData = groupArrayOfObjects(questionsData, 'topic_id');
-
-  // console.log('questionsData, groupedQuestionData:', { questionsData, groupedQuestionData});
-
-  const { altHeaders, maxQuestions } = getCreatedHeaders(groupedQuestionData, headers);
-  await createHeaders(headersEstaticos.concat(altHeaders));
-  // console.log(questionsData);
 
   let users_to_export = [];
 
@@ -91,9 +82,17 @@ async function exportarEvaluacionesAbiertas ({
       tipocurso
   }, workspaceId, false);
 
+  // questions por modulos y/o courses
+  const questionsData = await loadQuestionsByCourses(pluck(courses, 'course_id'));
+  // max questions por cursos
+  const maxQuestionsCourses = await loadCountQuestions(pluck(courses, 'course_id'));
+  const { altHeaders, maxQuestions } = getCreatedHeaders(maxQuestionsCourses, headers, true);
+  await createHeaders(headersEstaticos.concat(altHeaders));
+
   // === precargar topics, usuarios y criterios ===
   const StackTopicsData = await loadTopicsByCoursesIds( 
                                 pluck(courses, 'course_id'), true);
+
   const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true);
   let StackUserCriterios = [];
   // === precargar topics, usuarios y criterios ===
@@ -296,21 +295,6 @@ async function exportarEvaluacionesAbiertas ({
       }
       // === para rellenar en preguntas ===
 
-  /*  } else {
-        // console.log('answers', answers);
-
-        if (answers) {
-          answers.forEach((answer, index) => {
-            if (answer) {
-              const question = questionsData.find(q => q.id === answer.id);
-              cellRow.push((question) ? strippedString(question.pregunta) : '-')
-              cellRow.push((answer && question) ? strippedString(answer.respuesta) : '-');
-            }
-          });
-        }
-      } */
-
-
     // añadir fila 
     worksheet.addRow(cellRow).commit();
     }
@@ -343,14 +327,16 @@ async function getQuestionsByTopic(topic_id, countLimit) {
   return rows;
 }
 
-function getCreatedHeaders(questions, headers){
+function getCreatedHeaders(questions, headers, passed = false) {
   
-  let maxQuestions = 0;
+  let maxQuestions = (typeof questions === 'object') ? 0 : questions;
 
-  for (const question in questions) {
-    const result = questions[question];
-    const countQuestions = result.length; 
-    if(countQuestions > maxQuestions) maxQuestions = countQuestions;
+  if(!passed) {
+    for (const question in questions) {
+      const result = questions[question];
+      const countQuestions = result.length; 
+      if(countQuestions > maxQuestions) maxQuestions = countQuestions;
+    }
   }
 
   // === CONDITIONAL HEADERS ===
@@ -391,8 +377,8 @@ async function loadQuestions (modulesIds) {
 
   const questionTypes = await con('taxonomies')
     .where('group', 'question')
-    .where('code', 'written-answer')
-  const type = questionTypes[0]
+    .where('code', 'written-answer');
+  const type = questionTypes[0];
 
   // console.log(type);
   
@@ -413,8 +399,65 @@ async function loadQuestions (modulesIds) {
             group by t.id
         )
   `
-  // logtime(query)
+  // logtime(query) 
 
   const [rows] = await con.raw(query, { typeId: type.id })
   return rows
+}
+
+async function loadQuestionsByCourses(courses_ids) {
+  const questionTypes = await con('taxonomies')
+    .where('group', 'question')
+    .where('code', 'written-answer');
+  const type = questionTypes[0];
+
+  const query = `
+    SELECT
+      *
+    FROM
+      questions q
+    WHERE
+      q.type_id = ${type.id}
+    AND q.topic_id IN (
+      SELECT
+        t.id
+      FROM topics t
+      WHERE t.course_id IN (${courses_ids.join()})
+      AND t.type_evaluation_id = 4577)`
+  // t.type_evaluation_id = 4557 = tipo de evluacion: 'abierta'
+  // logtime(query);
+  const [ rows ] = await con.raw(query);
+  return rows;
+}
+
+async function loadCountQuestions(courses_ids) {
+
+  const questionTypes = await con('taxonomies')
+    .where('group', 'question')
+    .where('code', 'written-answer');
+  const type = questionTypes[0];
+
+  const query = `
+      SELECT 
+        q.topic_id,
+        COUNT(1) AS num_questions
+      FROM
+        questions q
+      WHERE
+        q.type_id = ${type.id}
+        AND q.topic_id IN (
+          SELECT 
+            t.id 
+          FROM topics t 
+            WHERE t.course_id IN (${courses_ids.join()}) 
+            AND t.type_evaluation_id = 4577)
+
+    GROUP BY q.topic_id
+    ORDER BY num_questions DESC`;
+  // t.type_evaluation_id = 4557 = tipo de evluacion: 'abierta'
+  // logtime(query);
+
+  const [ rows ] = await con.raw(query);
+
+  return rows.length ? rows[0].num_questions : 0; // el mayor de preguntas
 }
