@@ -75,8 +75,8 @@ async function exportarDiplomas({ data, states }) {
   const coursesWithoutDiplomaIds = pluck(summariesWithoutDiploma, 'course_id')
 
   // Get compatible courses ids
-
-  const compatiblesCoursesIds = await loadCompatiblesIds(coursesWithoutDiplomaIds)
+  console.log(course_ids.length ? course_ids : coursesWithoutDiplomaIds)
+  const compatiblesCoursesIds = await loadCompatiblesIds(course_ids.length ? course_ids : coursesWithoutDiplomaIds)
 
   // Load summary courses with diploma
 
@@ -129,7 +129,7 @@ async function exportarDiplomas({ data, states }) {
     cellRow.push(`${config.URL_TEST}/tools/ver_diploma/${summary.user_id}/${originalCourseId || summary.course_id}`)
     cellRow.push(`${config.URL_TEST}/tools/dnc/${summary.user_id}/${originalCourseId || summary.course_id}`)
 
-    cellRow.push(originalCourseName ? summary.course_name : '')
+    cellRow.push(originalCourseName ? summary.course_name:  '')
 
     worksheet.addRow(cellRow).commit()
   }

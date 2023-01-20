@@ -121,14 +121,13 @@ exports.generateQuery = (
       c.active course_active,
       sc.certification_issued_at,
       sc.certification_accepted_at
-    from
-        summary_courses sc
-            join users u on u.id = sc.user_id
-            join workspaces w on w.id = u.subworkspace_id
-            join courses c on c.id = sc.course_id
-            join course_school cs on cs.course_id = c.id
-            join schools s on s.id = cs.school_id
-            join taxonomies tx on c.type_id = tx.id
+    from users u
+             left join summary_courses sc on u.id = sc.user_id
+             join workspaces w on w.id = u.subworkspace_id
+             join courses c on c.id = sc.course_id
+             left join course_school cs on cs.course_id = c.id
+             left join schools s on s.id = cs.school_id
+             join taxonomies tx on c.type_id = tx.id
     where
         ${conditions}
   `
