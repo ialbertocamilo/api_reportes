@@ -18,10 +18,10 @@ const headers = [
   'Documento (entrenador)',
   'Nombre (entrenador)',
   'Escuela',
-  'Curso',
+  'Curso(s) Asignado',
   'Tipo Curso',
   'Checklist',
-  'Avance de Checklist',
+  'Cumplimiento del Checklist',
  // 'Estado de entrenador de usuario'
 ]
 
@@ -96,6 +96,8 @@ async function generateReport ({
     cellRow.push(user.course_type)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
+    // cellRow.push(user.assigned_checklists)
+    // cellRow.push(user.completed_checklists)
 
     // Add activities values
     const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
@@ -133,7 +135,7 @@ async function loadUsersCheckists (
           c.name course_name,
           tx.name as course_type,
           checklists.title checklists_title,
-          count(checklist_id) assigned_checklists,
+          count(ca.checklist_id) assigned_checklists,
           sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
           
       from
@@ -142,18 +144,19 @@ async function loadUsersCheckists (
               inner join users trainers on ca.coach_id = trainers.id
               inner join users u on u.id = ca.student_id
               inner join schools s on s.id = ca.school_id
-              inner join courses c on c.id = ca.course_id
+              inner join checklist_relationships cr on cr.checklist_id = ca.checklist_id
+              inner join courses c on c.id = cr.course_id
               inner join taxonomies tx on tx.id = c.type_id
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
-
+  //a checklist could be associated with one or more courses
   const staticCondition = ` where 
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
-          ca.school_id in (${schoolId}) and
-          ca.course_id in (${courseId}) and
           ca.checklist_id = :checklistId 
-  `
+          `
+    // ca.school_id in (${schoolId}) and 
+    // cr.course_id in (${courseId}) and
 
   if (areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
