@@ -21,7 +21,7 @@ const headers = [
   'Curso(s) Asignado',
   'Tipo Curso',
   'Checklist',
-  'Porcentaje de cumplimiento',
+  'Cumplimiento del Checklist',
  // 'Estado de entrenador de usuario'
 ]
 
