@@ -172,7 +172,7 @@ module.exports = {
    * @param {string} coursesIds separated by commas
    * @returns {Promise<*>}
    */
-  async loadCourseChecklists (coursesIds) {
+  async loadChecklists (workspaceId) {
     const [rows] = await con.raw(`
       select
         c.id,
@@ -180,7 +180,7 @@ module.exports = {
       from
         checklists c 
         where
-        c.active = 1
+        c.active = 1 and workspace_id = ${workspaceId}
         `)
         // group by c.id
         // inner join checklists c on c.id = cr.checklist_id
