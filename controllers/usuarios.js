@@ -13,10 +13,13 @@ const { pluck, logtime } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 const defaultHeaders = [
+  'NOMBRE COMPLETO',
   'NOMBRE',
   'APELLIDO PATERNO',
   'APELLIDO MATERNO',
   'DOCUMENTO',
+  'NÚMERO DE TELÉFONO',
+  'NÚMERO DE PERSONA COLABORADOR',
   'ESTADO(USUARIO)',
   'EMAIL',
   'ULTIMA SESIÓN'
@@ -49,11 +52,16 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
   for (const user of users) {
     const cellRow = []
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
-
+    const fullname = [user.name,user.lastname, user.surname]
+    .filter(e => Boolean(e))
+    .join(' ');
+    cellRow.push(fullname)
     cellRow.push(user.name)
     cellRow.push(user.lastname)
     cellRow.push(user.surname)
     cellRow.push(user.document)
+    cellRow.push(user.phone_number)
+    cellRow.push(user.person_number)
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
     cellRow.push(user.email)
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
