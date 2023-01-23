@@ -1,6 +1,6 @@
 const { con } = require('../db')
 const moment = require('moment/moment')
-const { pluck, logtime } = require('./Helper')
+const { pluck, logtime, setCustomIndexAtObject } = require('./Helper')
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   logtime('method: getUsers')

@@ -112,3 +112,13 @@ exports.generatePagination = (total, perPage, page) => {
     endIndex: endIndex
   }
 }
+exports.setCustomIndexAtObject = (data, key = 'id') => {
+  let StackValues = {};
+
+  for(const value of data) {
+    const { [key]:index } = value;
+    StackValues[index] = value;
+  }
+
+  return StackValues;
+}
