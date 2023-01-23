@@ -1,6 +1,6 @@
 const { con } = require('../db')
 const moment = require('moment/moment')
-const { pluck, logtime } = require('./Helper')
+const { pluck, logtime, setCustomIndexAtObject } = require('./Helper')
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   logtime('method: getUsers')
@@ -270,3 +270,18 @@ exports.loadUsersIdsWithCriterionValues = async (workspaceId, criterionValuesIds
 
   return pluck(users, 'id')
 }
+exports.loadUsersBySubWorspaceIds = async (
+  subWorkspaceIds, indexId = false) => {
+
+ const [users] = await con.raw(
+  ` 
+    select
+      u.id, u.name,
+      u.lastname, u.surname, u.email,
+      u.document, u.active, u.last_login
+    from users u where
+      u.subworkspace_id IN (${subWorkspaceIds.join()})
+`);
+
+return indexId ? setCustomIndexAtObject(users) : users;
+};
