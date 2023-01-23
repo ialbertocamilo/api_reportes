@@ -22,6 +22,7 @@ const { getSchoolStatesWorkspace,
 const { loadCompatiblesIds, loadCompatiblesId } = require('../helper/CoursesTopicsHelper')
 const { con } = require('../db')
 const { getUsers } = require('../helper/Usuarios')
+const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
 
 const defaultHeaders = [
   'Módulo', // modulo user
@@ -101,11 +102,10 @@ async function exportarDiplomas({ data, states }) {
     let originalCourseName = ''
     let originalCourseId = ''
     if (compatiblesCoursesIds.includes(summary.course_id)) {
-      const originalCoursesIds = await loadCompatiblesId(summary.course_id)
-      const originalCourse = await con('courses').where('id', originalCoursesIds[0].id)
-      if (originalCourse[0]) {
-        originalCourseName = originalCourse[0].name
-        originalCourseId = originalCourse[0].id
+      const originalCourse = await getCourseWithDiplomaWithTheHighestGrade(summary.user_id, summary.course_id)
+      if (originalCourse) {
+        originalCourseName = originalCourse.name
+        originalCourseId = originalCourse.id
       }
     }
 
@@ -129,7 +129,7 @@ async function exportarDiplomas({ data, states }) {
     cellRow.push(`${config.URL_TEST}/tools/ver_diploma/${summary.user_id}/${originalCourseId || summary.course_id}`)
     cellRow.push(`${config.URL_TEST}/tools/dnc/${summary.user_id}/${originalCourseId || summary.course_id}`)
 
-    cellRow.push(originalCourseName ? summary.course_name:  '')
+    cellRow.push(originalCourseName ? summary.course_name : '')
 
     worksheet.addRow(cellRow).commit()
   }
@@ -158,4 +158,32 @@ async function loadSummaries (
 
   const [summaries] = await con.raw(query)
   return summaries
+}
+
+async function getCourseWithDiplomaWithTheHighestGrade(userId, courseId) {
+  let compatible = null
+  const compatiblesCoursesIds = await loadCompatiblesIds([courseId])
+  if (compatiblesCoursesIds.length) {
+    const compatiblesUserSummaryCourses = await loadSummaryCoursesByUsersAndCourses([userId], compatiblesCoursesIds)
+
+    // Get summary course with the highest grade
+
+    let highestGrade = 0
+    let highestGradeIndex = -1
+    if (compatiblesUserSummaryCourses.length) {
+      for (let j = 0; j < compatiblesUserSummaryCourses.length; j++) {
+        const sc = compatiblesUserSummaryCourses[j]
+        if (sc.grade_average > highestGrade && sc.certification_issued_at != null) {
+          highestGrade = sc.grade_average
+          highestGradeIndex = j
+        }
+      }
+
+      if (highestGrade > 0) {
+        compatible = compatiblesUserSummaryCourses[highestGradeIndex]
+      }
+    }
+  }
+
+  return compatible
 }
