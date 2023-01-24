@@ -26,7 +26,7 @@ const defaultHeaders = [
   'Dni', 
   'Apellidos y Nombres', 
   'Género',
-  'Vademecum',
+  'Contenido',
   'Visitas',
   'Última Visita'
 ];
@@ -68,7 +68,7 @@ async function exportarVademecum ({ workspaceId, vademecumsSelected }) {
 
     // parse and set data
     const { updated_at, user, vademecum: _vademecum } = row;
-    const lastVisit = (updated_at).format('DD/MM/YYYY H:mm:ss');
+    const lastVisit = moment(updated_at).format('DD/MM/YYYY H:mm:ss');
 
     const fullName = `${user.surname || ''} ${user.lastname || ''} ${user.name || ''}`;
     const { workspace } = user;

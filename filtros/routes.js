@@ -16,9 +16,9 @@ router.get('/courses/:schoolIds', async (req, res) => {
   res.json(datos)
 })
 
-router.get('/courses/checklist/:coursesIds', async (req, res) => {
+router.get('/courses/checklist/:workspaceId', async (req, res) => {
 
-  const datos = await tablas.loadCourseChecklists(req.params.coursesIds)
+  const datos = await tablas.loadChecklists(req.params.workspaceId)
   res.json(datos)
 })
 

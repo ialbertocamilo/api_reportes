@@ -20,41 +20,76 @@ async function exportReportPollQuestion(filters) {
     if(!es_anonimo){
         defaultHeaders = [...defaultHeaders,...['Nombre','Apellido Paterno','Apellido Materno','Documento']];
     }
-    await createHeaders(defaultHeaders.concat(['Escuela','Curso','Pregunta','Respuesta','Fecha']));
+    defaultHeaders = [...defaultHeaders,...['Escuela','Curso','Pregunta']];
+    if(filters.type_poll_question.code =='califica'){
+        defaultHeaders = [...defaultHeaders,...['Respuesta numérica','Respuesta texto','Fecha']];
+    }else{
+        defaultHeaders = [...defaultHeaders,...['Respuesta','Fecha']];
+    }
+    await createHeaders(defaultHeaders);
     let [poll_questions_answers, subworkspaces,schools] = await Promise.all([
                                         pollQuestionReportData(filters),
                                         loadSubWorkSpaces(filters),
                                         loadSchoolsByCourse(filters)
                                     ]);
+    const values_question_type_califica = [
+        {numeric:5,value:'Muy bueno'},
+        {numeric:4,value:'Bueno'},
+        {numeric:3,value:'Regular'},
+        {numeric:2,value:'Malo'},
+        {numeric:1,value:'Muy malo'},
+    ];
     for (const poll_questions_answer of poll_questions_answers) {
-        const cellRow = [];
+        const response_user = parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question); 
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
         const schools_name = pluck(schools.filter(s=>s.course_id == poll_questions_answer.course_id),'name').join(',');
-        
-        cellRow.push(workspace ? workspace.name : '-');
-        if(!es_anonimo){
-            cellRow.push(poll_questions_answer.name);
-            cellRow.push(poll_questions_answer.lastname);
-            cellRow.push(poll_questions_answer.surname);
-            cellRow.push(poll_questions_answer.document);
+        if(filters.type_poll_question.code == 'opcion-multiple' && response_user.length > 0){
+            for (const response_user_multiple of response_user) {
+                const cellRow = [];
+                cellRow.push(workspace ? workspace.name : '-');
+                if(!es_anonimo){
+                    cellRow.push(poll_questions_answer.name);
+                    cellRow.push(poll_questions_answer.lastname);
+                    cellRow.push(poll_questions_answer.surname);
+                    cellRow.push(poll_questions_answer.document);
+                }
+                cellRow.push(schools_name);
+                cellRow.push(poll_questions_answer.course_name);
+                cellRow.push(poll_questions_answer.titulo);
+                // cellRow.push(poll_questions_answer.respuestas);
+                cellRow.push(response_user_multiple);
+                cellRow.push(moment(poll_questions_answer.created_at).format('DD/MM/YYYY H:mm:ss'));
+                worksheet.addRow(cellRow).commit();
+            }
+        }else{
+            const cellRow = [];
+            cellRow.push(workspace ? workspace.name : '-');
+            if(!es_anonimo){
+                cellRow.push(poll_questions_answer.name);
+                cellRow.push(poll_questions_answer.lastname);
+                cellRow.push(poll_questions_answer.surname);
+                cellRow.push(poll_questions_answer.document);
+            }
+            cellRow.push(schools_name);
+            cellRow.push(poll_questions_answer.course_name);
+            cellRow.push(poll_questions_answer.titulo);
+            // cellRow.push(poll_questions_answer.respuestas);
+            cellRow.push(response_user);
+            if(filters.type_poll_question.code =='califica'){
+                const value_text = values_question_type_califica.find(c=>c.numeric ==response_user ); 
+                cellRow.push(value_text ? value_text.value : '-');
+            }
+            cellRow.push(moment(poll_questions_answer.created_at).format('DD/MM/YYYY H:mm:ss'));
+            worksheet.addRow(cellRow).commit();
         }
-        cellRow.push(schools_name);
-        cellRow.push(poll_questions_answer.course_name);
-        cellRow.push(poll_questions_answer.titulo);
-        // cellRow.push(poll_questions_answer.respuestas);
-        cellRow.push(parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question));
-        cellRow.push(moment(poll_questions_answer.created_at).format('DD/MM/YYYY H:mm:ss'));
-        worksheet.addRow(cellRow).commit();
     }
 
     if (worksheet._rowZero > 1){
         workbook.commit().then(() => {
             process.send(response({ createAt, modulo: 'Reporte-Encuestas' }));
         });
-        //process.send({ modulo: 'Diplomas response_if', summaries });
     } else {
         process.send({ alert: 'No se encontraron resultados' });
-        //process.send({ modulo: 'Diplomas response_else', summaries });
     }
 }
 function parseResponseUser(response,type_poll_question){
@@ -70,9 +105,9 @@ function parseResponseUser(response,type_poll_question){
             }
         case 'opcion-multiple':
             try {
-                return JSON.parse(response).join();
+                return JSON.parse(response);
             } catch (error) {
-                return '-';
+                return [];
             }
         default : 
         return response;
