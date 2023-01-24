@@ -3,7 +3,8 @@ const { logtime } = require('./Helper')
 
 exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
   logtime('method: getWorkspaceCriteria')
-  const [rows] = await con.raw(`
+
+  let query = `
         select 
             c.*
         from 
@@ -12,14 +13,15 @@ exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
                 inner join workspaces w on w.id = cw.workspace_id
         where 
             w.id = :workspaceId and 
-            ${criteria_id.length>0 ? ` c.id in (${criteria_id.toString()}) and ` : ''}
+            ${criteria_id.length > 0 ? ` c.id in (${criteria_id.toString()}) and ` : ''}
             c.show_in_reports = 1 and
             w.active = 1 and
             c.active = 1
-          group by c.id
-    `,
-  { workspaceId }
-  )
+        group by c.id
+    `
+  // logtime(query)
+
+  const [rows] = await con.raw(query, { workspaceId })
 
   return rows
 }

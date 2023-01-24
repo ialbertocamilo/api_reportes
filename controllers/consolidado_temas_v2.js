@@ -14,6 +14,7 @@ const { pluck, logtime } = require('../helper/Helper')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
+
   loadEvaluationTypes, getCourseStatusName, getTopicStatusName,
   loadCoursesStatuses
 } = require('../helper/CoursesTopicsHelper')
@@ -109,7 +110,6 @@ async function exportarUsuariosDW ({
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
 
     // Add user's criterion values
-
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
@@ -183,6 +183,7 @@ async function loadUsersWithCoursesAndTopics (
 ) {
   // Base query
   const taxonomy = evaluation_types.find(type => type.code == 'qualified'); 
+
   let query = `
     select 
         u.*, 
@@ -240,7 +241,7 @@ async function loadUsersWithCoursesAndTopics (
   } 
 
   // Add type_course and dates at ('created_at')
-  if(tipocurso) query +=  ` and tx.code = 'free'` 
+  if(!tipocurso) query += ` and not tx.code = 'free'`
   if(start) query += ` and date(st.updated_at) >= '${start}'`
   if(end) query += ` and date(st.updated_at) <= '${end}'`
 

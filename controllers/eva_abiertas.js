@@ -87,7 +87,7 @@ async function exportarEvaluacionesAbiertas ({
 
     // === Questions Answers FP / Others ===
     const answers = user.answers;
-    
+
     if(workspaceId === 25) {
       const countLimit = answers ? answers.length : 0;
       if(countLimit) {
@@ -252,7 +252,7 @@ async function loadUsersQuestions (
   } 
 
   // Add type_course and dates at ('created_at')
-  if(tipocurso) query +=  ` and tax.code = 'free'` 
+  if(!tipocurso) query += ` and not tax.code = 'free'`
   if(start) query += ` and date(st.updated_at) >= '${start}'`
   if(end) query += ` and date(st.updated_at) <= '${end}'`
 
