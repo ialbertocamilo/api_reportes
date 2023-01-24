@@ -1,14 +1,8 @@
-<<<<<<< HEAD
-const { con } = require('../db')
-const moment = require('moment/moment')
-const { pluck, logtime, setCustomIndexAtObject } = require('./Helper')
-=======
 const { con } = require("../db")
 const moment = require("moment/moment")
 const { pluck, logtime, setCustomIndexAtObject } = require('./Helper')
 const { loadCriterionValuesByUser } = require('./Criterian')
 
->>>>>>> testing3
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
   logtime("method: getUsers");
