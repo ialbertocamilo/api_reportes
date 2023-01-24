@@ -101,8 +101,13 @@ async function exportarDiplomas({ data, states }) {
     let originalCourseName = ''
     let originalCourseId = ''
     if (compatiblesCoursesIds.includes(summary.course_id)) {
-      const originalCoursesIds = await loadCompatiblesId(summary.course_id)
-      const originalCourse = await con('courses').where('id', originalCoursesIds[0].id)
+      let originalCoursesIds = await loadCompatiblesIds([summary.course_id])
+      const filteredOriginalCoursesIds = filterCompatibles(course_ids, originalCoursesIds)
+      if (filteredOriginalCoursesIds.length) {
+        originalCoursesIds = filteredOriginalCoursesIds
+      }
+
+      const originalCourse = await con('courses').where('id', originalCoursesIds[0])
       if (originalCourse[0]) {
         originalCourseName = originalCourse[0].name
         originalCourseId = originalCourse[0].id
@@ -165,3 +170,13 @@ async function loadSummaries (
   return summaries
 }
 
+function filterCompatibles (coursesIds, compatibleCoursesIds) {
+  const found = []
+  for (const i of compatibleCoursesIds) {
+    if (coursesIds.includes(i)) {
+      found.push(i)
+    }
+  }
+
+  return found
+}
