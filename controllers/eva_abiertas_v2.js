@@ -90,9 +90,11 @@ async function exportarEvaluacionesAbiertas ({
   await createHeaders(headersEstaticos.concat(altHeaders));
 
   // === precargar topics, usuarios y criterios ===
-  const StackTopicsData = await loadTopicsByCoursesIds( 
-                                pluck(courses, 'course_id'), true);
-
+  let StackTopicsData = {};
+  if(courses.length) {
+    StackTopicsData = await loadTopicsByCoursesIds( 
+                            pluck(courses, 'course_id'), true);
+  }
   const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true);
   let StackUserCriterios = [];
   // === precargar topics, usuarios y criterios ===
