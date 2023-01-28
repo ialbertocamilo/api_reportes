@@ -2,10 +2,16 @@ const { Router } = require('express')
 const router = Router()
 const db = require('../db')
 const handler = require('./index')
+const { verifyReportsStatus } = require('../helper/Queue')
+
 router.get('/', async (req, res) => {
   console.log(db.con)
   res.send({ response: 'Bienvenido a la api Node 3.0.0' })
 })
+
+
+//router.post('/ranking', handler.ranking)
+
 
 router.post('/notas_usuario', handler.notasUsuario2)
 router.post('/historial_usuario', handler.historialUsuario)
@@ -27,13 +33,10 @@ router.post('/evaluaciones_abiertas', handler.evaluacionesAbiertas)
 router.post('/evaluaciones_abiertas_v2', handler.evaluacionesAbiertasV2)
 router.post('/temas_no_evaluables', handler.temasNoEvaluables)
 router.post('/temas_no_evaluables_v2', handler.temasNoEvaluablesV2)
-router.post('/ranking', handler.ranking)
+
 router.post('/user_uploads', handler.userUploads)
 
 router.post('/supervisores_notas', handler.supervisores_notas2)
-
-//router.post('/supervisores_notas', handler.supervisores_notas)
-
 
 router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
 

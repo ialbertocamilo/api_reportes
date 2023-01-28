@@ -1,0 +1,3 @@
+exports.ReportTypes = {
+  ranking: 'Ranking'
+}

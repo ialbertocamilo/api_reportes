@@ -15,6 +15,9 @@ const {
 const moment = require('moment/moment')
 const { con } = require('../db')
 const { response } = require('../response')
+const { ReportTypes } = require('../helper/Enums')
+const { markReportAsReady, generateReportPath } = require('../helper/Queue')
+const reportsEmitter = require.cache['../socket-initializer']
 
 const headers = [
   'Puntaje (P)',
@@ -25,7 +28,7 @@ const headers = [
 ]
 
 async function ranking({
-  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, areas, sedes
+  workspaceId, adminId, modulos, UsuariosActivos, UsuariosInactivos, areas, sedes
 }) {
   // Generate Excel file header
 
@@ -90,8 +93,12 @@ async function ranking({
   }
 
   if (worksheet._rowZero > 1) {
+    await markReportAsReady(
+      ReportTypes.ranking, generateReportPath(createAt), workspaceId, adminId
+    )
+
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'Ranking' }))
+      process.send(response({ createAt, modulo: ReportTypes.ranking }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })
