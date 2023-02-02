@@ -1,0 +1,20 @@
+exports.ReportTypes = {
+  ranking: 'Ranking',
+  historial_usuario: 'HistorialUsuario',
+  usuarios: 'Usuarios',
+  consolidado_cursos: 'ConsolidadoCursos',
+  segmentation: 'SegmentaciónCursos',
+  consolidado_temas: 'ConsolidadoCompatibleTemas',
+  visitas: 'Visitas',
+  reinicios: 'Reinicios',
+  evaluaciones_abiertas: 'EvaluacionAbierta',
+  temas_no_evaluables: 'Temas no evaluables',
+  user_uploads: 'Usuario Uploads',
+  checklist_general: 'checklist_general',
+  checklist_detallado: 'checklist_detallado',
+  videoteca: 'Videoteca',
+  vademecum: 'Vademecum',
+  diplomas: 'Diplomas',
+  avance_curricula: 'avance_curricula',
+  "poll-questions": 'Reporte-Encuestas'
+}
