@@ -4,6 +4,7 @@
   "description": "Servicio de reportes para cursalab_v2",
   "main": "index.js",
   "dependencies": {
+    "axios": "^1.2.6",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "eslint": "^7.18.0",

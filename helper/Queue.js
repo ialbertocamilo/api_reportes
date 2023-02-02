@@ -1,5 +1,6 @@
 const { extension } = require('../config')
 const GeneratedReport = require('../models/GeneratedReport')
+const axios = require('axios')
 
 /**
  * Check if reports in queue exists or not
@@ -19,18 +20,17 @@ exports.isServerAvailable = async (workspaceId, adminId) => {
  * Register report in queue
  */
 exports.registerInQueue = async (
-  reportType, workspaceId, adminId, selectedFilters
+  reportType, reportName, workspaceId, adminId, filters, filtersDescriptions
 ) => {
   try {
     // Check if there is other pending report of the same type and
     // the same filters
-
     const pendingReports = await GeneratedReport.findAll({
       where: {
         report_type: reportType,
         workspace_id: workspaceId,
         admin_id: adminId,
-        filters: JSON.stringify(selectedFilters),
+        filters: JSON.stringify(filters),
         is_ready: false
       }
     })
@@ -42,9 +42,11 @@ exports.registerInQueue = async (
     if (pendingReports.length === 0) {
       await GeneratedReport.create({
         report_type: reportType,
+        name: reportName,
         workspace_id: workspaceId,
         admin_id: adminId,
-        filters: JSON.stringify(selectedFilters),
+        filters: JSON.stringify(filters),
+        filters_descriptions: JSON.stringify(filtersDescriptions),
         is_ready: false
       })
     }
@@ -56,26 +58,50 @@ exports.registerInQueue = async (
 /**
  * Update report status to ready
  */
-exports.markReportAsReady = async (reportType, downloadPath, workspaceId, adminId) => {
-  await GeneratedReport.update(
-    {
-      is_ready: true,
-      download_url: downloadPath
-    },
-    {
-      where: {
-        report_type: reportType,
-        admin_id: adminId,
-        workspace_id: workspaceId,
-        is_ready: false
-      }
+exports.markReportAsReady = async (reportType, downloadPath, workspaceId, adminId, filters) => {
+  const reports = await GeneratedReport.findAll({
+    where: {
+      report_type: reportType,
+      admin_id: adminId,
+      workspace_id: workspaceId,
+      filters: JSON.stringify(filters),
+      is_ready: false
     }
-  )
+  })
+
+  if (reports[0]) {
+    reports[0].is_ready = 1
+    reports[0].download_url = downloadPath
+    await reports[0].save()
+  }
 }
 
-// exports.verifyReportsStatus = ({ body, params }, res) => {
-//   res.send(params.reportName)
-// }
+exports.startNextReport = async (reportType) => {
+  const reports = await GeneratedReport.findAll({
+    order: [
+      ['id', 'asc']
+    ],
+    where: {
+      is_ready: false
+    }
+  })
+
+  if (reports[0]) {
+
+    const filters = JSON.parse(reports[0].filters)
+    filters.skipQueue = 1
+
+    try {
+      await axios({
+        url: 'http://localhost:3000/exportar/' + reportType,
+        method: 'post',
+        data: filters
+      })
+    } catch (ex) {
+      console.log(ex)
+    }
+  }
+}
 
 exports.generateReportPath = (createAt) => {
   return 'reports/' + createAt + extension

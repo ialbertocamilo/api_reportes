@@ -175,9 +175,7 @@ module.exports = {
     const isAvailable = await isServerAvailable(body.workspaceId, body.adminId)
     await registerInQueue(ReportTypes.ranking, body.workspaceId, body.adminId, body.selectedFilters)
 
-    if (true) {
-      const children = fork('./controllers/ranking.js')
-      children.send(body)
+    if (isAvailable) {
 
       // children.send(body)
       // children.on('message', (data) => {

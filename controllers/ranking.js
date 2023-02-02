@@ -93,9 +93,6 @@ async function ranking({
   }
 
   if (worksheet._rowZero > 1) {
-    await markReportAsReady(
-      ReportTypes.ranking, generateReportPath(createAt), workspaceId, adminId
-    )
 
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: ReportTypes.ranking }))

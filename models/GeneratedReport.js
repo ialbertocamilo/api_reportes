@@ -12,6 +12,7 @@ GeneratedReport.init({
   name: STRING,
   download_url: STRING,
   filters: STRING,
+  filters_descriptions: STRING,
   workspace_id: BIGINT,
   admin_id: BIGINT,
   is_ready: BOOLEAN
