@@ -102,14 +102,14 @@ function getReportFilePath (reportType) {
     case ReportTypes.ranking: file = 'ranking.js'; break
     case ReportTypes.historial_usuario: file = 'historial_usuario.js'; break
     case ReportTypes.usuarios: file = 'usuarios.js'; break
-    case ReportTypes.consolidado_cursos: file = 'consolidado_cursos_v2.js'; break
+    case ReportTypes.consolidado_cursos_v2: file = 'consolidado_cursos_v2.js'; break
     case ReportTypes.segmentation: file = 'segmentation.js'; break
-    case ReportTypes.consolidado_temas: file = 'consolidado_temas_v3.js'; break
+    case ReportTypes.consolidado_temas_v3: file = 'consolidado_temas_v3.js'; break
 
     case ReportTypes.visitas: file = 'visitas.js'; break
     case ReportTypes.reinicios: file = 'reinicios.js'; break
-    case ReportTypes.evaluaciones_abiertas: file = 'eva_abiertas_v2.js'; break
-    case ReportTypes.temas_no_evaluables: file = 'temas_no_evaluables_v2.js'; break
+    case ReportTypes.evaluaciones_abiertas_v2: file = 'eva_abiertas_v2.js'; break
+    case ReportTypes.temas_no_evaluables_v2: file = 'temas_no_evaluables_v2.js'; break
 
     case ReportTypes.user_uploads: file = 'user_uploads.js'; break
     case ReportTypes.checklist_general: file = 'checklist_general.js'; break
