@@ -7,7 +7,7 @@ const {
   isServerAvailable,
   registerInQueue,
   markReportAsReady,
-  startNextReport
+  startNextReport, findNextPendingReport
 } = require('../helper/Queue')
 const { fork } = require('child_process')
 
@@ -28,7 +28,7 @@ module.exports = function (io) {
   //  Reports with push notifications
   // ========================================
 
-  router.post('/:reportPath', async ({ body, params }, res) => {
+  router.post('/:reportPath', async ({ body, params, headers, protocol}, res) => {
 
     const reportType = ReportTypes[params.reportPath]
     const reportName = body.reportName || reportType
@@ -48,14 +48,11 @@ module.exports = function (io) {
     }
 
     if (isAvailable) {
-
       // Process report
 
       const children = fork(getReportFilePath(reportType))
       children.send(body)
       children.on('message', async (result) => {
-        children.kill()
-
         await markReportAsReady(
           reportType,
           result.alert ? '' : result.ruta_descarga,
@@ -64,16 +61,13 @@ module.exports = function (io) {
           body
         )
 
-        // Start the next report
-
-        startNextReport(reportType)
-
         // Broadcast event to frontend
 
         let message
         let success = false
         if (result.alert) {
           message = `No se encontraron resultados para tu reporte "${reportName}".`
+          success = false
         } else {
           message = `Tu reporte "${reportName}" se encuentra listo.`
           success = true
@@ -85,6 +79,20 @@ module.exports = function (io) {
           name: reportName,
           url: result.ruta_descarga
         })
+
+        // Start the next report
+        const nextReport = await findNextPendingReport()
+        if (nextReport) {
+          io.sockets.emit('report-started', {
+            report: nextReport,
+            adminId: body.adminId
+          })
+          // Start a requet to process
+          const baseUrl = protocol + '://' + headers.host
+          startNextReport(nextReport, baseUrl)
+        }
+
+        children.kill()
       })
 
       res.json({ result: 'response will be sent over IO' })

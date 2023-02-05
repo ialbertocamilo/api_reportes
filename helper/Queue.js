@@ -1,6 +1,7 @@
 const { extension } = require('../config')
 const GeneratedReport = require('../models/GeneratedReport')
 const axios = require('axios')
+const { ReportTypes } = require('./Enums')
 
 /**
  * Check if reports in queue exists or not
@@ -71,38 +72,63 @@ exports.markReportAsReady = async (reportType, downloadPath, workspaceId, adminI
 
   if (reports[0]) {
     reports[0].is_ready = 1
+    reports[0].is_processing = 0
     reports[0].download_url = downloadPath
     await reports[0].save()
   }
 }
 
-exports.startNextReport = async (reportType) => {
+exports.startNextReport = async (report, baseUrl) => {
+
+  const filters = JSON.parse(report.filters)
+  filters.skipQueue = 1
+
+  try {
+    await axios({
+      url: baseUrl + '/exportar/' + getReportPathFromReportType(report.report_type),
+      method: 'post',
+      data: filters
+    })
+  } catch (ex) {
+    console.log(ex)
+  }
+}
+
+/**
+ * Find next pending report and mark it as processing
+ * @returns {Promise<null>}
+ */
+exports.findNextPendingReport = async () => {
   const reports = await GeneratedReport.findAll({
     order: [
       ['id', 'asc']
     ],
     where: {
-      is_ready: false
+      is_ready: false,
+      is_processing: false
     }
   })
 
   if (reports[0]) {
-
-    const filters = JSON.parse(reports[0].filters)
-    filters.skipQueue = 1
-
-    try {
-      await axios({
-        url: 'http://localhost:3000/exportar/' + reportType,
-        method: 'post',
-        data: filters
-      })
-    } catch (ex) {
-      console.log(ex)
-    }
+    reports[0].is_processing = true
+    await reports[0].save()
+    return reports[0]
+  } else {
+    return null
   }
 }
 
+const getReportPathFromReportType = (reportType) => {
+
+  let path = ''
+  for (const [key, value] of Object.entries(ReportTypes)) {
+    if (value === reportType) {
+      path = key
+    }
+  }
+
+  return path
+}
 exports.generateReportPath = (createAt) => {
   return 'reports/' + createAt + extension
 }

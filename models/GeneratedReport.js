@@ -15,7 +15,8 @@ GeneratedReport.init({
   filters_descriptions: STRING,
   workspace_id: BIGINT,
   admin_id: BIGINT,
-  is_ready: BOOLEAN
+  is_ready: BOOLEAN,
+  is_processing: BOOLEAN
 }, {
   sequelize,
   modelName: 'generated_report',
