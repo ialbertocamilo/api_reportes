@@ -26,11 +26,11 @@ GeneratedReport.init({
   updatedAt: 'updated_at'
 })
 
-GeneratedReport.hasOne(Workspace, {
+GeneratedReport.belongsTo(Workspace, {
   foreignKey: 'workspace_id'
 })
 
-GeneratedReport.hasOne(User, {
+GeneratedReport.belongsTo(User, {
   foreignKey: 'admin_id'
 })
 
