@@ -65,12 +65,12 @@ module.exports = function (io) {
 
         let message
         let success = false
-        if (result.alert) {
-          message = `No se encontraron resultados para tu reporte "${reportName}".`
-          success = false
-        } else {
+        if (result.ruta_descarga) {
           message = `Tu reporte "${reportName}" se encuentra listo.`
           success = true
+        } else {
+          message = `No se encontraron resultados para tu reporte "${reportName}".`
+          success = false
         }
         io.sockets.emit('report-finished', {
           adminId: body.adminId,
