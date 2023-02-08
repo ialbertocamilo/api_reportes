@@ -2,7 +2,6 @@ const { Router } = require('express')
 const router = Router()
 const db = require('../db')
 const handler = require('./index')
-const { ReportTypes } = require('../helper/Enums')
 const {
   isServerAvailable,
   registerInQueue,
@@ -24,13 +23,13 @@ module.exports = function (io) {
   router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
   router.post('/notas_usuario', handler.notasUsuario2)
   router.post('/historial_usuario', handler.historialUsuario)
+  router.post('/poll-questions', handler.poolQuestions)
 
   //  Reports with push notifications
   // ========================================
 
-  router.post('/:reportPath', async ({ body, params, headers, protocol}, res) => {
-
-    const reportType = ReportTypes[params.reportPath]
+  router.post('/:reportType', async ({ body, params, headers, protocol }, res) => {
+    const reportType = params.reportType
     const reportName = body.reportName || reportType
     const filtersDescriptions = body.filtersDescriptions
     const skipQueue = !!body.skipQueue
@@ -104,29 +103,31 @@ module.exports = function (io) {
   return router
 }
 
+/**
+ * Get the controller's path for each report type
+ * @param reportType
+ * @returns {string}
+ */
 function getReportFilePath (reportType) {
   let file
   switch (reportType) {
-    case ReportTypes.ranking: file = 'ranking.js'; break
-    case ReportTypes.historial_usuario: file = 'historial_usuario.js'; break
-    case ReportTypes.usuarios: file = 'usuarios.js'; break
-    case ReportTypes.consolidado_cursos_v2: file = 'consolidado_cursos_v2.js'; break
-    case ReportTypes.segmentation: file = 'segmentation.js'; break
-    case ReportTypes.consolidado_temas_v3: file = 'consolidado_temas_v3.js'; break
-
-    case ReportTypes.visitas: file = 'visitas.js'; break
-    case ReportTypes.reinicios: file = 'reinicios.js'; break
-    case ReportTypes.evaluaciones_abiertas_v2: file = 'eva_abiertas_v2.js'; break
-    case ReportTypes.temas_no_evaluables_v2: file = 'temas_no_evaluables_v2.js'; break
-
-    case ReportTypes.user_uploads: file = 'user_uploads.js'; break
-    case ReportTypes.checklist_general: file = 'checklist_general.js'; break
-    case ReportTypes.checklist_detallado: file = 'checklist_detallado.js'; break
-    case ReportTypes.videoteca: file = 'videoteca.js'; break
-    case ReportTypes.vademecum: file = 'vademecum.js'; break
-    case ReportTypes.diplomas: file = 'diplomas2.js'; break
-    case ReportTypes.avance_curricula: file = 'avance_curricula.js'; break
-    case ReportTypes['poll-questions']: file = 'poolQuestions.js'; break
+    case 'ranking': file = 'ranking.js'; break
+    case 'historial_usuario': file = 'historial_usuario.js'; break
+    case 'usuarios': file = 'usuarios.js'; break
+    case 'consolidado_cursos': file = 'consolidado_cursos_v2.js'; break
+    case 'segmentation': file = 'segmentation.js'; break
+    case 'consolidado_temas': file = 'consolidado_temas_v3.js'; break
+    case 'visitas': file = 'visitas.js'; break
+    case 'reinicios': file = 'reinicios.js'; break
+    case 'evaluaciones_abiertas': file = 'eva_abiertas_v2.js'; break
+    case 'temas_no_evaluables': file = 'temas_no_evaluables_v2.js'; break
+    case 'user_uploads': file = 'user_uploads.js'; break
+    case 'checklist_general': file = 'checklist_general.js'; break
+    case 'checklist_detallado': file = 'checklist_detallado.js'; break
+    case 'videoteca': file = 'videoteca.js'; break
+    case 'vademecum': file = 'vademecum.js'; break
+    case 'diplomas': file = 'diplomas2.js'; break
+    case 'avance_curricula': file = 'avance_curricula.js'; break
   }
 
   return `./controllers/${file}`

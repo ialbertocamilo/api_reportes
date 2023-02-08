@@ -15,9 +15,6 @@ const {
 const moment = require('moment/moment')
 const { con } = require('../db')
 const { response } = require('../response')
-const { ReportTypes } = require('../helper/Enums')
-const { markReportAsReady, generateReportPath } = require('../helper/Queue')
-const reportsEmitter = require.cache['../socket-initializer']
 
 const headers = [
   'Puntaje (P)',
@@ -95,7 +92,7 @@ async function ranking({
   if (worksheet._rowZero > 1) {
 
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: ReportTypes.ranking }))
+      process.send(response({ createAt, modulo: '' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })

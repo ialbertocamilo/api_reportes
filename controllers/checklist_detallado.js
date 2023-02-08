@@ -153,7 +153,7 @@ async function loadUsersCheckists (
   const staticCondition = ` where 
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
-          ca.checklist_id = :checklistId 
+          ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
           `
     // ca.school_id in (${schoolId}) and 
     // cr.course_id in (${courseId}) and
@@ -192,7 +192,7 @@ async function loadUsersCheckists (
 
   // Execute query
   // logtime(query);
-  const [rows] = await con.raw(query, { checklistId })
+  const [rows] = await con.raw(query, { })
   return rows
 }
 
@@ -213,7 +213,8 @@ async function loadChecklistActivities (checklistId) {
             inner join checklist_answers_items cai on ci.id = cai.checklist_item_id 
             inner join checklist_answers ca on ca.checklist_id = cai.checklist_answer_id
      where 
-       ci.checklist_id = :checklistId and
+       ci.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
+       and
        active = 1
     
      group by

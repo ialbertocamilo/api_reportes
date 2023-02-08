@@ -1,7 +1,6 @@
 const { extension } = require('../config')
 const GeneratedReport = require('../models/GeneratedReport')
 const axios = require('axios')
-const { ReportTypes } = require('./Enums')
 
 /**
  * Check if reports in queue exists or not
@@ -85,7 +84,7 @@ exports.startNextReport = async (report, baseUrl) => {
 
   try {
     await axios({
-      url: baseUrl + '/exportar/' + getReportPathFromReportType(report.report_type),
+      url: baseUrl + '/exportar/' + report.report_type,
       method: 'post',
       data: filters
     })
@@ -118,17 +117,6 @@ exports.findNextPendingReport = async () => {
   }
 }
 
-const getReportPathFromReportType = (reportType) => {
-
-  let path = ''
-  for (const [key, value] of Object.entries(ReportTypes)) {
-    if (value === reportType) {
-      path = key
-    }
-  }
-
-  return path
-}
 exports.generateReportPath = (createAt) => {
   return 'reports/' + createAt + extension
 }

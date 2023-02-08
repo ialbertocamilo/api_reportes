@@ -1,7 +1,5 @@
 const { fork } = require('child_process')
 const { logtime } = require('../helper/Helper')
-const { registerInQueue, isServerAvailable } = require('../helper/Queue')
-const { ReportTypes } = require('../helper/Enums')
 
 module.exports = {
   // * Usuarios
@@ -168,23 +166,6 @@ module.exports = {
       res.send(data)
       children.kill()
     })
-  },
-  // * Ranking
-  async ranking ({ body }, res) {
-
-    const isAvailable = await isServerAvailable(body.workspaceId, body.adminId)
-    await registerInQueue(ReportTypes.ranking, body.workspaceId, body.adminId, body.selectedFilters)
-
-    if (isAvailable) {
-
-      // children.send(body)
-      // children.on('message', (data) => {
-      //   //res.send(data)
-      //   children.kill()
-      // })
-    } else {
-      res.send({ serverIsBusy: true })
-    }
   },
   // * User uploads
   userUploads({ body }, res) {
