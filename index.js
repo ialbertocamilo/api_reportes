@@ -9,6 +9,7 @@ const { con } = require('./db')
 const { CARPETA_DESCARGA } = require('./config')
 require('./cron')
 const handler = require('./routes')
+const { restartQueueExecution } = require('./helper/Queue')
 
 // Server config
 
@@ -25,13 +26,15 @@ app.use(function (req, res, next) {
   console.log(req.body)
   req.setTimeout(0)
   next()
-});
+})
 
 // Initialize database configuration
 
-(async () => {
-  await con.raw("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))")
-})()
+if (process.env.IS_LOCALHOST == 1) {
+  (async () => {
+    await con.raw("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))")
+  })()
+}
 
 // Start server
 
@@ -43,7 +46,7 @@ const server = app.listen(app.get('port'), () => {
   console.log(`Your PORT is : ${process.env.PORT}`)
 })
 
-//const reportsEmitter = require('./socket-initializer')(server)
+// Initialize socket.io library to submit events to frontend
 
 const io = require('socket.io')(server, {
   cors: {
@@ -53,21 +56,22 @@ const io = require('socket.io')(server, {
 })
 
 io.sockets.on('connection', (socket) => {
-
   console.log('A user connected')
-
   socket.on('disconnect', function () {
     console.log('A user disconnected')
   })
 })
 
-const rutaReportes = require('./routes/routes.route.js')(io)
-
 // Initialize routes
 
+const rutaReportes = require('./routes/routes.route.js')(io)
 app.get('/exportar', queue({ activeLimit: 2, queuedLimit: -1 }))
 app.use('/exportar', rutaReportes)
 app.use('/filtros', rutaFiltros)
+// Route to re-start queue
+app.get('/reports/queue/started/:workspaceId', async (req, res) => {
+  res.json({ started: await restartQueueExecution(req.params.workspaceId, req.protocol + '://' + req.headers.host) })
+})
 app.get('/reports/:filename', (req, res) => {
   const file = CARPETA_DESCARGA + `/${req.params.filename}`
   res.download(file)

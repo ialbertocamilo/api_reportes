@@ -1,6 +1,7 @@
 const { extension } = require('../config')
 const GeneratedReport = require('../models/GeneratedReport')
 const axios = require('axios')
+const { Op } = require('sequelize')
 
 /**
  * Check if reports in queue exists or not
@@ -23,8 +24,9 @@ exports.registerInQueue = async (
   reportType, reportName, workspaceId, adminId, filters, filtersDescriptions
 ) => {
   try {
-    // Check if there is other pending report of the same type and
-    // the same filters
+    // Check if there is other pending report
+    // of the same type and the same filters
+
     const pendingReports = await GeneratedReport.findAll({
       where: {
         report_type: reportType,
@@ -58,7 +60,9 @@ exports.registerInQueue = async (
 /**
  * Update report status to ready
  */
-exports.markReportAsReady = async (reportType, downloadPath, workspaceId, adminId, filters) => {
+exports.markReportAsReady = async (
+  reportType, downloadPath, workspaceId, adminId, filters
+) => {
   const reports = await GeneratedReport.findAll({
     where: {
       report_type: reportType,
@@ -77,10 +81,22 @@ exports.markReportAsReady = async (reportType, downloadPath, workspaceId, adminI
   }
 }
 
-exports.startNextReport = async (report, baseUrl) => {
+/**
+ * Perform a request to start a new report
+ * @param report
+ * @param baseUrl
+ * @returns {Promise<void>}
+ */
+const startNextReport = async (report, baseUrl) => {
 
   const filters = JSON.parse(report.filters)
+
+  // Adds skipQueue option, to avoid report to be
+  // added to queue, since is already there
+
   filters.skipQueue = 1
+
+  // Perform request
 
   try {
     await axios({
@@ -92,23 +108,27 @@ exports.startNextReport = async (report, baseUrl) => {
     console.log(ex)
   }
 }
+exports.startNextReport = startNextReport
 
 /**
- * Find next pending report and mark it as processing
+ * Find next pending report and mark it as 'processing'
  * @returns {Promise<null>}
  */
-exports.findNextPendingReport = async () => {
+exports.findNextPendingReport = async (workspaceId) => {
   const reports = await GeneratedReport.findAll({
     order: [
       ['id', 'asc']
     ],
     where: {
+      workspace_id: workspaceId,
       is_ready: false,
       is_processing: false
     }
   })
 
   if (reports[0]) {
+    // Update status of report to 'processing'
+
     reports[0].is_processing = true
     await reports[0].save()
     return reports[0]
@@ -117,6 +137,44 @@ exports.findNextPendingReport = async () => {
   }
 }
 
+/**
+ * Mark pracessing report as pending, and start queue again
+ * @param workspaceId
+ * @param baseUrl
+ * @returns {Promise<boolean>}
+ */
+exports.restartQueueExecution = async (workspaceId, baseUrl) => {
+  // Iterate every 'pending', if
+  // processing, change its status to 'pending'
+
+  const reports = await GeneratedReport.findAll({
+    order: [['id', 'asc']],
+    where: {
+      workspace_id: workspaceId,
+      is_ready: false
+    }
+  })
+
+  for (let i = 0; i < reports.length; i++) {
+    if (reports[i].is_processing) {
+      reports[i].is_processing = false
+      await reports[i].save()
+    }
+  }
+
+  if (reports[0]) {
+    await startNextReport(reports[0], baseUrl)
+    return true
+  } else {
+    return false
+  }
+}
+
+/**
+ * Generate report's name and path
+ * @param createAt
+ * @returns {string}
+ */
 exports.generateReportPath = (createAt) => {
   return 'reports/' + createAt + extension
 }

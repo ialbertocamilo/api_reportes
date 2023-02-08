@@ -16,7 +16,7 @@ module.exports = function (io) {
     res.send({ response: 'Bienvenido a la api Node 3.0.0' })
   })
 
-  //  Reports with responses
+  //  Reports with standard responses
   // ========================================
 
   router.post('/supervisores_notas', handler.supervisores_notas2)
@@ -25,7 +25,7 @@ module.exports = function (io) {
   router.post('/historial_usuario', handler.historialUsuario)
   router.post('/poll-questions', handler.poolQuestions)
 
-  //  Reports with push notifications
+  //  Reports with queues and push notifications
   // ========================================
 
   router.post('/:reportType', async ({ body, params, headers, protocol }, res) => {
@@ -54,7 +54,7 @@ module.exports = function (io) {
       children.on('message', async (result) => {
         await markReportAsReady(
           reportType,
-          result.alert ? '' : result.ruta_descarga,
+          result.ruta_descarga ? result.ruta_descarga : '',
           body.workspaceId,
           body.adminId,
           body
@@ -80,15 +80,16 @@ module.exports = function (io) {
         })
 
         // Start the next report
-        const nextReport = await findNextPendingReport()
+
+        const nextReport = await findNextPendingReport(body.workspaceId)
         if (nextReport) {
           io.sockets.emit('report-started', {
             report: nextReport,
             adminId: body.adminId
           })
           // Start a requet to process
-          const baseUrl = protocol + '://' + headers.host
-          startNextReport(nextReport, baseUrl)
+
+          startNextReport(nextReport, protocol + '://' + headers.host)
         }
 
         children.kill()
