@@ -35,6 +35,7 @@ module.exports = {
 
   async cargarAdmins(workspaceId) {
     const adminRoleId = 3
+    const typeCursalabId = 4556
     const [rows] = await con.raw(`
         select
           u.id, u.name
@@ -42,10 +43,11 @@ module.exports = {
             users u inner join assigned_roles ar on ar.entity_id = u.id
         where
             ar.role_id = :adminRoleId and
+            u.type_id <> :typeCursalabId and
             u.active = 1 and
             ar.scope = :workspaceId
       `,
-      { workspaceId, adminRoleId })
+      { workspaceId,typeCursalabId ,adminRoleId })
     return rows
   },
 
