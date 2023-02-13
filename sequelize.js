@@ -6,7 +6,8 @@ const sequelize = new Sequelize(config.DATABASE, config.USER, config.PASSWORD, {
   dialect: 'mysql',
   port: config.DB_PORT,
   logging: false,
-  timezone: '-05:00'
+  timezone: '-05:00',
+  useUTC: false
 })
 
 module.exports = sequelize
