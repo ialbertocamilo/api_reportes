@@ -1,5 +1,7 @@
 const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
+const { pluck } = require('../helper/Helper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
 const knex = require('../db').con
 module.exports = {
   async datosIniciales(workspaceId) {
@@ -135,7 +137,7 @@ module.exports = {
     return rows
   },
   /**
-   * Load workspace's courses
+   * Load workspace's schools
    * @param workspaceId
    * @returns {Promise<*>}
    */
@@ -146,6 +148,26 @@ module.exports = {
       from schools s inner join school_workspace sw on s.id = sw.school_id
       where sw.workspace_id = :workspaceId and s.active = 1
     `, { workspaceId }
+    )
+    return rows
+  },
+  /**
+   * Load subworkspace's courses
+   * @param workspaceId
+   * @returns {Promise<*>}
+   */
+  async loadsubworkspaceSchools (workspaceId) {
+    const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+
+    const [rows] = await con.raw(`
+      select
+        s.*
+      from 
+          schools s 
+              inner join 
+              school_subworkspace sw on s.id = sw.school_id
+      where sw.subworkspace_id in (${subworkspacesIds.join()}) and s.active = 1
+    `, { }
     )
     return rows
   },
@@ -205,6 +227,28 @@ module.exports = {
     `, { workspaceId });
 
     return rows;
+  },
+  async loadSchoolsStatesBySubworkspaceId (data) {
+    const { workspaceId, active, inactive } = data
+
+    const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+
+    const SqlState = (active && inactive)
+      ? ''
+      : `and s.active = ${active ? 1 : 0}`
+
+    const [rows] = await con.raw(`
+      select
+        s.*
+      from schools as s 
+      inner join school_subworkspace as sw
+        on s.id = sw.school_id
+      where 
+        sw.subworkspace_id in (${subworkspacesIds.join(',')}) 
+        ${SqlState}
+    `, { })
+
+    return rows
   },
   async loadSchoolCoursesStatesById (data) {
     const { schoolIds, active, inactive } = data;

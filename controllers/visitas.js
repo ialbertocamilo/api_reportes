@@ -163,6 +163,8 @@ async function loadUsersWithVisits (
   start, end
 ) {
 
+  const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+
   // Base query
   let queryCondition = '';
   const MergeState = [...careers, ...areas].length > 0;
@@ -182,10 +184,12 @@ async function loadUsersWithVisits (
     const InitialUsersIds = pluck(InitialUsers, 'id');
     if(!InitialUsersIds.length) return []; 
 
-    queryCondition += ` where u.id in (${InitialUsersIds.join()}) and sw.workspace_id = ${workspaceId} `
+    queryCondition += ` 
+      where u.id in (${InitialUsersIds.join()}) and
+        sw.subworkspace_id in (${subworkspacesIds.join()}) `
 
   } else {
-    queryCondition += ` where u.subworkspace_id in (${modulesIds.join()}) and sw.workspace_id = ${workspaceId} `
+    queryCondition += ` where u.subworkspace_id in (${modulesIds.join()}) and sw.subworkspace_id in (${subworkspacesIds.join()})`
     queryCondition = addActiveUsersCondition(queryCondition, activeUsers, inactiveUsers, true);
   }
 
@@ -213,7 +217,7 @@ async function loadUsersWithVisits (
            cs.course_id = c.id
         inner join schools s on
            s.id = cs.school_id
-        inner join school_workspace sw on
+        inner join school_subworkspace sw on
            sw.school_id = s.id
 
         ${queryCondition} `
@@ -279,10 +283,10 @@ async function getSchoolsWorkspace(workspaceId) {
     s.id,
     s.name school_name
   FROM schools s 
-  INNER JOIN school_workspace sw ON
+  INNER JOIN school_subworkspace sw ON
      sw.school_id = s.id
   WHERE
-     sw.workspace_id = ${workspaceId}
+     sw.subworkspace_id = ${workspaceId}
   ORDER BY s.id`;
 
   const [ rows ] = await con.raw(query);
@@ -303,7 +307,8 @@ async function getSchoolsWorkspace(workspaceId) {
 }
 
 
-async function getCoursesWorkspace(workspaceId) {
+async function getCoursesWorkspace (workspaceId) {
+  const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
 
   const query = `
   SELECT
@@ -317,10 +322,10 @@ async function getCoursesWorkspace(workspaceId) {
      tx.id = c.type_id
   INNER JOIN schools s ON
      s.id = cs.school_id
-  INNER JOIN school_workspace sw ON
+  INNER JOIN school_subworkspace sw ON
      sw.school_id = s.id
   WHERE
-     sw.workspace_id = ${workspaceId}
+     sw.subworkspace_id in (${subworkspacesIds.join()})
   ORDER BY c.id`;
 
   const [ rows ] = await con.raw(query);
@@ -352,10 +357,10 @@ async function getTopicsWorkspace(workspaceId) {
      cs.course_id = c.id
   INNER JOIN schools s ON
      s.id = cs.school_id
-  INNER JOIN school_workspace sw ON
+  INNER JOIN school_subworkspace sw ON
      sw.school_id = s.id
   WHERE
-     sw.workspace_id = ${workspaceId}
+     sw.subworkspace_id = ${workspaceId}
   ORDER BY t.id`;
 
   const [ rows ] = await con.raw(query);
