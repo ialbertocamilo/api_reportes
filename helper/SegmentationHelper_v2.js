@@ -9,6 +9,7 @@ const {
   logtime,
   pluck,
 } = require("./Helper");
+const { getSuboworkspacesIds } = require('./Workspace')
 
 const StackBuildQuery = {
   // sides: relacion ('inner','left','right','cross')
@@ -667,6 +668,8 @@ exports.loadCoursesV2 = async (
   workspaceId,
   deleted_at = true) => {
 
+  let subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+
   let query = `
     select  
     
@@ -684,14 +687,15 @@ exports.loadCoursesV2 = async (
         on s.id = cs.school_id
       inner join taxonomies as tx
         on tx.id = c.type_id 
-      inner join school_workspace as sw
+      inner join school_subworkspace as sw
         on sw.school_id = s.id
       inner join topics as t
           on t.course_id = c.id
     
     where  
-      sw.workspace_id = ${workspaceId}  
-  `; 
+      sw.subworkspace_id in (${subworkspacesIds.join()})
+  `
+
   if(deleted_at) query += ` and c.deleted_at is null `; // mms para eliminado
 
   // posible filtro en estado de curso

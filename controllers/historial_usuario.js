@@ -32,7 +32,9 @@ async function historialUsuario ({ document, type, page, schoolId, search, works
 
   // Load subworkspaces ids
 
-  const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+  const subworkspacesIds = (workspaceId)
+    ? await getSuboworkspacesIds(workspaceId)
+    : []
 
   // Load user's history from database
 
