@@ -1,4 +1,4 @@
-const { Model, DataTypes: { STRING, BOOLEAN, BIGINT } } = require('sequelize')
+const { Model, DataTypes: { STRING, BOOLEAN, BIGINT, DATE } } = require('sequelize')
 const sequelize = require('../sequelize.js')
 const Workspace = require('./Workspace')
 const User = require('./Usuario')
@@ -16,14 +16,14 @@ GeneratedReport.init({
   workspace_id: BIGINT,
   admin_id: BIGINT,
   is_ready: BOOLEAN,
-  is_processing: BOOLEAN
+  is_processing: BOOLEAN,
+  created_at: DATE,
+  updated_at: DATE
 }, {
   sequelize,
+  timestamps: false,
   modelName: 'generated_report',
-  tableName: 'generated_reports',
-
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
+  tableName: 'generated_reports'
 })
 
 GeneratedReport.belongsTo(Workspace, {

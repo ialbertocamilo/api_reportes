@@ -2,17 +2,23 @@ const { extension } = require('../config')
 const GeneratedReport = require('../models/GeneratedReport')
 const axios = require('axios')
 const { Op } = require('sequelize')
+const moment = require('moment-timezone')
 
 /**
  * Check if reports in queue exists or not
  */
 exports.isServerAvailable = async (workspaceId, adminId) => {
-  const pendingReports = await GeneratedReport.findAll({
-    where: {
-      workspace_id: workspaceId,
-      is_ready: false
-    }
-  })
+  let pendingReports = []
+  try {
+    pendingReports = await GeneratedReport.findAll({
+      where: {
+        workspace_id: workspaceId,
+        is_ready: false
+      }
+    })
+  } catch (ex) {
+    console.log(ex)
+  }
 
   return pendingReports.length === 0
 }
@@ -49,7 +55,8 @@ exports.registerInQueue = async (
         admin_id: adminId,
         filters: JSON.stringify(filters),
         filters_descriptions: JSON.stringify(filtersDescriptions),
-        is_ready: false
+        is_ready: false,
+        created_at: moment(new Date()).tz('America/Lima')
       })
     }
   } catch (ex) {
