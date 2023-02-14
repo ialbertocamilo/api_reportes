@@ -56,7 +56,7 @@ exports.registerInQueue = async (
         filters: JSON.stringify(filters),
         filters_descriptions: JSON.stringify(filtersDescriptions),
         is_ready: false,
-        created_at: moment(new Date()).tz('Africa/Lagos').format('YYYY-MM-DD HH:mm:ss')
+        created_at: moment(new Date()).tz('America/Lima').format('YYYY-MM-DD HH:mm:ss')
       })
     }
   } catch (ex) {
