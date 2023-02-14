@@ -77,13 +77,3 @@ app.get('/reports/:filename', (req, res) => {
   const file = CARPETA_DESCARGA + `/${req.params.filename}`
   res.download(file)
 })
-
-app.get('/', (req, res) => {
-  const format = 'MMM DD YYYY hh:mm:ss'
-  res.send({
-    original: new Date(),
-    originalWithMoment: moment(new Date()).format(format),
-    lima: moment.tz(new Date(), 'America/Lima').format(format),
-    africa: moment(new Date()).tz('Africa/Lagos').format(format)
-  })
-})
