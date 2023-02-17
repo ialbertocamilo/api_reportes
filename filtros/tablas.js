@@ -161,7 +161,8 @@ module.exports = {
 
     const [rows] = await con.raw(`
       select
-        s.*
+        s.*,
+        sw.subworkspace_id
       from 
           schools s 
               inner join 
@@ -239,10 +240,10 @@ module.exports = {
 
     const [rows] = await con.raw(`
       select
-        s.*
-      from schools as s 
-      inner join school_subworkspace as sw
-        on s.id = sw.school_id
+        s.*,
+        sw.subworkspace_id
+      from schools s 
+        inner join school_subworkspace sw on s.id = sw.school_id
       where 
         sw.subworkspace_id in (${subworkspacesIds.join(',')}) 
         ${SqlState}
