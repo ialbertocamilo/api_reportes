@@ -167,16 +167,6 @@ module.exports = {
       children.kill()
     })
   },
-  // * Ranking
-  ranking({ body }, res) {
-    const children = fork('./controllers/ranking.js')
-    children.send(body)
-
-    children.on('message', (data) => {
-      res.send(data)
-      children.kill()
-    })
-  },
   // * User uploads
   userUploads({ body }, res) {
     const children = fork('./controllers/user_uploads.js')

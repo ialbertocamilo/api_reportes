@@ -25,7 +25,7 @@ const headers = [
 ]
 
 async function ranking({
-  workspaceId, modulos, UsuariosActivos, UsuariosInactivos, areas, sedes
+  workspaceId, adminId, modulos, UsuariosActivos, UsuariosInactivos, areas, sedes
 }) {
   // Generate Excel file header
 
@@ -90,8 +90,9 @@ async function ranking({
   }
 
   if (worksheet._rowZero > 1) {
+
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'Ranking' }))
+      process.send(response({ createAt, modulo: '' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })
