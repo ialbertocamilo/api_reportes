@@ -193,6 +193,14 @@ module.exports = {
       children.kill()
     })
   },
+  supervisores_notas_temas({ body }, res) {
+    const children = fork('./controllers/supervisores_notas_temas.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   supervisores_avance_curricula({ body }, res) {
     const children = fork('./controllers/supervisores_avance_curricula.js')
     children.send(body)

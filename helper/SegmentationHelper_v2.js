@@ -9,6 +9,7 @@ const {
   logtime,
   pluck,
 } = require("./Helper");
+const { getSuboworkspacesIds } = require('./Workspace')
 
 const StackBuildQuery = {
   // sides: relacion ('inner','left','right','cross')
@@ -318,20 +319,25 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
   start_date = null,
   end_date = null,
-  
+
   activeUsers = false,
   inactiveUsers = false,
 
   activeTopics = false,
   inactiveTopics = false,
 
-  completed
+  completed,
+  StacksUsersIds = []
 ) => {
 	logtime('start: user ids segmentation');
 	// === extraer ids de usuarios segmentados ===
-   const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules, 
-                                                     areas, activeUsers, inactiveUsers);
-   const StacksUsersIds = pluck(LoadUsersData, 'id');
+
+  if (!StacksUsersIds.length) {
+    const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules,
+      areas, activeUsers, inactiveUsers);
+    StacksUsersIds = pluck(LoadUsersData, 'id');
+  }
+
   	// === extraer ids de usuarios segmentados ===
 	logtime('end: user ids segmentation');
   
@@ -667,6 +673,8 @@ exports.loadCoursesV2 = async (
   workspaceId,
   deleted_at = true) => {
 
+  const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+
   let query = `
     select  
     
@@ -684,14 +692,14 @@ exports.loadCoursesV2 = async (
         on s.id = cs.school_id
       inner join taxonomies as tx
         on tx.id = c.type_id 
-      inner join school_workspace as sw
+      inner join school_subworkspace as sw
         on sw.school_id = s.id
       inner join topics as t
           on t.course_id = c.id
     
     where  
-      sw.workspace_id = ${workspaceId}  
-  `; 
+      sw.subworkspace_id in( ${subworkspacesIds.join()} )  
+  `
   if(deleted_at) query += ` and c.deleted_at is null `; // mms para eliminado
 
   // posible filtro en estado de curso
