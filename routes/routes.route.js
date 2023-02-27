@@ -9,6 +9,7 @@ const {
   startNextReport, findNextPendingReport
 } = require('../helper/Queue')
 const { fork } = require('child_process')
+const { reportErrorInSlackError } = require('../helper/Slack')
 
 module.exports = function (io) {
   router.get('/', async (req, res) => {
@@ -48,51 +49,25 @@ module.exports = function (io) {
 
     if (isAvailable) {
       // Process report
-
       const children = fork(getReportFilePath(reportType))
+
+      // When report execution has failed, report error on Slack
+      children.on('exit', async (code) => {
+        if (code === 0) {
+          reportErrorInSlackError(`
+            Error in report execution
+            WorkspaceId: ${body.workspaceId}
+            Report type: ${reportType}
+            File: ${getReportFilePath(reportType)}
+          `)
+
+          await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null)
+        }
+      })
+
       children.send(body)
       children.on('message', async (result) => {
-        await markReportAsReady(
-          reportType,
-          result.ruta_descarga ? result.ruta_descarga : '',
-          body.workspaceId,
-          body.adminId,
-          body
-        )
-
-        // Broadcast event to frontend
-
-        let message
-        let success = false
-        if (result.ruta_descarga) {
-          message = `Tu reporte "${reportName}" se encuentra listo.`
-          success = true
-        } else {
-          message = `No se encontraron resultados para tu reporte "${reportName}".`
-          success = false
-        }
-        io.sockets.emit('report-finished', {
-          adminId: body.adminId,
-          success,
-          message,
-          name: reportName,
-          url: result.ruta_descarga
-        })
-
-        // Start the next report
-
-        const nextReport = await findNextPendingReport(body.workspaceId)
-        if (nextReport) {
-          io.sockets.emit('report-started', {
-            report: nextReport,
-            adminId: body.adminId
-          })
-          // Start a requet to process
-
-          startNextReport(nextReport, protocol + '://' + headers.host)
-        }
-
-        children.kill()
+        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, result)
       })
 
       res.json({ result: 'response will be sent over IO' })
@@ -102,6 +77,55 @@ module.exports = function (io) {
   })
 
   return router
+}
+
+/**
+ * Mark report as ready, broacast result and start next report
+ * @returns {Promise<void>}
+ */
+const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result) => {
+
+  const rutaDescarga = result ? result.ruta_descarga : ''
+
+  await markReportAsReady(
+    reportType,
+    rutaDescarga || '',
+    body.workspaceId,
+    body.adminId,
+    body
+  )
+
+  // Broadcast event to frontend
+
+  let message = `No se encontraron resultados para tu reporte "${reportName}".`
+  let success = false
+  if (rutaDescarga) {
+    message = `Tu reporte "${reportName}" se encuentra listo.`
+    success = true
+  }
+
+  io.sockets.emit('report-finished', {
+    adminId: body.adminId,
+    success,
+    message,
+    name: reportName,
+    url: rutaDescarga || null
+  })
+
+  // Start the next report
+
+  const nextReport = await findNextPendingReport(body.workspaceId)
+  if (nextReport) {
+    io.sockets.emit('report-started', {
+      report: nextReport,
+      adminId: body.adminId
+    })
+    // Start a requet to process
+
+    startNextReport(nextReport, protocol + '://' + headers.host)
+  }
+
+  children.kill()
 }
 
 /**
