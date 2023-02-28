@@ -68,7 +68,7 @@ exports.registerInQueue = async (
  * Update report status to ready
  */
 exports.markReportAsReady = async (
-  reportType, downloadPath, workspaceId, adminId, filters
+  reportType, downloadPath, workspaceId, adminId, filters, failed = false
 ) => {
   const reports = await GeneratedReport.findAll({
     where: {
@@ -83,6 +83,7 @@ exports.markReportAsReady = async (
   if (reports[0]) {
     reports[0].is_ready = 1
     reports[0].is_processing = 0
+    reports[0].failed = failed ? 1 : 0
     reports[0].download_url = downloadPath
     await reports[0].save()
   }

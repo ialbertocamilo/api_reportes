@@ -17,6 +17,7 @@ GeneratedReport.init({
   admin_id: BIGINT,
   is_ready: BOOLEAN,
   is_processing: BOOLEAN,
+  failed: BOOLEAN,
   created_at: DATE,
   updated_at: DATE
 }, {

@@ -56,22 +56,22 @@ module.exports = function (io) {
 
       // Print child process' error log and report error to Slack
       children.stderr.on('data', async (data) => {
-        reportErrorInSlackError(`
-            Error in report execution
-            WorkspaceId: ${body.workspaceId}
-            Report type: ${reportType}
-            File: ${getReportFilePath(reportType)}
-          `)
+
         // When report execution has finished, notify user
-        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null)
+        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null, true)
 
         // Print error log
         console.log(data.toString())
       })
 
       children.on('message', async (result) => {
+        const hasError = !!result.error
         // When report execution has finished, notify user
-        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, result)
+        await reportFinishedHandler(
+          protocol, headers, children, io, reportType, reportName, body,
+          hasError ? null : result,
+          hasError
+        )
       })
 
       // Send request values to child process to execute report
@@ -88,10 +88,10 @@ module.exports = function (io) {
 }
 
 /**
- * Mark report as ready, broacast result and start next report
+ * Mark report as ready, broadcast result and start next report
  * @returns {Promise<void>}
  */
-const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result) => {
+const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed) => {
 
   const rutaDescarga = result ? result.ruta_descarga : ''
 
@@ -100,8 +100,18 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     rutaDescarga || '',
     body.workspaceId,
     body.adminId,
-    body
+    body,
+    failed
   )
+
+  if (failed) {
+    await reportErrorInSlackError(`
+      Error in report execution
+      WorkspaceId: ${body.workspaceId}
+      Report type: ${reportType}
+      File: ${getReportFilePath(reportType)}
+    `)
+  }
 
   // Broadcast event to frontend
 
@@ -128,7 +138,7 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
       report: nextReport,
       adminId: body.adminId
     })
-    // Start a requet to process
+    // Submit a request to start report
 
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
