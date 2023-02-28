@@ -48,27 +48,35 @@ module.exports = function (io) {
     }
 
     if (isAvailable) {
-      // Process report
-      const children = fork(getReportFilePath(reportType))
+      // Execute report in a child process
+      const children = fork(getReportFilePath(reportType), { silent: true })
 
-      // When report execution has failed, report error on Slack
-      children.on('exit', async (code) => {
-        if (code === 0) {
-          reportErrorInSlackError(`
+      // Print child process' console logs
+      children.stdout.on('data', data => console.log(data.toString()))
+
+      // Print child process' error log and report error to Slack
+      children.stderr.on('data', async (data) => {
+        reportErrorInSlackError(`
             Error in report execution
             WorkspaceId: ${body.workspaceId}
             Report type: ${reportType}
             File: ${getReportFilePath(reportType)}
           `)
+        // When report execution has finished, notify user
+        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null)
 
-          await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null)
-        }
+        // Print error log
+        console.log(data.toString())
       })
 
-      children.send(body)
       children.on('message', async (result) => {
+        // When report execution has finished, notify user
         await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, result)
       })
+
+      // Send request values to child process to execute report
+
+      children.send(body)
 
       res.json({ result: 'response will be sent over IO' })
     } else {
