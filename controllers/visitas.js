@@ -98,7 +98,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
 
       // lastLogin user
       const lastLogin = moment(last_login).format('DD/MM/YYYY H:mm:ss');
-      const SaveLastLoginUser = (lastLogin !== 'Invalid date') ? lastLogin : '-';
+      SaveLastLoginUser = (lastLogin !== 'Invalid date') ? lastLogin : '-';
       cellRow.push(SaveLastLoginUser);
 
     }
