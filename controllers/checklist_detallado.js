@@ -22,7 +22,9 @@ const headers = [
   'Tipo Curso',
   'Checklist',
   'Cumplimiento del Checklist',
- // 'Estado de entrenador de usuario'
+  'Actividad',
+  'A quien califica',
+  'Estado'
 ]
 
 async function generateReport ({
@@ -65,6 +67,13 @@ async function generateReport ({
 
   await createHeaders(headersEstaticos.concat(headers))
 
+  // Load qualifiers from taxonomies
+
+  const [checklistTypesTaxonomies] = await con.raw(`
+    select id, name 
+    from taxonomies 
+    where \`group\` = 'checklist' and \`type\` = 'type'`)
+
   // Add data to Excel rows
 
   for (const user of users) {
@@ -96,6 +105,10 @@ async function generateReport ({
     cellRow.push(user.course_type)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
+    cellRow.push(user.activity)
+    cellRow.push(getChecklistTypeName(user.checklist_item_type, checklistTypesTaxonomies))
+    cellRow.push(user.qualification)
+
     // cellRow.push(user.assigned_checklists)
     // cellRow.push(user.completed_checklists)
 
@@ -136,7 +149,12 @@ async function loadUsersCheckists (
           tx.name as course_type,
           checklists.title checklists_title,
           count(ca.checklist_id) assigned_checklists,
-          sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
+          sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists,
+          
+          cli.activity,
+          cli.type_id checklist_item_type,
+          cai.qualification,
+          ca.id checklist_answers_id
           
       from
           checklist_answers ca
@@ -147,6 +165,7 @@ async function loadUsersCheckists (
               inner join checklist_relationships cr on cr.checklist_id = ca.checklist_id
               inner join courses c on c.id = cr.course_id
               inner join taxonomies tx on tx.id = c.type_id
+              left join checklist_items cli on checklists.id = cli.checklist_id 
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
   //a checklist could be associated with one or more courses
@@ -241,4 +260,9 @@ function filterUserActivities (activitiesHeaders, checklistActivities, userId) {
   })
 
   return values
+}
+
+function getChecklistTypeName (id, checklistTypesTaxonomies) {
+  const type = checklistTypesTaxonomies.find(tx => tx.id === id)
+  return type ? type.name : null
 }
