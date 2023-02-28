@@ -66,7 +66,7 @@ io.sockets.on('connection', (socket) => {
 // Initialize routes
 
 const rutaReportes = require('./routes/routes.route.js')(io)
-app.get('/exportar', queue({ activeLimit: 2, queuedLimit: -1 }))
+//app.get('/exportar', queue({ activeLimit: 2, queuedLimit: -1 }))
 app.use('/exportar', rutaReportes)
 app.use('/filtros', rutaFiltros)
 // Route to re-start queue
