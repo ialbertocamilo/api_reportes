@@ -56,7 +56,7 @@ exports.registerInQueue = async (
         filters: JSON.stringify(filters),
         filters_descriptions: JSON.stringify(filtersDescriptions),
         is_ready: false,
-        created_at: moment(new Date()).tz('America/Lima').format('YYYY-MM-DD HH:mm:ss')
+        created_at: getCurrentStringDate()
       })
     }
   } catch (ex) {
@@ -85,6 +85,7 @@ exports.markReportAsReady = async (
     reports[0].is_processing = 0
     reports[0].failed = failed ? 1 : 0
     reports[0].download_url = downloadPath
+    reports[0].updated_at = getCurrentStringDate()
     await reports[0].save()
   }
 }
@@ -122,7 +123,7 @@ exports.startNextReport = startNextReport
  * Find next pending report and mark it as 'processing'
  * @returns {Promise<null>}
  */
-exports.findNextPendingReport = async (workspaceId) => {
+const findNextPendingReport = async (workspaceId) => {
   const reports = await GeneratedReport.findAll({
     order: [
       ['id', 'asc']
@@ -138,20 +139,20 @@ exports.findNextPendingReport = async (workspaceId) => {
     // Update status of report to 'processing'
 
     reports[0].is_processing = true
+    reports[0].updated_at = getCurrentStringDate()
     await reports[0].save()
     return reports[0]
   } else {
     return null
   }
 }
+exports.findNextPendingReport = findNextPendingReport
 
 /**
  * Mark pracessing report as pending, and start queue again
- * @param workspaceId
- * @param baseUrl
  * @returns {Promise<boolean>}
  */
-exports.restartQueueExecution = async (workspaceId, baseUrl) => {
+exports.restartQueueExecution = async (io, adminId, workspaceId, baseUrl) => {
   // Iterate every 'pending', if
   // processing, change its status to 'pending'
 
@@ -163,21 +164,20 @@ exports.restartQueueExecution = async (workspaceId, baseUrl) => {
     }
   })
 
-  // Set the first report to processing
-
   for (let i = 0; i < reports.length; i++) {
-    if (i === 0) {
-      reports[i].is_processing = true
-    } else if (reports[i].is_processing) {
+    if (reports[i].is_processing) {
       reports[i].is_processing = false
+      await reports[i].save()
     }
-
-    reports[i].download_url = null
-    await reports[i].save()
   }
 
-  if (reports[0]) {
-    await startNextReport(reports[0], baseUrl)
+  const pendingReport = await findNextPendingReport(workspaceId)
+  if (pendingReport) {
+    io.sockets.emit('report-started', {
+      report: pendingReport,
+      adminId: adminId
+    })
+    await startNextReport(pendingReport, baseUrl)
     return true
   } else {
     return false
@@ -192,3 +192,9 @@ exports.restartQueueExecution = async (workspaceId, baseUrl) => {
 exports.generateReportPath = (createAt) => {
   return 'reports/' + createAt + extension
 }
+
+const getCurrentStringDate = () => {
+  return moment(new Date()).tz('America/Lima').format('YYYY-MM-DD HH:mm:ss')
+}
+
+exports.getCurrentStringDate = getCurrentStringDate
