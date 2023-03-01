@@ -122,6 +122,7 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     success = true
   }
 
+  console.log('Notify user: report-finished')
   io.sockets.emit('report-finished', {
     adminId: body.adminId,
     success,

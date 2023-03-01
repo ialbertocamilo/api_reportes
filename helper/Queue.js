@@ -163,11 +163,17 @@ exports.restartQueueExecution = async (workspaceId, baseUrl) => {
     }
   })
 
+  // Set the first report to processing
+
   for (let i = 0; i < reports.length; i++) {
-    if (reports[i].is_processing) {
+    if (i === 0) {
+      reports[i].is_processing = true
+    } else if (reports[i].is_processing) {
       reports[i].is_processing = false
-      await reports[i].save()
     }
+
+    reports[i].download_url = null
+    await reports[i].save()
   }
 
   if (reports[0]) {
