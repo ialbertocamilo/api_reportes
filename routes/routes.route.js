@@ -29,7 +29,8 @@ module.exports = function (io) {
   //  Reports with queues and push notifications
   // ========================================
 
-  router.post('/:reportType', async ({ body, params, headers, protocol }, res) => {
+  router.post('/:reportType', async ({ body, params, headers }, res) => {
+    const protocol = process.env.IS_LOCALHOST == 1 ? 'http' : 'https'
     const reportType = params.reportType
     const reportName = body.reportName || reportType
     const filtersDescriptions = body.filtersDescriptions

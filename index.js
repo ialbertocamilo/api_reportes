@@ -71,7 +71,8 @@ app.use('/exportar', rutaReportes)
 app.use('/filtros', rutaFiltros)
 // Route to re-start queue
 app.post('/reports/queue/started/:workspaceId', async (req, res) => {
-  res.json({ started: await restartQueueExecution(io, req.body.adminId, req.params.workspaceId, req.protocol + '://' + req.headers.host) })
+  const protocol = process.env.IS_LOCALHOST == 1 ? 'http' : 'https'
+  res.json({ started: await restartQueueExecution(io, req.body.adminId, req.params.workspaceId, protocol + '://' + req.headers.host) })
 })
 app.get('/reports/:filename', (req, res) => {
   const file = CARPETA_DESCARGA + `/${req.params.filename}`
