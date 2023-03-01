@@ -29,7 +29,8 @@ module.exports = function (io) {
   //  Reports with queues and push notifications
   // ========================================
 
-  router.post('/:reportType', async ({ body, params, headers, protocol }, res) => {
+  router.post('/:reportType', async ({ body, params, headers }, res) => {
+    const protocol = process.env.IS_LOCALHOST == 1 ? 'http' : 'https'
     const reportType = params.reportType
     const reportName = body.reportName || reportType
     const filtersDescriptions = body.filtersDescriptions
@@ -48,27 +49,35 @@ module.exports = function (io) {
     }
 
     if (isAvailable) {
-      // Process report
-      const children = fork(getReportFilePath(reportType))
+      // Execute report in a child process
+      const children = fork(getReportFilePath(reportType), { silent: true })
 
-      // When report execution has failed, report error on Slack
-      children.on('exit', async (code) => {
-        if (code === 0) {
-          reportErrorInSlackError(`
-            Error in report execution
-            WorkspaceId: ${body.workspaceId}
-            Report type: ${reportType}
-            File: ${getReportFilePath(reportType)}
-          `)
+      // Print child process' console logs
+      children.stdout.on('data', data => console.log(data.toString()))
 
-          await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null)
-        }
+      // Print child process' error log and report error to Slack
+      children.stderr.on('data', async (data) => {
+
+        // When report execution has finished, notify user
+        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null, true)
+
+        // Print error log
+        console.log(data.toString())
       })
+
+      children.on('message', async (result) => {
+        const hasError = !!result.error
+        // When report execution has finished, notify user
+        await reportFinishedHandler(
+          protocol, headers, children, io, reportType, reportName, body,
+          hasError ? null : result,
+          hasError
+        )
+      })
+
+      // Send request values to child process to execute report
 
       children.send(body)
-      children.on('message', async (result) => {
-        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, result)
-      })
 
       res.json({ result: 'response will be sent over IO' })
     } else {
@@ -80,10 +89,10 @@ module.exports = function (io) {
 }
 
 /**
- * Mark report as ready, broacast result and start next report
+ * Mark report as ready, broadcast result and start next report
  * @returns {Promise<void>}
  */
-const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result) => {
+const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed) => {
 
   const rutaDescarga = result ? result.ruta_descarga : ''
 
@@ -92,8 +101,18 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     rutaDescarga || '',
     body.workspaceId,
     body.adminId,
-    body
+    body,
+    failed
   )
+
+  if (failed) {
+    await reportErrorInSlackError(`
+      Error in report execution
+      WorkspaceId: ${body.workspaceId}
+      Report type: ${reportType}
+      File: ${getReportFilePath(reportType)}
+    `)
+  }
 
   // Broadcast event to frontend
 
@@ -104,6 +123,7 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     success = true
   }
 
+  console.log('Notify user: report-finished')
   io.sockets.emit('report-finished', {
     adminId: body.adminId,
     success,
@@ -120,7 +140,7 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
       report: nextReport,
       adminId: body.adminId
     })
-    // Start a requet to process
+    // Submit a request to start report
 
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
