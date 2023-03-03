@@ -10,7 +10,7 @@ const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck, logtime, groupArrayOfObjects } = require('../helper/Helper')
+const { pluck, logtime, groupArrayOfObjects, formatDatetimeToString } = require('../helper/Helper')
 const {
   getUsersNullAndNotNull,
   getUserCriterionValues2,
@@ -290,7 +290,8 @@ async function exportarUsuariosDW({
 
       cellRow.push(user.topic_views || '-')
       cellRow.push(user.minimum_grade || '-')
-      cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
+
+      cellRow.push(formatDatetimeToString(user.topic_last_time_evaluated_at))
 
       cellRow.push(user.compatible || `-`);
 
@@ -301,9 +302,11 @@ async function exportarUsuariosDW({
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
-      process.send(response({ createAt, modulo: 'ConsolidadoCompatibleTemas' }))
+      process.send(response({ createAt, modulo: 'Reporte de Notas' }))
     })
   } else {
     process.send({ alert: 'No se encontraron resultados' })
   }
 }
+
+
