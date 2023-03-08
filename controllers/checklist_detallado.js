@@ -7,7 +7,7 @@ const { worksheet, workbook, createAt, createHeaders } = require('../exceljs')
 const { response } = require('../response')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck, pluckUnique, logtime } = require('../helper/Helper')
+const { pluck, pluckUnique, logtime, formatDatetimeToString } = require('../helper/Helper')
 const {
   getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
 } = require('../helper/Usuarios')
@@ -24,7 +24,8 @@ const headers = [
   'Cumplimiento del Checklist',
   'Actividad',
   'A quien califica',
-  'Estado'
+  'Estado',
+  'Fecha y hora'
 ]
 
 async function generateReport ({
@@ -32,7 +33,7 @@ async function generateReport ({
   UsuariosActivos, UsuariosInactivos, start, end, areas
 }) {
   // Generate Excel file header
- 
+
   const headersEstaticos = await getGenericHeaders(workspaceId)
 
   // Load workspace criteria
@@ -59,9 +60,9 @@ async function generateReport ({
 
   // Load checklist activities
 
-  const checklistActivities = await loadChecklistActivities(checklist)
-  const activitiesHeaders = pluckUnique(checklistActivities, 'activity')
-  activitiesHeaders.forEach(h => headers.push(h))
+  // const checklistActivities = await loadChecklistActivities(checklist)
+  // const activitiesHeaders = pluckUnique(checklistActivities, 'activity')
+  // activitiesHeaders.forEach(h => headers.push(h))
 
   // Add headers
 
@@ -108,6 +109,7 @@ async function generateReport ({
     cellRow.push(user.activity)
     cellRow.push(getChecklistTypeName(user.checklist_item_type, checklistTypesTaxonomies))
     cellRow.push(user.qualification)
+    cellRow.push(formatDatetimeToString(user.checklist_answer_created_at))
 
     // cellRow.push(user.assigned_checklists)
     // cellRow.push(user.completed_checklists)
@@ -154,8 +156,8 @@ async function loadUsersCheckists (
           cli.activity,
           cli.type_id checklist_item_type,
           cai.qualification,
-          ca.id checklist_answers_id
-          
+          ca.id checklist_answers_id,
+          ca.updated_at checklist_answer_created_at
       from
           checklist_answers ca
               inner join checklists on ca.checklist_id = checklists.id
@@ -174,8 +176,8 @@ async function loadUsersCheckists (
           u.subworkspace_id in (${modulos.join()}) and
           ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
           `
-    // ca.school_id in (${schoolId}) and 
-    // cr.course_id in (${courseId}) and
+  // ca.school_id in (${schoolId}) and
+  // cr.course_id in (${courseId}) and
 
   if (areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
@@ -243,7 +245,7 @@ async function loadChecklistActivities (checklistId) {
   // Execute query
 
   // logtime(query);
-  
+
   const [rows] = await con.raw(query, { checklistId })
   return rows
 }
