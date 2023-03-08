@@ -113,10 +113,10 @@ async function generateReport ({
     // cellRow.push(user.completed_checklists)
 
     // Add activities values
-    const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
-    userActivitiesValues.forEach(values => {
-      cellRow.push(values)
-    })
+    // const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
+    // userActivitiesValues.forEach(values => {
+    //   cellRow.push(values)
+    // })
 
     worksheet.addRow(cellRow).commit()
   }
