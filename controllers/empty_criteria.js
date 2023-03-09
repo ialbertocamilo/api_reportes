@@ -6,30 +6,40 @@ const { createHeaders, worksheet, workbook, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { loadWorkspaceSegmentationCriteria } = require('../helper/Criterios')
 const { pluck } = require('../helper/Helper')
-const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { response } = require('../response')
 
 const headers = [
-  'Id usuario'
+  'Documento de identidad'
 ]
 
-async function executeReport ({ workspaceId }) {
-  // Generate Excel reports
+async function executeReport ({ workspaceId, modules, selectedCriteria }) {
 
-  await createHeaders(headers)
+  // When criteria ids are not provided, load all
+  // workspace criteria which is used in segmentation
+
+  let segmentationCriteriaIds = []
+  if (selectedCriteria.length) {
+    segmentationCriteriaIds = selectedCriteria
+  } else {
+    const segmentationCriteria = await loadWorkspaceSegmentationCriteria(workspaceId)
+    segmentationCriteriaIds = pluck(segmentationCriteria, 'id')
+  }
 
   // Find those users who have no complete set of criteria
 
-  const segmentationCriteria = await loadWorkspaceSegmentationCriteria(workspaceId)
-  const segmentationCriteriaIds = pluck(segmentationCriteria, 'id')
-  const users = await findUsersWithIncompleteCriteriaValues(workspaceId, segmentationCriteriaIds)
+  const users = await findUsersWithIncompleteCriteriaValues(modules, segmentationCriteriaIds)
+
+  // Generate Excel reports
+  
+  const criteriaNames = await getCriteriaNames(segmentationCriteriaIds)
+  await createHeaders(headers.concat(criteriaNames))
 
   // Add users to Excel rows
 
   for (const user of users) {
     const cellRow = []
 
-    cellRow.push(user.user_id)
+    cellRow.push(user.document)
 
     // Add row to sheet
 
@@ -48,15 +58,17 @@ async function executeReport ({ workspaceId }) {
 /**
  * Find those users who have no complete set of criteria
  */
-async function findUsersWithIncompleteCriteriaValues (workspaceId, criteriaIds) {
-  const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+async function findUsersWithIncompleteCriteriaValues (subworkspacesIds, criteriaIds) {
+
   const query = `
     select
         user_id,
+        document,
         sum(criteria_count) total_criteria_count
     from (
         select
             u.id user_id,
+            u.document,
             -- when a user has the same criterion with
             -- different values, only counts as one
             if (count(cv.criterion_id) >= 1, 1, 0) criteria_count
@@ -80,4 +92,17 @@ async function findUsersWithIncompleteCriteriaValues (workspaceId, criteriaIds) 
 
   const [rows] = await con.raw(query, { criteriaCount: criteriaIds.length })
   return rows
+}
+
+/**
+ * Load array of criteria names
+ *
+ * @param criteriaIds
+ * @returns {Promise<*>}
+ */
+async function getCriteriaNames (criteriaIds) {
+  const query = `select * from criteria where id in (${criteriaIds.join()})`
+  const [rows] = await con.raw(query, { criteriaCount: criteriaIds.length })
+
+  return pluck(rows, 'name')
 }
