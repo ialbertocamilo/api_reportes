@@ -9,6 +9,7 @@ const { pluck } = require('../helper/Helper')
 const { response } = require('../response')
 
 const headers = [
+  'Nombre completo',
   'Documento de identidad'
 ]
 
@@ -30,7 +31,7 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
   const users = await findUsersWithIncompleteCriteriaValues(modules, segmentationCriteriaIds)
 
   // Generate Excel reports
-  
+
   const criteriaNames = await getCriteriaNames(segmentationCriteriaIds)
   await createHeaders(headers.concat(criteriaNames))
 
@@ -39,6 +40,7 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
   for (const user of users) {
     const cellRow = []
 
+    cellRow.push(user.fullname)
     cellRow.push(user.document)
 
     // Add row to sheet
@@ -63,11 +65,13 @@ async function findUsersWithIncompleteCriteriaValues (subworkspacesIds, criteria
   const query = `
     select
         user_id,
+        fullname,
         document,
         sum(criteria_count) total_criteria_count
     from (
         select
             u.id user_id,
+            concat(u.name, ' ', coalesce(u.lastname, '')) fullname,
             u.document,
             -- when a user has the same criterion with
             -- different values, only counts as one
