@@ -75,7 +75,8 @@ async function findUsersWithIncompleteCriteriaValues (subworkspacesIds, criteria
             u.document,
             -- when a user has the same criterion with
             -- different values, only counts as one
-            if (count(cv.criterion_id) >= 1, 1, 0) criteria_count
+            if (sum(if(cv.criterion_id in (${criteriaIds.join()}), 1, 0)) >= 1, 1, 0) criteria_count
+      
         from
             users u
             join criterion_value_user cvu on u.id = cvu.user_id
@@ -86,7 +87,6 @@ async function findUsersWithIncompleteCriteriaValues (subworkspacesIds, criteria
             and u.deleted_at is null
             and cv.deleted_at is null
             and u.subworkspace_id in (${subworkspacesIds.join()})
-            and cv.criterion_id in (${criteriaIds.join()})
         group by
           u.id, cv.criterion_id
     ) user_criteria_count
