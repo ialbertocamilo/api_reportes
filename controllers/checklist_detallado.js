@@ -7,7 +7,7 @@ const { worksheet, workbook, createAt, createHeaders } = require('../exceljs')
 const { response } = require('../response')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
-const { pluck, pluckUnique, logtime } = require('../helper/Helper')
+const { pluck, pluckUnique, logtime, formatDatetimeToString } = require('../helper/Helper')
 const {
   getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
 } = require('../helper/Usuarios')
@@ -22,7 +22,10 @@ const headers = [
   'Tipo Curso',
   'Checklist',
   'Cumplimiento del Checklist',
- // 'Estado de entrenador de usuario'
+  'Actividad',
+  'A quien califica',
+  'Estado',
+  'Fecha y hora'
 ]
 
 async function generateReport ({
@@ -30,7 +33,7 @@ async function generateReport ({
   UsuariosActivos, UsuariosInactivos, start, end, areas
 }) {
   // Generate Excel file header
- 
+
   const headersEstaticos = await getGenericHeaders(workspaceId)
 
   // Load workspace criteria
@@ -57,13 +60,20 @@ async function generateReport ({
 
   // Load checklist activities
 
-  const checklistActivities = await loadChecklistActivities(checklist)
-  const activitiesHeaders = pluckUnique(checklistActivities, 'activity')
-  activitiesHeaders.forEach(h => headers.push(h))
+  // const checklistActivities = await loadChecklistActivities(checklist)
+  // const activitiesHeaders = pluckUnique(checklistActivities, 'activity')
+  // activitiesHeaders.forEach(h => headers.push(h))
 
   // Add headers
 
   await createHeaders(headersEstaticos.concat(headers))
+
+  // Load qualifiers from taxonomies
+
+  const [checklistTypesTaxonomies] = await con.raw(`
+    select id, name 
+    from taxonomies 
+    where \`group\` = 'checklist' and \`type\` = 'type'`)
 
   // Add data to Excel rows
 
@@ -96,14 +106,19 @@ async function generateReport ({
     cellRow.push(user.course_type)
     cellRow.push(user.checklists_title)
     cellRow.push(Math.round(progress) + '%')
+    cellRow.push(user.activity)
+    cellRow.push(getChecklistTypeName(user.checklist_item_type, checklistTypesTaxonomies))
+    cellRow.push(user.qualification)
+    cellRow.push(formatDatetimeToString(user.checklist_answer_created_at))
+
     // cellRow.push(user.assigned_checklists)
     // cellRow.push(user.completed_checklists)
 
     // Add activities values
-    const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
-    userActivitiesValues.forEach(values => {
-      cellRow.push(values)
-    })
+    // const userActivitiesValues = filterUserActivities(activitiesHeaders, checklistActivities, user.id)
+    // userActivitiesValues.forEach(values => {
+    //   cellRow.push(values)
+    // })
 
     worksheet.addRow(cellRow).commit()
   }
@@ -136,8 +151,13 @@ async function loadUsersCheckists (
           tx.name as course_type,
           checklists.title checklists_title,
           count(ca.checklist_id) assigned_checklists,
-          sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
+          sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists,
           
+          cli.activity,
+          cli.type_id checklist_item_type,
+          cai.qualification,
+          ca.id checklist_answers_id,
+          ca.updated_at checklist_answer_created_at
       from
           checklist_answers ca
               inner join checklists on ca.checklist_id = checklists.id
@@ -147,6 +167,7 @@ async function loadUsersCheckists (
               inner join checklist_relationships cr on cr.checklist_id = ca.checklist_id
               inner join courses c on c.id = cr.course_id
               inner join taxonomies tx on tx.id = c.type_id
+              left join checklist_items cli on checklists.id = cli.checklist_id 
               left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   `
   //a checklist could be associated with one or more courses
@@ -155,8 +176,8 @@ async function loadUsersCheckists (
           u.subworkspace_id in (${modulos.join()}) and
           ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
           `
-    // ca.school_id in (${schoolId}) and 
-    // cr.course_id in (${courseId}) and
+  // ca.school_id in (${schoolId}) and
+  // cr.course_id in (${courseId}) and
 
   if (areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
@@ -224,7 +245,7 @@ async function loadChecklistActivities (checklistId) {
   // Execute query
 
   // logtime(query);
-  
+
   const [rows] = await con.raw(query, { checklistId })
   return rows
 }
@@ -241,4 +262,9 @@ function filterUserActivities (activitiesHeaders, checklistActivities, userId) {
   })
 
   return values
+}
+
+function getChecklistTypeName (id, checklistTypesTaxonomies) {
+  const type = checklistTypesTaxonomies.find(tx => tx.id === id)
+  return type ? type.name : null
 }

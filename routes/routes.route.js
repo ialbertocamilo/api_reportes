@@ -21,6 +21,7 @@ module.exports = function (io) {
   // ========================================
 
   router.post('/supervisores_notas', handler.supervisores_notas2)
+  router.post('/supervisores_notas_temas', handler.supervisores_notas_temas)
   router.post('/supervisores_avance_curricula', handler.supervisores_avance_curricula)
   router.post('/notas_usuario', handler.notasUsuario2)
   router.post('/historial_usuario', handler.historialUsuario)

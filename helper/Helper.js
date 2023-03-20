@@ -4,6 +4,7 @@
  * @param key
  * @returns {*}
  */
+const moment = require('moment/moment')
 exports.pluck = (collection, key) => {
   return collection.map(obj => obj[key])
 }
@@ -137,4 +138,18 @@ exports.groupArrayOfObjects_v2 = (data, key = 'id') => {
   }
 
   return ResultData;
+}
+
+exports.formatDatetimeToString = (datetime) => {
+  if (isNaN(datetime)) {
+    return '-'
+  }
+
+  if (datetime === 'Invalid date') {
+    return '-'
+  }
+
+  return datetime
+    ? moment(datetime).format('DD/MM/YYYY H:mm:ss')
+    : '-'
 }

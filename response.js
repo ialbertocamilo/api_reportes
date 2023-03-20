@@ -10,7 +10,9 @@ exports.response = (responseData) => {
       ruta_descarga: generateReportPath(createAt),
       createAt,
       modulo,
-      new_name: `${modulo}_${moment(createAt).format("L")}`
+      new_name: `${modulo}_${moment(createAt)
+        .tz('America/Lima')
+        .format('YYYY-MM-DD HH:mm')}`
     }
   }
   return responseData
