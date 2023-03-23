@@ -7,6 +7,7 @@ const { con } = require('../db')
 const { loadWorkspaceSegmentationCriteria } = require('../helper/Criterios')
 const { pluck } = require('../helper/Helper')
 const { response } = require('../response')
+const { getUserCriterionValues2 } = require('../helper/Usuarios')
 
 const headers = [
   'Nombre completo',
@@ -42,6 +43,13 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
 
     cellRow.push(user.fullname)
     cellRow.push(user.document)
+
+    const userValues = await getUserCriterionValues2(
+      user.user_id, criteriaNames
+    )
+    userValues.forEach(uv => {
+      cellRow.push(uv.criterion_value)
+    })
 
     // Add row to sheet
 
