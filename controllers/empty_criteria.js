@@ -4,18 +4,27 @@ process.on('message', (requestData) => {
 
 const { createHeaders, worksheet, workbook, createAt } = require('../exceljs')
 const { con } = require('../db')
-const { loadWorkspaceSegmentationCriteria } = require('../helper/Criterios')
-const { pluck } = require('../helper/Helper')
+const { loadWorkspaceSegmentationCriteria, getWorkspaceCriteria } = require('../helper/Criterios')
+const { pluck, logtime } = require('../helper/Helper')
 const { response } = require('../response')
-const { getUserCriterionValues2 } = require('../helper/Usuarios')
+const { getUserCriterionValues2, getUserCriterionValues,
+  loadUsersCriteriaValues
+} = require('../helper/Usuarios')
+const moment = require('moment/moment')
 
-const headers = [
-  'Nombre completo',
-  'Documento de identidad'
+const defaultHeaders = [
+  'NOMBRE COMPLETO',
+  'NOMBRE',
+  'APELLIDO PATERNO',
+  'APELLIDO MATERNO',
+  'DOCUMENTO',
+  'NÚMERO DE TELÉFONO',
+  'NÚMERO DE PERSONA COLABORADOR',
+  'ESTADO(USUARIO)',
+  'EMAIL',
+  'ULTIMA SESIÓN'
 ]
-
 async function executeReport ({ workspaceId, modules, selectedCriteria }) {
-
   // When criteria ids are not provided, load all
   // workspace criteria which is used in segmentation
 
@@ -30,26 +39,38 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
   // Find those users who have no complete set of criteria
 
   const users = await findUsersWithIncompleteCriteriaValues(modules, segmentationCriteriaIds)
+  const usersIds = pluck(users, 'user_id')
 
-  // Generate Excel reports
+  // Generate headers adding workspace criteria to default header columns
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  workspaceCriteria.forEach(el => defaultHeaders.push(el.name))
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+  const usersCriteriaValues = await loadUsersCriteriaValues(modules, usersIds)
+  await createHeaders(defaultHeaders)
 
-  const criteriaNames = await getCriteriaNames(segmentationCriteriaIds)
-  await createHeaders(headers.concat(criteriaNames))
-
-  // Add users to Excel rows
-
+  // Generate rows for Excel file
+  logtime('Start file generation')
   for (const user of users) {
     const cellRow = []
-
-    cellRow.push(user.fullname)
+    const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
+    const fullname = [user.name, user.lastname, user.surname]
+      .filter(e => Boolean(e))
+      .join(' ');
+    cellRow.push(fullname)
+    cellRow.push(user.name)
+    cellRow.push(user.lastname)
+    cellRow.push(user.surname)
     cellRow.push(user.document)
+    cellRow.push(user.phone_number)
+    cellRow.push(user.person_number)
+    cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+    cellRow.push(user.email)
+    cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
-    const userValues = await getUserCriterionValues2(
-      user.user_id, criteriaNames
-    )
-    userValues.forEach(uv => {
-      cellRow.push(uv.criterion_value)
-    })
+    // Add user's criterion values
+
+    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriteriaValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Add row to sheet
 
@@ -73,14 +94,30 @@ async function findUsersWithIncompleteCriteriaValues (subworkspacesIds, criteria
   const query = `
     select
         user_id,
+        name,
+        lastname,
+        username,
         fullname,
         document,
+        email,
+        phone_number,
+        person_number,
+        active,
+        last_login,
         sum(criteria_count) total_criteria_count
     from (
         select
             u.id user_id,
+            u.name,
+            u.lastname,
+            u.username,
             concat(u.name, ' ', coalesce(u.lastname, '')) fullname,
             u.document,
+            u.email,
+            u.phone_number,
+            u.person_number,
+            u.active,
+            u.last_login,
             -- when a user has the same criterion with
             -- different values, only counts as one
             if (sum(if(cv.criterion_id in (${criteriaIds.join()}), 1, 0)) >= 1, 1, 0) criteria_count
