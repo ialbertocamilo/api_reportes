@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const tablas = require('./tablas')
 const { pluck } = require('../helper/Helper')
+const { loadWorkspaceSegmentationCriteria } = require('../helper/Criterios')
 router.get('/', async (req, res) => {
   res.send('Bienvenido a la api de filtros')
 })
@@ -144,6 +145,11 @@ router.get('/sub-workspace/:subworkspacesIds/criterion-values/:criterionCode', a
   const criterionValuesIds = pluck(subworkspaces, 'criterion_value_id')
   const datos = await tablas.loadCriterionValuesByParentId(criterionValuesIds, criterionCode)
   res.json(datos)
+})
+
+router.get('/segmented-criteria/:workspaceId', async (req, res) => {
+  const { workspaceId } = req.params
+  res.json(await loadWorkspaceSegmentationCriteria(workspaceId))
 })
 
 router.post(`/criterion-values/:criterionCode`, async (req, res) => {

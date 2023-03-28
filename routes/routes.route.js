@@ -174,6 +174,7 @@ function getReportFilePath (reportType) {
     case 'vademecum': file = 'vademecum.js'; break
     case 'diplomas': file = 'diplomas2.js'; break
     case 'avance_curricula': file = 'avance_curricula.js'; break
+    case 'empty_criteria': file = 'empty_criteria.js'; break
   }
 
   return `./controllers/${file}`
