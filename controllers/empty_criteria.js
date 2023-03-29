@@ -69,8 +69,8 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
 
     // Add user's criterion values
 
-    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriteriaValues)
-    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+    const userValues = getUserCriterionValues(user.user_id, workspaceCriteriaNames, usersCriteriaValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || ''))
 
     // Add row to sheet
 
@@ -92,53 +92,53 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
 async function findUsersWithIncompleteCriteriaValues (subworkspacesIds, criteriaIds) {
 
   const query = `
-    select
-        user_id,
-        name,
-        lastname,
-        username,
-        surname,
-        fullname,
-        document,
-        email,
-        phone_number,
-        person_number,
-        active,
-        last_login,
-        sum(criteria_count) total_criteria_count
-    from (
-        select
-            u.id user_id,
-            u.name,
-            u.lastname,
-            u.surname,
-            u.username,            
-            concat(u.name, ' ', coalesce(u.lastname, '')) fullname,
-            u.document,
-            u.email,
-            u.phone_number,
-            u.person_number,
-            u.active,
-            u.last_login,
-            -- when a user has the same criterion with
-            -- different values, only counts as one
-            if (sum(if(cv.criterion_id in (${criteriaIds.join()}), 1, 0)) >= 1, 1, 0) criteria_count
-      
-        from
-            users u
-            join criterion_value_user cvu on u.id = cvu.user_id
-            join criterion_values cv on cv.id = cvu.criterion_value_id
-        where
-            u.active = 1
-            and cv.active = 1
-            and u.deleted_at is null
-            and cv.deleted_at is null
-            and u.subworkspace_id in (${subworkspacesIds.join()})
-        group by
-          u.id, cv.criterion_id
-    ) user_criteria_count
-    group by user_id
-    having total_criteria_count < :criteriaCount
+      select
+          user_id,
+          name,
+          lastname,
+          username,
+          surname,
+          fullname,
+          document,
+          email,
+          phone_number,
+          person_number,
+          active,
+          last_login,
+          sum(criteria_count) total_criteria_count
+      from (
+               select
+                   u.id user_id,
+                   u.name,
+                   u.lastname,
+                   u.surname,
+                   u.username,
+                   concat(u.name, ' ', coalesce(u.lastname, '')) fullname,
+                   u.document,
+                   u.email,
+                   u.phone_number,
+                   u.person_number,
+                   u.active,
+                   u.last_login,
+                   -- when a user has the same criterion with
+                   -- different values, only counts as one
+                   if (sum(if(cv.criterion_id in (${criteriaIds.join()}), 1, 0)) >= 1, 1, 0) criteria_count
+
+               from
+                   users u
+                       join criterion_value_user cvu on u.id = cvu.user_id
+                       join criterion_values cv on cv.id = cvu.criterion_value_id
+               where
+                   u.active = 1
+                 and cv.active = 1
+                 and u.deleted_at is null
+                 and cv.deleted_at is null
+                 and u.subworkspace_id in (${subworkspacesIds.join()})
+               group by
+                   u.id, cv.criterion_id
+           ) user_criteria_count
+      group by user_id
+      having total_criteria_count < :criteriaCount
   `
 
   const [rows] = await con.raw(query, { criteriaCount: criteriaIds.length })
