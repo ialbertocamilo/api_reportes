@@ -120,11 +120,11 @@ async function loadUsersWithRestarts (
        inner join courses c on t.course_id = c.id
        inner join course_school cs on c.id = cs.course_id
        inner join schools s on cs.school_id = s.id
-       inner join school_workspace sw on s.id = sw.school_id
+       inner join school_subworkspace sw on s.id = sw.school_id
        left join users admins on st.restarter_id = admins.id
     where  
       u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId} 
+      sw.subworkspace_id in (${modulesIds.join()}) 
   `
 
   if (adminIds) {

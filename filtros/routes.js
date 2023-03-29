@@ -36,7 +36,7 @@ router.get('/topics/:coursesIds', async (req, res) => {
 
 router.get('/schools/:workspaceId', async (req, res) => {
 
-  const datos = await tablas.loadWorkspaceSchools(req.params.workspaceId)
+  const datos = await tablas.loadsubworkspaceSchools(req.params.workspaceId)
   res.json(datos)
 })
 
@@ -69,9 +69,9 @@ router.get('/cargar_ciclos', async (req, res) => {
 
 
 router.post('/schools/states', async (req, res) => {
-  const { body } = req;
-  const datos = await tablas.loadSchoolsStatesByWorkspaceId(body);
-  return res.json(datos);
+  const { body } = req
+  const datos = await tablas.loadSchoolsStatesBySubworkspaceId(body)
+  return res.json(datos)
 })
 
 router.post('/school/courses/states', async (req, res) => {
