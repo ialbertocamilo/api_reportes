@@ -45,6 +45,7 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   workspaceCriteria.forEach(el => defaultHeaders.push(el.name))
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+
   const usersCriteriaValues = await loadUsersCriteriaValues(modules, usersIds)
   await createHeaders(defaultHeaders)
 
@@ -69,8 +70,8 @@ async function executeReport ({ workspaceId, modules, selectedCriteria }) {
 
     // Add user's criterion values
 
-    const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriteriaValues)
-    userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
+    const userValues = getUserCriterionValues(user.user_id, workspaceCriteriaNames, usersCriteriaValues)
+    userValues.forEach(item => cellRow.push(item.criterion_value || ''))
 
     // Add row to sheet
 
