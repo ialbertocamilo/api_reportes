@@ -156,12 +156,17 @@ module.exports = {
   /**
    * Load subworkspace's courses
    * @param workspaceId
+   * @param grouped
    * @returns {Promise<*>}
    */
-  async loadsubworkspaceSchools (workspaceId) {
-    const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+  async loadsubworkspaceSchools (workspaceId, grouped) {
 
-    const [rows] = await con.raw(`
+    if (typeof grouped === 'undefined') {
+      grouped = true
+    }
+
+    const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+    let query = `
       select
         s.*,
         sw.subworkspace_id
@@ -172,9 +177,13 @@ module.exports = {
       where 
          sw.subworkspace_id in (${subworkspacesIds.join()}) 
          and s.active = 1
-      group by s.id
-    `, { }
-    )
+    `
+
+    if (grouped) {
+      query += ' group by s.id'
+    }
+
+    const [rows] = await con.raw(query, { })
     return rows
   },
   async loadWorkspaceJobPositions(workspaceId) {
