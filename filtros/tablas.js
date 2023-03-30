@@ -169,7 +169,10 @@ module.exports = {
           schools s 
               inner join 
               school_subworkspace sw on s.id = sw.school_id
-      where sw.subworkspace_id in (${subworkspacesIds.join()}) and s.active = 1
+      where 
+         sw.subworkspace_id in (${subworkspacesIds.join()}) 
+         and s.active = 1
+      group by s.id
     `, { }
     )
     return rows
