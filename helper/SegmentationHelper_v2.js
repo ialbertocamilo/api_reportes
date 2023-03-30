@@ -326,13 +326,16 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   activeTopics = false,
   inactiveTopics = false,
 
-  completed
+  completed,
+  StacksUsersIds = []
 ) => {
 	logtime('start: user ids segmentation');
 	// === extraer ids de usuarios segmentados ===
-   const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules, 
-                                                     areas, activeUsers, inactiveUsers);
-   const StacksUsersIds = pluck(LoadUsersData, 'id');
+  if (!StacksUsersIds.length) {
+    const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules,
+      areas, activeUsers, inactiveUsers);
+    StacksUsersIds = pluck(LoadUsersData, 'id');
+  }
   	// === extraer ids de usuarios segmentados ===
 	logtime('end: user ids segmentation');
   
@@ -695,7 +698,6 @@ exports.loadCoursesV2 = async (
     where
         sw.subworkspace_id in (${subworkspacesIds.join()})  
   `
-
   if(deleted_at) query += ` and c.deleted_at is null `; // mms para eliminado
 
   // posible filtro en estado de curso
