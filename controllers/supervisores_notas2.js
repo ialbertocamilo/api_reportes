@@ -17,8 +17,8 @@ const {
 
 const { pluck, logtime } = require('../helper/Helper')
 const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
-const { getGenericHeadersNotasXCurso } = require('../helper/Criterios')
-const { loadUsersBySubWorspaceIds } = require('../helper/Usuarios')
+const { getGenericHeadersNotasXCurso, getWorkspaceCriteria } = require('../helper/Criterios')
+const { loadUsersBySubWorspaceIds, getUserCriterionValues2 } = require('../helper/Usuarios')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
 
@@ -107,6 +107,11 @@ async function generateSegmentationReport ({
   const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true)
   const StackUserCriterios = []
   // === precargar usuarios y criterios
+
+  // Load workspace criteria
+
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
   for (const course of courses) {
     // Load workspace user criteria
@@ -197,13 +202,17 @@ async function generateSegmentationReport ({
         const StoreUserValues = StackUserCriterios[id]
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || '-'))
       } else {
-        const userValues = []
-        for (let i = 0; i < criteriaIds.length; i++) {
-          userValues.push({ criterion_value: '-' })
-        }
-        userValues.forEach((item) => cellRow.push(item.criterion_value || '-'))
+        // const userValues = []
+        // for (let i = 0; i < criteriaIds.length; i++) {
+        //   userValues.push({ criterion_value: '-' })
+        // }
+        // userValues.forEach((item) => cellRow.push(item.criterion_value || '-'))
+        //
+        // StackUserCriterios[id] = userValues
+        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
+        userValues.forEach((item) => cellRow.push(item.criterion_value || "-"))
 
-        StackUserCriterios[id] = userValues
+        StackUserCriterios[id] = userValues;
       }
       // criterios de usuario
 
