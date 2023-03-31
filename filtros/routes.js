@@ -35,8 +35,15 @@ router.get('/topics/:coursesIds', async (req, res) => {
 })
 
 router.get('/schools/:workspaceId', async (req, res) => {
+  let grouped
+  // default value for grouped is true
+  if (typeof req.query.grouped === 'undefined') {
+    grouped = true
+  } else {
+    grouped = req.query.grouped === '1'
+  }
 
-  const datos = await tablas.loadsubworkspaceSchools(req.params.workspaceId)
+  const datos = await tablas.loadsubworkspaceSchools(req.params.workspaceId, grouped)
   res.json(datos)
 })
 

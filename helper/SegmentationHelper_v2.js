@@ -327,15 +327,22 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   inactiveTopics = false,
 
   completed,
-  StacksUsersIds = []
+  restrictToUserIds = []
 ) => {
 	logtime('start: user ids segmentation');
 	// === extraer ids de usuarios segmentados ===
-  if (!StacksUsersIds.length) {
-    const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules,
-      areas, activeUsers, inactiveUsers);
-    StacksUsersIds = pluck(LoadUsersData, 'id');
+
+  const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules,
+    areas, activeUsers, inactiveUsers);
+  let StacksUsersIds = pluck(LoadUsersData, 'id');
+
+  if (restrictToUserIds.length) {
+    StacksUsersIds = StacksUsersIds.filter(id => {
+      return restrictToUserIds.includes(id)
+    })
   }
+
+
   	// === extraer ids de usuarios segmentados ===
 	logtime('end: user ids segmentation');
   
