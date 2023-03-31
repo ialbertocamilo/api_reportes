@@ -25,7 +25,11 @@ exports.pluckUnique = (collection, key) => {
 
   return values
 }
-
+exports.uniqueElementsOfArray = (array)=>{
+  return array.filter((elemento, indice) => {
+    return array.indexOf(elemento) === indice;
+  });
+}
 /**
  * Remove HTML tags from string
  * @param value

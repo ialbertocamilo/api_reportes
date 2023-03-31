@@ -9,8 +9,8 @@ const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
 const { loadCoursesStatuses, getCourseStatusName, loadCompatiblesIds
 } = require('../helper/CoursesTopicsHelper')
-const { strippedString } = require('../helper/Helper')
-const { loadModuleCoursesIds } = require('../helper/SegmentationHelper')
+const { strippedString,uniqueElementsOfArray } = require('../helper/Helper')
+const { loadModuleCoursesIds,loaCoursesIdsBySegmentationDocument } = require('../helper/SegmentationHelper')
 const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
 
 async function notasUsuario2 ({ document }) {
@@ -29,14 +29,12 @@ async function notasUsuario2 ({ document }) {
   // Get moduleId (criterion_value_id) from user's subworkspace
 
   const moduleId = await getModuleIdFromSubworkspace(user.subworkspace_id)
-
+  const criterionValueDocument = await getCriterionValueId(user.document);
   // Get courses from module using segmentation
-
-  const moduleCoursesIds = await loadModuleCoursesIds(moduleId)
-
+  const coursesIds = await getCoursesId(moduleId,criterionValueDocument);
   const userSummaryCourses = []
-  for (let i = 0; i < moduleCoursesIds.length; i++) {
-    const courseId = moduleCoursesIds[i]
+  for (let i = 0; i < coursesIds.length; i++) {
+    const courseId = coursesIds[i]
     const summaryCourses = await loadSummaryCoursesByUsersAndCourses(
       [user.id], [courseId]
     )
@@ -74,7 +72,6 @@ async function notasUsuario2 ({ document }) {
       }
     }
   }
-
   // When user has no summary courses,
   // stop execution and return response
 
@@ -245,7 +242,15 @@ async function getModuleIdFromSubworkspace (subworkspaceId) {
 
   return workspaces ? workspaces[0].criterion_value_id : null
 }
+async function getCriterionValueId (document) {
+  const [criterionValue] = await con.raw(`
+    select id from criterion_values where criterion_id = 48 and  value_text = :document limit 1
+  `,
+  { document }
+  )
 
+  return criterionValue ? criterionValue[0].id : null
+}
 async function getCourseName(courseId) {
   const [courses] = await con.raw(`
     select * from courses where id = :courseId
@@ -253,4 +258,17 @@ async function getCourseName(courseId) {
   )
 
   return courses ? courses[0].name : null
+}
+async function getCoursesId(moduleId,userId){
+  return Promise.all([
+    loadModuleCoursesIds(moduleId),
+    loaCoursesIdsBySegmentationDocument(userId)
+  ]).then(([coursesIdByModuleSegmentation, coursesIdByDocumentSegmentation]) => {
+    return uniqueElementsOfArray(
+      [
+        ...coursesIdByModuleSegmentation,
+        ...coursesIdByDocumentSegmentation
+      ]
+    );
+  });
 }
