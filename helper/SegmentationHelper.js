@@ -929,3 +929,22 @@ exports.loadModuleCoursesIds = async (moduleId) => {
 
   return pluck(rows, 'course_id')
 }
+
+exports.loaCoursesIdsBySegmentationDocument = async (criterionValueId) => {
+  const query = `
+      select distinct model_id as course_id
+      from segments s
+      where s.model_type like '%Course'
+        and active = 1
+        and id in (
+            select distinct segment_id
+            from segments_values sv
+            where criterion_id = 48 -- module criterion
+                and criterion_value_id = :criterionValueId -- module
+      )
+  `
+  const [rows] = await con.raw(query, { criterionValueId })
+
+  return pluck(rows, 'course_id')
+}
+
