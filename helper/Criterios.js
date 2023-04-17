@@ -57,9 +57,12 @@ exports.loadWorkspaceSegmentationCriteria = async (workspaceId) => {
     order by
         criterion_id
   `
-
-  const [criterion] = await con.raw(query2)
-  return criterion
+  if (courseIds.length === 0) {
+    return []
+  } else {
+    const [criterion] = await con.raw(query2)
+    return criterion
+  }
 }
 
 exports.getGenericHeadersNotasXCurso = async (workspaceId,criteria_id=[]) => {
