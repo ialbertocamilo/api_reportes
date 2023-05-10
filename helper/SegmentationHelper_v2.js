@@ -665,6 +665,56 @@ exports.loadCourses = async (
   const [rows] = await con.raw(query);
   return rows;
 };
+//LoadCourses using subworkspace_id table
+exports.loadCoursesV3 = async (
+  { cursos = [], 
+    escuelas = [],
+    
+    CursosActivos,
+    CursosInactivos,
+
+    tipocurso }, subworkspacesIds) => {
+
+  let query = `
+    select  
+    
+      cs.course_id,
+      c.name as course_name,
+      s.name as school_name,
+      c.active as course_active,
+      tx.name as course_type
+
+    from course_school as cs
+
+      inner join courses as c 
+        on c.id = cs.course_id
+      inner join schools as s
+        on s.id = cs.school_id
+      inner join taxonomies as tx
+        on tx.id = c.type_id 
+      inner join school_subworkspace as sw
+        on sw.school_id = s.id
+
+    where  
+    sw.subworkspace_id in (${subworkspacesIds.join()})  
+      and c.deleted_at is null 
+  `;
+
+  // posible filtro en estado de curso
+  if(CursosActivos && !CursosInactivos) query += ` and c.active = 1`;
+  if(!CursosActivos && CursosInactivos) query += ` and c.active = 0`;
+
+  if(cursos.length) query += ` and cs.course_id in (${cursos.join()})`;
+  if(escuelas.length) query += ` and cs.school_id in (${escuelas.join()})`;
+  if(!tipocurso) query += ` and not tx.code = 'free'`;
+  
+  query += ` group by cs.course_id`;
+  console.log(query);
+  // logtime(query);
+
+  const [rows] = await con.raw(query);
+  return rows;
+};
 
 exports.loadCoursesV2 = async (
 { escuelas = [],
