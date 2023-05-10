@@ -1,4 +1,4 @@
-const { Model, DataTypes: { STRING, BOOLEAN, BIGINT, DATE } } = require('sequelize')
+const { Model, DataTypes: { INTEGER, STRING, BOOLEAN, BIGINT, DATE } } = require('sequelize')
 const sequelize = require('../sequelize.js')
 const Workspace = require('./Workspace')
 const User = require('./Usuario')
@@ -8,6 +8,11 @@ class GeneratedReport extends Model {
 }
 
 GeneratedReport.init({
+  id: {
+    type: INTEGER,
+    autoIncrement: true,
+    primaryKey: true
+  },
   report_type: STRING,
   name: STRING,
   download_url: STRING,
