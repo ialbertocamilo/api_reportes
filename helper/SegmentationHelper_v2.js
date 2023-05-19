@@ -284,7 +284,8 @@ exports.loadUsersSegmentedv2 = async (
 	      sc.assigned, sc.completed,
 	      sc.last_time_evaluated_at, sc.restarts,
 	      sc.taken, sc.reviewed, sc.assigned,
-	      sc.status_id as course_status_id
+	      sc.status_id as course_status_id,
+	      sc.course_id
 
 	   from users u
     
@@ -681,6 +682,7 @@ exports.loadCoursesV3 = async (
       cs.course_id,
       c.name as course_name,
       s.name as school_name,
+      s.id as school_id,
       c.active as course_active,
       tx.name as course_type
 

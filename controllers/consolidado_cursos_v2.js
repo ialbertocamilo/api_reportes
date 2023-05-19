@@ -7,6 +7,8 @@ require("../error");
 const moment = require("moment");
 const { workbook, worksheet, createHeaders, createAt } = require("../exceljs");
 const { response } = require("../response");
+const _ = require('lodash')
+let usersSchoolsPercentages = []
 const {
   loadCoursesV3,
   loadUsersSegmented,
@@ -22,6 +24,7 @@ const {
   getCourseStatusId
 } = require("../helper/CoursesTopicsHelper");
 
+
 const { pluck, logtime } = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
@@ -36,12 +39,15 @@ const {
   getUserCriterionValues2,
 } = require("../helper/Usuarios");
 const { getSuboworkspacesIds } = require("../helper/Workspace");
+const { con } = require('../db')
+const { loadUsersSchoolsPercentages, calculateSchoolProgressPercentage } = require('../helper/Courses')
 
 // Headers for Excel file
 
 const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
+  'AVANCE ESCUELA (%)',
   'CURSO',
   'VISITAS',
   'NOTA PROMEDIO',
@@ -51,7 +57,7 @@ const headers = [
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
-  'AVANCE (%)',
+  'AVANCE CURSO (%)',
   'ULTIMA EVALUACIÓN',
   'CURSO COMPATIBLE' // nombre del curso
 ];
@@ -124,6 +130,9 @@ async function generateSegmentationReport({
   let StackUserCriterios = [];
   // === precargar usuarios y criterios
 
+  const coursesIds = pluck(courses, 'course_id')
+  usersSchoolsPercentages = await loadUsersSchoolsPercentages(coursesIds)
+
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -143,6 +152,7 @@ async function generateSegmentationReport({
       completed
     );
     logtime(`-- end: user segmentation --`);
+
 
     const countTopics = await getCountTopics(course.course_id);
 
@@ -240,9 +250,12 @@ async function generateSegmentationReport({
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
+      cellRow.push(calculateSchoolProgressPercentage(
+        usersSchoolsPercentages, user.id, course.school_id
+      ));
       cellRow.push(course.course_name);
       cellRow.push(user.course_views || "-");
-      cellRow.push(user.course_passed > 0 ? user.grade_average : "-");
+      cellRow.push(user.grade_average);
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {
