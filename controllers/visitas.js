@@ -278,8 +278,6 @@ async function getSubWorkspaceUsers(modulesIds) {
 
 async function getSchoolsWorkspace(workspaceId) {
 
-  const suboworkspacesIds = await getSuboworkspacesIds(workspaceId)
-
   const query = `
   SELECT
     s.id,
@@ -288,7 +286,7 @@ async function getSchoolsWorkspace(workspaceId) {
   INNER JOIN school_subworkspace sw ON
      sw.school_id = s.id
   WHERE
-     sw.subworkspace_id in (${suboworkspacesIds.join(',')})
+     sw.subworkspace_id = ${workspaceId}
   ORDER BY s.id`;
 
   const [ rows ] = await con.raw(query);
@@ -347,7 +345,7 @@ async function getCoursesWorkspace (workspaceId) {
 }
 
 async function getTopicsWorkspace(workspaceId) {
-  const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+
   const query = `
   SELECT
     t.id,
@@ -362,7 +360,7 @@ async function getTopicsWorkspace(workspaceId) {
   INNER JOIN school_subworkspace sw ON
      sw.school_id = s.id
   WHERE
-     sw.subworkspace_id in ( ${subworkspacesIds.join(',')} )
+     sw.subworkspace_id = ${workspaceId}
   ORDER BY t.id`;
 
   const [ rows ] = await con.raw(query);

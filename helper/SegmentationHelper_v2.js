@@ -709,7 +709,7 @@ exports.loadCoursesV3 = async (
   if(!tipocurso) query += ` and not tx.code = 'free'`;
   
   query += ` group by cs.course_id`;
-  console.log(query);
+  // console.log(query);
   // logtime(query);
 
   const [rows] = await con.raw(query);
