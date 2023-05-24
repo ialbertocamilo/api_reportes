@@ -21,7 +21,7 @@ const { getGenericHeadersNotasXCurso, getWorkspaceCriteria } = require('../helpe
 const { loadUsersBySubWorspaceIds, getUserCriterionValues2 } = require('../helper/Usuarios')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
-const { loadUsersSchoolsPercentages, calculateSchoolProgressPercentage } = require('../helper/Courses')
+const { loadUsersCoursesProgress, calculateSchoolProgressPercentage } = require('../helper/Courses')
 
 // Headers for Excel file
 
@@ -116,7 +116,7 @@ async function generateSegmentationReport ({
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
   const coursesIds = pluck(courses, 'course_id')
-  usersSchoolsPercentages = await loadUsersSchoolsPercentages(coursesIds)
+  usersSchoolsPercentages = await loadUsersCoursesProgress(coursesIds)
 
 
   for (const course of courses) {
