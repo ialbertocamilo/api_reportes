@@ -2,6 +2,7 @@ const { extension } = require('../config')
 const GeneratedReport = require('../models/GeneratedReport')
 const axios = require('axios')
 const { Op } = require('sequelize')
+const sequelize = require('../sequelize.js')
 const moment = require('moment-timezone')
 
 /**
@@ -48,16 +49,26 @@ exports.registerInQueue = async (
     // the same filters
 
     if (pendingReports.length === 0) {
-      await GeneratedReport.create({
-        report_type: reportType,
-        name: reportName,
-        workspace_id: workspaceId,
-        admin_id: adminId,
-        filters: JSON.stringify(filters),
-        filters_descriptions: JSON.stringify(filtersDescriptions),
-        is_ready: false,
-        created_at: getCurrentStringDate()
-      })
+
+      await sequelize.query(`
+        insert into generated_reports (report_type, name, workspace_id, admin_id, filters, filters_descriptions, is_ready, created_at)
+        values (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        {
+          type: sequelize.QueryTypes.INSERT,
+          replacements: [reportType, reportName, workspaceId, adminId, JSON.stringify(filters), JSON.stringify(filtersDescriptions), false, getCurrentStringDate()]
+        })
+
+      // await GeneratedReport.create({
+      //   report_type: reportType,
+      //   name: reportName,
+      //   workspace_id: workspaceId,
+      //   admin_id: adminId,
+      //   filters: JSON.stringify(filters),
+      //   filters_descriptions: JSON.stringify(filtersDescriptions),
+      //   is_ready: false,
+      //   created_at: getCurrentStringDate()
+      // })
     }
   } catch (ex) {
     console.log(ex)

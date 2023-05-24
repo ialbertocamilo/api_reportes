@@ -52,7 +52,7 @@ const headers = [
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
   'AVANCE (%)',
-  'ULTIMA EVALUACIÓN',
+  'ULTIMA EVALUACIN',
   'CURSO COMPATIBLE' // nombre del curso
 ];
 

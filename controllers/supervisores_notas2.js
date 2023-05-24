@@ -110,7 +110,7 @@ async function generateSegmentationReport ({
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId, criteriaIds)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
   for (const course of courses) {
@@ -209,6 +209,7 @@ async function generateSegmentationReport ({
         // userValues.forEach((item) => cellRow.push(item.criterion_value || '-'))
         //
         // StackUserCriterios[id] = userValues
+
         const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"))
 
@@ -265,7 +266,7 @@ async function generateSegmentationReport ({
 
       // Get topics count
 
-      // aÃ±adir fila
+      // añadir fila
       worksheet.addRow(cellRow).commit()
     }
   }
