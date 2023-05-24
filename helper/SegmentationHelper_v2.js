@@ -893,7 +893,18 @@ async function loadCoursesSegmentedToUsersInSchool (schoolsIds, usersIds) {
               addedUsers.push(userId)
               usersCourses[userId] = []
             }
-            usersCourses[userId].push(schoolsCourses.find(sc => +sc.course_id === +segments[i].course_id))
+
+            let schoolCourseToBeAdded = schoolsCourses.find(sc => +sc.course_id === +segments[i].course_id)
+            if (schoolCourseToBeAdded) {
+              let schoolAlreadyAdded = usersCourses[userId].find(uc => {
+                return uc.school_id === schoolCourseToBeAdded.school_id &&
+                  uc.course_id === schoolCourseToBeAdded.course_id
+              })
+              if (!schoolAlreadyAdded) {
+                usersCourses[userId].push(schoolCourseToBeAdded)
+              }
+            }
+
         }
       }
     })

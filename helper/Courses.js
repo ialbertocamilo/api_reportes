@@ -69,6 +69,8 @@ exports.calculateSchoolProgressPercentage = (
       +us.user_id === +userId
   })
 
+  if (!schoolInfo) return 0
+
   let coursesCount = 0;
   userSegmentedSchoolsCourses.forEach(ussc => {
     if (+ussc.school_id === schoolId) {
@@ -77,7 +79,7 @@ exports.calculateSchoolProgressPercentage = (
   })
 
   const percentage = coursesCount > 0
-    ? schoolInfo.courses_percentage_sum / coursesCount
+    ? +schoolInfo.courses_percentage_sum / coursesCount
     : 0;
 
   return schoolInfo

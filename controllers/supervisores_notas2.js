@@ -14,14 +14,17 @@ const {
   getCourseStatusName,
   getCourseStatusId
 } = require('../helper/CoursesTopicsHelper')
-let usersSchoolsPercentages = []
+let usersCoursesProgress = []
 const { pluck, logtime } = require('../helper/Helper')
 const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
 const { getGenericHeadersNotasXCurso, getWorkspaceCriteria } = require('../helper/Criterios')
 const { loadUsersBySubWorspaceIds, getUserCriterionValues2 } = require('../helper/Usuarios')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
-const { loadUsersCoursesProgress, calculateSchoolProgressPercentage } = require('../helper/Courses')
+const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
+  loadUsersWithCourses
+} = require('../helper/Courses')
+const { loadCoursesSegmentedToUsersInSchool } = require('../helper/SegmentationHelper_v2')
 
 // Headers for Excel file
 
@@ -30,6 +33,7 @@ const headers = [
   'ESCUELA',
   'AVANCE ESCUELA (%)',
   'CURSO',
+  'AVANCE CURSO (%)',
   'VISITAS',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
@@ -38,7 +42,6 @@ const headers = [
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
-  'AVANCE CURSO (%)',
   'ULTIMA EVALUACIÓN',
   'CURSO COMPATIBLE', // nombre del curso
 
@@ -115,9 +118,16 @@ async function generateSegmentationReport ({
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId, criteriaIds)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
-  const coursesIds = pluck(courses, 'course_id')
-  usersSchoolsPercentages = await loadUsersCoursesProgress(coursesIds)
+  // Load progress by user
 
+  usersCoursesProgress = await loadUsersCoursesProgress(escuelas)
+
+  // Load segmented courses by school for each user
+
+  let segmentedCoursesByUsers
+  if (supervisedUsersIds.length) {
+    segmentedCoursesByUsers = await loadCoursesSegmentedToUsersInSchool(escuelas, supervisedUsersIds)
+  }
 
   for (const course of courses) {
     // Load workspace user criteria
@@ -231,9 +241,14 @@ async function generateSegmentationReport ({
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
       cellRow.push(course.school_name)
       cellRow.push(calculateSchoolProgressPercentage(
-        usersSchoolsPercentages, user.id, course.school_id
-      ));
+        usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
+      ) + '%');
       cellRow.push(course.course_name)
+      cellRow.push(
+        user.advanced_percentage
+          ? user.advanced_percentage + '%'
+          : user.compatible ? '100%' : '0%'
+      )
       cellRow.push(user.course_views || '-')
       cellRow.push(
         user.course_passed > 0
@@ -261,11 +276,7 @@ async function generateSegmentationReport ({
         ? Math.round(user.compatible_completed)
         : Math.round(completed) || 0
       )
-      cellRow.push(
-        user.advanced_percentage
-          ? user.advanced_percentage + '%'
-          : user.compatible ? '100%' : '0%'
-      )
+
       cellRow.push(
         user.last_time_evaluated_at
           ? moment(user.last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss')
