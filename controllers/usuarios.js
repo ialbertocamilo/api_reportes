@@ -22,7 +22,8 @@ const defaultHeaders = [
   'NÚMERO DE PERSONA COLABORADOR',
   'ESTADO(USUARIO)',
   'EMAIL',
-  'ULTIMA SESIÓN'
+  'ULTIMA SESIÓN',
+  'FECHA DE CREACIÓN'
 ]
 
 async function exportarUsuariosDW ({ workspaceId, modulos,
@@ -52,6 +53,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
   for (const user of users) {
     const cellRow = []
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
+    const createAt = moment(user.created_at).format('DD/MM/YYYY H:mm:ss')
     const fullname = [user.name,user.lastname, user.surname]
     .filter(e => Boolean(e))
     .join(' ');
@@ -65,6 +67,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
     cellRow.push(user.email)
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
+    cellRow.push(createAt !== 'Invalid date' ? createAt : '-')
 
     // Add user's criterion values
 
