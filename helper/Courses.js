@@ -22,7 +22,15 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
       select
           sc.user_id,
           s.id school_id,
-          sum(coalesce(sc.advanced_percentage, 0)) courses_percentage_sum
+          sum(
+              -- When course has a pending poll, its progress
+              -- is cosidered zero
+              if (
+                  sc.has_pending_poll = 1,
+                  0,
+                  if (coalesce(sc.advanced_percentage, 0) = 100, 100, 0)
+              )
+          ) courses_percentage_sum
       from summary_courses sc
                join courses c on c.id = sc.course_id
                join course_school cs on cs.course_id = c.id
