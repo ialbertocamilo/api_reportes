@@ -8,7 +8,7 @@ const moment = require("moment");
 const { workbook, worksheet, createHeaders, createAt } = require("../exceljs");
 const { response } = require("../response");
 const {
-  loadCourses,
+  loadCoursesV3,
   loadUsersSegmented,
   loadUsersSegmentedv2,
   getCountTopics
@@ -52,7 +52,7 @@ const headers = [
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
   'AVANCE (%)',
-  'ULTIMA EVALUACIN',
+  'ULTIMA EVALUACIÓN',
   'CURSO COMPATIBLE' // nombre del curso
 ];
 
@@ -101,9 +101,9 @@ async function generateSegmentationReport({
   let users_to_export = [];
 
   //Load Courses
-  const courses = await loadCourses({ cursos, escuelas, tipocurso,
+  const courses = await loadCoursesV3({ cursos, escuelas, tipocurso,
                                       CursosActivos, CursosInactivos }, 
-                                      workspaceId);
+                                      modulos);
   const coursesStatuses = await loadCoursesStatuses();
 
   // console.log('courses_count', courses.length)
@@ -266,7 +266,7 @@ async function generateSegmentationReport({
       );
       cellRow.push(user.compatible || `-`);
 
-      // aÃ±adir fila 
+      // añadir fila 
       worksheet.addRow(cellRow).commit();
     }
     logtime(`FIN addRow`);
