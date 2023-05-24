@@ -16,6 +16,13 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
   const schoolsCourses = await getSchoolsCoursesIds(schoolsIds)
   const schoolsCoursesIds = pluckUnique(schoolsCourses, 'course_id')
 
+  // Get id of status id
+
+  const [tax] = await con.raw(`select id 
+    from taxonomies 
+    where \`group\` = 'course' and code = 'enc_pend' `)
+  const idPendingPoll = tax[0].id
+
   // Load user's courses progress
 
   const query2 = `
@@ -26,7 +33,7 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
               -- When course has a pending poll, its progress
               -- is cosidered zero
               if (
-                  sc.has_pending_poll = 1,
+                  sc.status_id = ${idPendingPoll},
                   0,
                   if (coalesce(sc.advanced_percentage, 0) = 100, 100, 0)
               )
@@ -59,7 +66,7 @@ exports.calculateSchoolProgressPercentage = (
 
   const schoolInfo = usersCoursesProgress.find(us => {
     return +us.school_id === +schoolId &&
-           +us.user_id === +userId
+      +us.user_id === +userId
   })
 
   let coursesCount = 0;
@@ -86,9 +93,9 @@ const getSchoolsCoursesIds = async (schoolsIds) => {
   const query = `
       select s.id school_id, cs.course_id
       from schools s
-        join course_school cs on cs.school_id = s.id
+               join course_school cs on cs.school_id = s.id
       where cs.school_id in (${schoolsIds.join(',')})
-    `
+  `
   const [schoolsCourses] = await con.raw(query)
 
   return schoolsCourses;
@@ -107,16 +114,16 @@ exports.loadUsersWithCourses = async (
   // Base query
 
   let query = `
-    select 
-        u.id
-    from users u
-        inner join summary_courses sc on u.id = sc.user_id
-        inner join courses c on sc.course_id = c.id
-        inner join course_school cs on c.id = cs.course_id
-        inner join taxonomies tx on tx.id = c.type_id
-        inner join schools s on cs.school_id = s.id 
-        inner join school_workspace sw on s.id = sw.school_id
-   
+      select
+          u.id
+      from users u
+               inner join summary_courses sc on u.id = sc.user_id
+               inner join courses c on sc.course_id = c.id
+               inner join course_school cs on c.id = cs.course_id
+               inner join taxonomies tx on tx.id = c.type_id
+               inner join schools s on cs.school_id = s.id
+               inner join school_workspace sw on s.id = sw.school_id
+
   `
   query += ` where 
       u.subworkspace_id in (${modulesIds.join()}) and
