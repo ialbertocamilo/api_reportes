@@ -39,10 +39,12 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
               )
           ) courses_percentage_sum
       from summary_courses sc
-               join courses c on c.id = sc.course_id
-               join course_school cs on cs.course_id = c.id
-               join schools s on cs.school_id = s.id
-      where sc.course_id in (${schoolsCoursesIds.join(',')})
+        join courses c on c.id = sc.course_id
+        join course_school cs on cs.course_id = c.id
+        join schools s on cs.school_id = s.id
+      where 
+          sc.course_id in (${schoolsCoursesIds.join(',')})
+          and c.active = 1
       group by sc.user_id, s.id
   `
 
@@ -72,9 +74,13 @@ exports.calculateSchoolProgressPercentage = (
   if (!schoolInfo) return 0
 
   let coursesCount = 0;
+  let coursedAdded = []
   userSegmentedSchoolsCourses.forEach(ussc => {
     if (+ussc.school_id === schoolId) {
-      coursesCount++
+      if (!coursedAdded.includes(+ussc.course_id)) {
+        coursesCount++
+        coursedAdded.push(+ussc.course_id)
+      }
     }
   })
 
