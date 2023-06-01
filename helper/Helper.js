@@ -157,3 +157,20 @@ exports.formatDatetimeToString = (datetime) => {
     ? moment(datetime).format('DD/MM/YYYY H:mm:ss')
     : '-'
 }
+
+exports.calculateUserSeniorityRange = (dateString) => {
+  let seniorityValue = '-'
+
+  let startDate = moment(dateString, 'YYYY-MM-DD');
+  let today = moment();
+  let differenceMonths = today.diff(startDate, 'months')
+  if (differenceMonths > 12) {
+    seniorityValue = 'mas 1 año'
+  } else if (differenceMonths >= 6 && differenceMonths <= 12) {
+    seniorityValue = '6-12 meses'
+  } else if (differenceMonths >= 3 && differenceMonths < 6) {
+    seniorityValue = '3-6 meses'
+  }
+
+  return seniorityValue
+}

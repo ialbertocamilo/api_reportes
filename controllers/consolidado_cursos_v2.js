@@ -25,7 +25,7 @@ const {
 } = require("../helper/CoursesTopicsHelper");
 
 
-const { pluck, logtime, pluckUnique } = require("../helper/Helper");
+const { pluck, logtime, pluckUnique, calculateUserSeniorityRange } = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -49,7 +49,6 @@ const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
 const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
-  'AVANCE ESCUELA (%)',
   'CURSO',
   'AVANCE CURSO (%)',
   'VISITAS',
@@ -86,10 +85,26 @@ async function generateSegmentationReport({
   UsuariosInactivos: inactiveUsers,
   completed = true
 }) {
+
+  // Default criteria to be shown on report
+
+  let defaultsCriteriaIds = [1, 5, 13, 4, 40, 41];
+
+  // Homecenters Peruanos -> id 11
+  // Date_Start -> id 7
+  let isPromart = workspaceId === 11
+  if (isPromart) {
+    defaultsCriteriaIds.push(7)
+
+    let schoolProgressIndex = 2
+    headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
+    headers.unshift('RANGO DE ANTIGÜEDAD')
+  }
+
   // Generate Excel file header
   const headersEstaticos = await getGenericHeadersNotasXCurso(
     workspaceId,
-    [1, 5, 13, 4, 40, 41]
+    defaultsCriteriaIds
   );
   await createHeaders(headersEstaticos.concat(headers));
 
@@ -97,7 +112,7 @@ async function generateSegmentationReport({
 
   const workspaceCriteria = await getWorkspaceCriteria(
     workspaceId,
-    [1, 5, 13, 4, 40, 41]
+    defaultsCriteriaIds
   );
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
   // console.log('workpace_criteria_data: ',{ workspaceCriteria });
@@ -132,10 +147,6 @@ async function generateSegmentationReport({
   let StackUserCriterios = [];
   // === precargar usuarios y criterios
 
-  // Load progress by user
-
-  usersCoursesProgress = await loadUsersCoursesProgress(escuelas)
-
   // Load users from database and generate ids array
 
   const allUsers = await loadUsersWithCourses(
@@ -146,13 +157,18 @@ async function generateSegmentationReport({
   )
   const allUsersIds = pluck(allUsers, 'id')
 
-  // Load segmented courses by school for each user
+  let segmentedCoursesByUsers = []
+  if (isPromart) {
+    // Load progress by user
 
-  let segmentedCoursesByUsers
-  if (allUsersIds.length) {
-    segmentedCoursesByUsers = await loadCoursesSegmentedToUsersInSchool(escuelas, allUsersIds)
+    usersCoursesProgress = await loadUsersCoursesProgress(escuelas)
+
+    // Load segmented courses by school for each user
+
+    if (allUsersIds.length) {
+      segmentedCoursesByUsers = await loadCoursesSegmentedToUsersInSchool(escuelas, allUsersIds)
+    }
   }
-
 
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
@@ -262,6 +278,20 @@ async function generateSegmentationReport({
 
         StackUserCriterios[id] = userValues; 
       }
+
+      if (isPromart) {
+
+        let startDateCriteria = StackUserCriterios[id].find(c =>
+          c.criterion_name === 'Date_Start')
+        let seniorityValue = '-'
+
+        if (startDateCriteria) {
+          seniorityValue = calculateUserSeniorityRange(startDateCriteria.criterion_value)
+        }
+
+        cellRow.push(seniorityValue);
+      }
+
       // criterios de usuario
 
       const passed = user.course_passed || 0;
@@ -271,9 +301,15 @@ async function generateSegmentationReport({
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
-      cellRow.push(calculateSchoolProgressPercentage(
-        usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
-      ) + '%');
+
+
+      if (isPromart) {
+        const schoolTotals = calculateSchoolProgressPercentage(
+          usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
+        )
+        cellRow.push(schoolTotals.schoolPercentage + '%');
+      }
+
       cellRow.push(course.course_name);
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
