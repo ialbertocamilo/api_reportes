@@ -29,22 +29,27 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
       select
           sc.user_id,
           s.id school_id,
-          sum(
-              -- When course has a pending poll, its progress
-              -- is cosidered zero
-              if (
-                  sc.status_id = ${idPendingPoll},
-                  0,
-                  if (coalesce(sc.advanced_percentage, 0) = 100, 100, 0)
-              )
-          ) courses_percentage_sum
+          -- When course has a pending poll, its progress
+          -- is cosidered zero
+          group_concat(
+            if (
+              sc.status_id = ${idPendingPoll},
+              0,
+              if (ifnull(sc.advanced_percentage, 0) = 100, 100, 0)
+            )
+          ) courses_percentages,
+          group_concat(
+              sc.course_id
+          ) courses_ids,
+          group_concat(
+              if (c.active = 0, sc.course_id, '')
+          ) inactive_courses_ids
       from summary_courses sc
         join courses c on c.id = sc.course_id
         join course_school cs on cs.course_id = c.id
         join schools s on cs.school_id = s.id
       where 
           sc.course_id in (${schoolsCoursesIds.join(',')})
-          and c.active = 1
       group by sc.user_id, s.id
   `
 
@@ -63,7 +68,6 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
 exports.calculateSchoolProgressPercentage = (
   usersCoursesProgress, userId, schoolId, userSegmentedSchoolsCourses
 ) => {
-
   if (!userSegmentedSchoolsCourses) return 0
 
   const schoolInfo = usersCoursesProgress.find(us => {
@@ -73,24 +77,78 @@ exports.calculateSchoolProgressPercentage = (
 
   if (!schoolInfo) return 0
 
+  let progressSum = 0;
+  let completedCourses = 0;
   let coursesCount = 0;
   let coursedAdded = []
   userSegmentedSchoolsCourses.forEach(ussc => {
-    if (+ussc.school_id === schoolId) {
-      if (!coursedAdded.includes(+ussc.course_id)) {
-        coursesCount++
-        coursedAdded.push(+ussc.course_id)
+    if (+ussc.school_id === +schoolId) {
+
+      let coursesPercentages = schoolInfo.courses_percentages
+        ? schoolInfo.courses_percentages.split(',')
+        : []
+
+      let summaryCoursesIds = schoolInfo.courses_ids
+        ? schoolInfo.courses_ids.split(',')
+        : []
+
+      let inactiveCoursesIds = schoolInfo.inactive_courses_ids
+        ? schoolInfo.inactive_courses_ids.split(',')
+        : []
+
+      const segmentedCourseId = +ussc.course_id;
+      const alreadyProcessed = coursedAdded.includes(segmentedCourseId);
+      let isInactive = false
+      inactiveCoursesIds.forEach(i => {
+        if(+i === segmentedCourseId) {
+          isInactive = true
+        }
+      })
+
+      if (!alreadyProcessed && !isInactive) {
+
+        // Search index of course in summary
+        let courseIndex;
+        for (let i = 0; i < summaryCoursesIds.length; i++) {
+
+          if (segmentedCourseId === +summaryCoursesIds[i]) {
+            courseIndex = i
+          }
+        }
+
+        // If segmented course exists in summary, get its progress percentage
+
+        if (courseIndex >= 0) {
+          let coursePercentage = +coursesPercentages[courseIndex]
+          progressSum += coursePercentage
+          coursesCount++
+          coursedAdded.push(segmentedCourseId)
+
+          if (coursePercentage === 100) {
+            completedCourses++
+          }
+        }
       }
     }
   })
 
   const percentage = coursesCount > 0
-    ? +schoolInfo.courses_percentage_sum / coursesCount
+    ? progressSum / coursesCount
     : 0;
 
-  return schoolInfo
+  let schoolPercentage = schoolInfo
     ? Math.round(percentage, 2)
     : 0
+
+  if (typeof schoolPercentage === 'undefined') {
+    schoolPercentage = 0
+  }
+
+  return {
+    schoolPercentage,
+    completedCourses,
+    coursesCount
+  }
 }
 
 /**
