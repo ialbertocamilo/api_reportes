@@ -39,7 +39,7 @@ exports.strippedString = (value) => {
   try {
     return value.replace(/(<([^>]+)>)/gi, '')
   } catch (error) {
-    return value;    
+    return value;
   }
 }
 
@@ -68,10 +68,10 @@ exports.groupArrayOfObjects = (list, key , type = 'get_object')=>{
 
 exports.uniqueElements = (list,key = 'id')=>{
   return list.reduce((unique, o) => {
-      if(!unique.some(obj => obj[key] === o[key])) {
-        unique.push(o);
-      }
-      return unique;
+    if(!unique.some(obj => obj[key] === o[key])) {
+      unique.push(o);
+    }
+    return unique;
   },[])
 }
 
@@ -136,7 +136,7 @@ exports.groupArrayOfObjects_v2 = (data, key = 'id') => {
 
   for(const value of data) {
     const { [key]:index } = value;
-    
+
     if(!ResultData[index]) ResultData[index] = [];
     ResultData[index].push(value);
   }
@@ -163,13 +163,15 @@ exports.calculateUserSeniorityRange = (dateString) => {
 
   let startDate = moment(dateString, 'YYYY-MM-DD');
   let today = moment();
-  let differenceMonths = today.diff(startDate, 'months')
-  if (differenceMonths > 12) {
+  let differenceMonths = today.diff(startDate, 'months', true)
+  if (differenceMonths >= 12) {
     seniorityValue = 'mas 1 año'
-  } else if (differenceMonths >= 6 && differenceMonths <= 12) {
+  } else if (differenceMonths >= 6 && differenceMonths <= 11.99) {
     seniorityValue = '6-12 meses'
-  } else if (differenceMonths >= 3 && differenceMonths < 6) {
+  } else if (differenceMonths >= 3 && differenceMonths <= 5.99) {
     seniorityValue = '3-6 meses'
+  } if (differenceMonths >= 0 && differenceMonths <= 2.99) {
+    seniorityValue = '0-3 meses'
   }
 
   return seniorityValue
