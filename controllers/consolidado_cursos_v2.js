@@ -7,11 +7,13 @@ require("../error");
 const moment = require("moment");
 const { workbook, worksheet, createHeaders, createAt } = require("../exceljs");
 const { response } = require("../response");
+const _ = require('lodash')
+let usersCoursesProgress = []
 const {
   loadCoursesV3,
   loadUsersSegmented,
   loadUsersSegmentedv2,
-  getCountTopics
+  getCountTopics, loadCoursesSegmentedToUsersInSchool
 // } = require("../helper/SegmentationHelper");
 } = require("../helper/SegmentationHelper_v2");
 
@@ -22,7 +24,8 @@ const {
   getCourseStatusId
 } = require("../helper/CoursesTopicsHelper");
 
-const { pluck, logtime } = require("../helper/Helper");
+
+const { pluck, logtime, pluckUnique, calculateUserSeniorityRange } = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -36,6 +39,10 @@ const {
   getUserCriterionValues2,
 } = require("../helper/Usuarios");
 const { getSuboworkspacesIds } = require("../helper/Workspace");
+const { con } = require('../db')
+const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
+  loadUsersWithCourses
+} = require('../helper/Courses')
 
 // Headers for Excel file
 
@@ -43,6 +50,7 @@ const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
+  'AVANCE CURSO (%)',
   'VISITAS',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
@@ -51,7 +59,6 @@ const headers = [
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
-  'AVANCE (%)',
   'ULTIMA EVALUACIÓN',
   'CURSO COMPATIBLE' // nombre del curso
 ];
@@ -78,10 +85,26 @@ async function generateSegmentationReport({
   UsuariosInactivos: inactiveUsers,
   completed = true
 }) {
+
+  // Default criteria to be shown on report
+
+  let defaultsCriteriaIds = [1, 5, 13, 4, 40, 41];
+
+  // Homecenters Peruanos -> id 11
+  // Date_Start -> id 7
+  let isPromart = workspaceId === 11
+  if (isPromart) {
+    defaultsCriteriaIds.push(7)
+
+    let schoolProgressIndex = 2
+    headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
+    headers.unshift('RANGO DE ANTIGÜEDAD')
+  }
+
   // Generate Excel file header
   const headersEstaticos = await getGenericHeadersNotasXCurso(
     workspaceId,
-    [1, 5, 13, 4, 40, 41]
+    defaultsCriteriaIds
   );
   await createHeaders(headersEstaticos.concat(headers));
 
@@ -89,7 +112,7 @@ async function generateSegmentationReport({
 
   const workspaceCriteria = await getWorkspaceCriteria(
     workspaceId,
-    [1, 5, 13, 4, 40, 41]
+    defaultsCriteriaIds
   );
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
   // console.log('workpace_criteria_data: ',{ workspaceCriteria });
@@ -124,6 +147,29 @@ async function generateSegmentationReport({
   let StackUserCriterios = [];
   // === precargar usuarios y criterios
 
+  // Load users from database and generate ids array
+
+  const allUsers = await loadUsersWithCourses(
+    workspaceId, coursesStatuses,
+    modulos, activeUsers, inactiveUsers, escuelas, cursos,
+    aprobados, desaprobados, desarrollo, encuestaPendiente, start_date, end_date,
+    tipocurso
+  )
+  const allUsersIds = pluck(allUsers, 'id')
+
+  let segmentedCoursesByUsers = []
+  if (isPromart) {
+    // Load progress by user
+
+    usersCoursesProgress = await loadUsersCoursesProgress(escuelas)
+
+    // Load segmented courses by school for each user
+
+    if (allUsersIds.length) {
+      segmentedCoursesByUsers = await loadCoursesSegmentedToUsersInSchool(escuelas, allUsersIds)
+    }
+  }
+
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -143,6 +189,7 @@ async function generateSegmentationReport({
       completed
     );
     logtime(`-- end: user segmentation --`);
+
 
     const countTopics = await getCountTopics(course.course_id);
 
@@ -231,6 +278,20 @@ async function generateSegmentationReport({
 
         StackUserCriterios[id] = userValues; 
       }
+
+      if (isPromart) {
+
+        let startDateCriteria = StackUserCriterios[id].find(c =>
+          c.criterion_name === 'Date_Start')
+        let seniorityValue = '-'
+
+        if (startDateCriteria) {
+          seniorityValue = calculateUserSeniorityRange(startDateCriteria.criterion_value)
+        }
+
+        cellRow.push(seniorityValue);
+      }
+
       // criterios de usuario
 
       const passed = user.course_passed || 0;
@@ -240,9 +301,21 @@ async function generateSegmentationReport({
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
+
+
+      if (isPromart) {
+        const schoolTotals = calculateSchoolProgressPercentage(
+          usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
+        )
+        cellRow.push(schoolTotals.schoolPercentage + '%');
+      }
+
       cellRow.push(course.course_name);
+      cellRow.push(
+        user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
+      );
       cellRow.push(user.course_views || "-");
-      cellRow.push(user.course_passed > 0 ? user.grade_average : "-");
+      cellRow.push(user.grade_average);
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {
@@ -256,9 +329,6 @@ async function generateSegmentationReport({
       cellRow.push(user.course_restarts || "-");
       cellRow.push(user.assigned || '-');
       cellRow.push(Math.round(completed) || 0);
-      cellRow.push(
-        user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
-      );
       cellRow.push(
         user.last_time_evaluated_at
           ? moment(user.last_time_evaluated_at).format("DD/MM/YYYY H:mm:ss")

@@ -816,6 +816,7 @@ exports.loadCourses = async (
       cs.course_id,
       c.name as course_name,
       s.name as school_name,
+      s.id as school_id,
       c.active as course_active,
       tx.name as course_type
 
