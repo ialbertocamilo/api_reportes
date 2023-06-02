@@ -71,7 +71,7 @@ async function generateSegmentationReport ({
 
   // Homecenters Peruanos -> id 11
   // Date_Start -> id 7
-  let isPromart = workspaceId === 25
+  let isPromart = workspaceId === 11
   if (isPromart) {
     criteriaIds.push(7)
 
