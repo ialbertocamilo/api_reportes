@@ -81,7 +81,7 @@ async function historialUsuario ({ document, type, page, schoolId, search, works
   let courseResults = []
   for (const user of userHistory) {
     const courseObj = {}
-
+    courseObj.subworkspaces_name = user.subworkspaces_name
     courseObj.schools_names = user.schools_names
     courseObj.course_name = user.course_name
     courseObj.grade = user.course_grade || '-'
