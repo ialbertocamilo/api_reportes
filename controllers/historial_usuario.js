@@ -136,9 +136,10 @@ async function jsonResponse (user, courseResults, pagination) {
  * @returns {Promise<void>}
  */
 async function excelResponse (courseResults) {
-  await createHeaders(['Escuelas', 'Curso', 'Nota', 'Estado'])
+  await createHeaders(['Módulos','Escuelas', 'Curso', 'Nota', 'Estado'])
   for (const course of courseResults) {
     const cellRow = []
+    cellRow.push(course.subworkspaces_name)
     cellRow.push(course.schools_names)
     cellRow.push(course.course_name)
     cellRow.push(course.grade)
@@ -182,18 +183,18 @@ function generateQuery (
 
   return `
     select
+        group_concat(distinct (w.name) separator ', ') subworkspaces_name,
         group_concat(distinct (s.name) separator ', ') schools_names,
         c.name                                         course_name,
         sc.grade_average                               course_grade,
         sc.status_id                                   course_status_id
-    
     from users u
          inner join summary_courses sc on u.id = sc.user_id
          inner join courses c on sc.course_id = c.id
          inner join course_school cs on c.id = cs.course_id
          inner join schools s on cs.school_id = s.id
          inner join school_subworkspace sw on sw.school_id = s.id
-
+         inner join workspaces w on w.id = sw.subworkspace_id
     where 
         u.id = :userId 
         ${statusCondition}
