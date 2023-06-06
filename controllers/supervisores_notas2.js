@@ -14,13 +14,17 @@ const {
   getCourseStatusName,
   getCourseStatusId
 } = require('../helper/CoursesTopicsHelper')
-
-const { pluck, logtime } = require('../helper/Helper')
+let usersCoursesProgress = []
+const { pluck, logtime, calculateUserSeniorityRange } = require('../helper/Helper')
 const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
 const { getGenericHeadersNotasXCurso, getWorkspaceCriteria } = require('../helper/Criterios')
 const { loadUsersBySubWorspaceIds, getUserCriterionValues2 } = require('../helper/Usuarios')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
+const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
+  loadUsersWithCourses
+} = require('../helper/Courses')
+const { loadCoursesSegmentedToUsersInSchool } = require('../helper/SegmentationHelper_v2')
 
 // Headers for Excel file
 
@@ -28,6 +32,7 @@ const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
+  'AVANCE CURSO (%)',
   'VISITAS',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
@@ -36,7 +41,6 @@ const headers = [
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
-  'AVANCE (%)',
   'ULTIMA EVALUACIÓN',
   'CURSO COMPATIBLE', // nombre del curso
 
@@ -57,12 +61,24 @@ async function generateSegmentationReport ({
   desaprobados,
   desarrollo,
   encuestaPendiente,
+  noIniciado,
   CursosActivos = false, // posible filtro en estado de curso
   CursosInactivos = false // posible filtro en estado de curso
 }) {
   const criteriaIds = workspaceId === 25
     ? [1, 5, 13, 4, 40, 41]
     : [1, 5, 13, 4]
+
+  // Homecenters Peruanos -> id 11
+  // Date_Start -> id 7
+  let isPromart = workspaceId === 11
+  if (isPromart) {
+    criteriaIds.push(7)
+
+    let schoolProgressIndex = 2
+    headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
+    headers.unshift('RANGO DE ANTIGÜEDAD')
+  }
 
   // Generate Excel file header
   const headersEstaticos = await getGenericHeadersNotasXCurso(
@@ -113,6 +129,19 @@ async function generateSegmentationReport ({
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId, criteriaIds)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
+  let segmentedCoursesByUsers = []
+  if (isPromart) {
+    // Load progress by user
+
+    usersCoursesProgress = await loadUsersCoursesProgress(escuelas)
+
+    // Load segmented courses by school for each user
+
+    if (supervisedUsersIds.length) {
+      segmentedCoursesByUsers = await loadCoursesSegmentedToUsersInSchool(escuelas, supervisedUsersIds)
+    }
+  }
+
   for (const course of courses) {
     // Load workspace user criteria
 
@@ -127,7 +156,6 @@ async function generateSegmentationReport ({
       true,
       supervisedUsersIds
     )
-
     // filtro para usuarios nulos y no nulos
     const { users_null, users_not_null } = getUsersNullAndNotNull(users)
     users_to_export = users_not_null
@@ -177,12 +205,16 @@ async function generateSegmentationReport ({
     } else {
       users_to_export = [...users_not_null, ...users_null]
     }
-
     // exportar usuarios (users_to_export);
     for (const user of users_to_export) {
       // === filtro de checks ===
-      if (!StateChecks && !StackChecks.includes(user.course_status_id)) continue
-
+      const course_status_name = getCourseStatusName(coursesStatuses, user.course_status_id) || 'No iniciado';
+      if(noIniciado && !StateChecks){
+        if(course_status_name != 'No iniciado') continue
+      }else{
+        if ((!StateChecks && !StackChecks.includes(user.course_status_id))) continue
+      }
+      
       const cellRow = []
 
       // encontrar usuario por 'id'
@@ -215,6 +247,20 @@ async function generateSegmentationReport ({
 
         StackUserCriterios[id] = userValues;
       }
+
+      if (isPromart) {
+
+        let startDateCriteria = StackUserCriterios[id].find(c =>
+          c.criterion_name === 'Date_Start')
+        let seniorityValue = '-'
+
+        if (startDateCriteria) {
+          seniorityValue = calculateUserSeniorityRange(startDateCriteria.criterion_value)
+        }
+
+        cellRow.push(seniorityValue);
+      }
+
       // criterios de usuario
 
       const passed = user.course_passed || 0
@@ -224,7 +270,19 @@ async function generateSegmentationReport ({
 
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
       cellRow.push(course.school_name)
+      if (isPromart) {
+        const schoolTotals = calculateSchoolProgressPercentage(
+          usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
+        )
+        cellRow.push(schoolTotals.schoolPercentage + '%');
+      }
+
       cellRow.push(course.course_name)
+      cellRow.push(
+        user.advanced_percentage
+          ? user.advanced_percentage + '%'
+          : user.compatible ? '100%' : '0%'
+      )
       cellRow.push(user.course_views || '-')
       cellRow.push(
         user.course_passed > 0
@@ -234,7 +292,7 @@ async function generateSegmentationReport ({
 
       // estado para - 'RESULTADO DE TEMA'
       if (!user.course_status_name) {
-        cellRow.push(getCourseStatusName(coursesStatuses, user.course_status_id) || 'No iniciado')
+        cellRow.push(course_status_name)
       } else {
         cellRow.push(user.course_status_name)
       }
@@ -252,11 +310,7 @@ async function generateSegmentationReport ({
         ? Math.round(user.compatible_completed)
         : Math.round(completed) || 0
       )
-      cellRow.push(
-        user.advanced_percentage
-          ? user.advanced_percentage + '%'
-          : user.compatible ? '100%' : '0%'
-      )
+
       cellRow.push(
         user.last_time_evaluated_at
           ? moment(user.last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss')
