@@ -859,8 +859,8 @@ async function loadCoursesSegmentedToUsersInSchool (schoolsIds, usersIds) {
     .where("sg.deleted_at", null)
     .where("sv.deleted_at", null);
 
-  let criterionValuesIds = pluckUnique(segments, 'criterion_value_id')
-  let criteriaIds = pluckUnique(segments, 'criterion_id')
+  let criterionValuesIds = pluckUnique(segments, 'criterion_value_id').filter((e) => e !== null)
+  let criteriaIds = pluckUnique(segments, 'criterion_id').filter((e) => e !== null)
 
   // Load users criterion values
 
