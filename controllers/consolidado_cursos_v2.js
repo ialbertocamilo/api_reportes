@@ -307,7 +307,7 @@ async function generateSegmentationReport({
         const schoolTotals = calculateSchoolProgressPercentage(
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
-        cellRow.push(schoolTotals.schoolPercentage + '%');
+        cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
       }
 
       cellRow.push(course.course_name);

@@ -140,7 +140,9 @@ exports.calculateSchoolProgressPercentage = (
     ? Math.round(percentage, 2)
     : 0
 
-  if (typeof schoolPercentage === 'undefined') {
+  if (typeof schoolPercentage === 'undefined' ||
+     schoolPercentage === 'undefined' ||
+     isNaN(schoolPercentage)) {
     schoolPercentage = 0
   }
 
