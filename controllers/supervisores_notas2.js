@@ -70,10 +70,10 @@ async function generateSegmentationReport ({
     : [1, 5, 13, 4]
 
   // Homecenters Peruanos -> id 11
-  // Date_Start -> id 7
   let isPromart = workspaceId === 11
   if (isPromart) {
-    criteriaIds.push(7)
+    criteriaIds.push(7) // Date_Start
+    criteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
     headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
@@ -274,7 +274,7 @@ async function generateSegmentationReport ({
         const schoolTotals = calculateSchoolProgressPercentage(
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
-        cellRow.push(schoolTotals.schoolPercentage + '%');
+        cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
       }
 
       cellRow.push(course.course_name)
