@@ -90,6 +90,9 @@ exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
   if (modulesIds && !activeUsers && inactiveUsers) {
     query += ` and u.active = 0`;
   }
+
+  query += ` and u.deleted_at is null `;
+
   query += ` group by u.id`;
 
   const stateHavingCareerArea = (careers.length > 0 && areas.length > 0)
