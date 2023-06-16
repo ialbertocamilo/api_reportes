@@ -334,10 +334,17 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   logtime('start: user ids segmentation');
   // === extraer ids de usuarios segmentados ===
 
-  if (!StacksUsersIds.length) {
-    const LoadUsersData = await loadUsersSegmentedByCourse(course_id, modules,
-      areas, activeUsers, inactiveUsers);
-    StacksUsersIds = pluck(LoadUsersData, 'id');
+  const segmentedUsers = await loadUsersSegmentedByCourse(course_id, modules,
+    areas, activeUsers, inactiveUsers);
+
+  // When StacksUsersIds has items, filter those who
+  // are also included in segmented users
+
+  if (StacksUsersIds.length) {
+    let segmentedUsersIds = pluck(segmentedUsers, 'id');
+    StacksUsersIds = StacksUsersIds.filter(id => segmentedUsersIds.includes(id))
+  } else {
+    StacksUsersIds = pluck(segmentedUsers, 'id');
   }
 
 
