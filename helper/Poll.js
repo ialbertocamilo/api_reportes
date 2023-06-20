@@ -3,21 +3,23 @@ const { pluck } = require('./Helper')
 
 exports.pollQuestionReportData =async({courses_selected,modules,poll,type_poll_question,date})=>{
     const poll_questions_ids = await con('poll_questions').select('id').where('poll_id',poll.id).whereNull('deleted_at').where('type_id',type_poll_question.id);
-    let select_query = ['pq.titulo','pqa.respuestas','pqa.course_id','c.name as course_name','pqa.created_at','u.subworkspace_id']; 
+    let select_query = poll.type.code == 'xcurso' 
+                                    ?   ['pq.titulo','pqa.respuestas','pqa.course_id','c.name as course_name','pqa.created_at','u.subworkspace_id']
+                                    :   ['pq.titulo','pqa.respuestas','pqa.created_at','u.subworkspace_id']; 
     if(!poll.anonima){
         select_query = [...select_query,...['u.name','u.lastname','u.surname','u.document']]; 
     }
         
-    const where_between_dates = (date.start && date.end) ? `and pqa.created_at BETWEEN '${date.start}' and '${date.end}'` : ''; 
-    const query = `
+    const where_between_dates = (date.start && date.end) ? `and pqa.created_at BETWEEN '${date.start}' and '${date.end}' order by pqa.created_at desc` : ''; 
+    let query = `
     select ${select_query} from  poll_question_answers pqa
-    join users as u on u.id = pqa.user_id
-    join poll_questions as pq on pq.id = pqa.poll_question_id
-    join courses c on c.id = pqa.course_id
-    where u.active =1 and u.deleted_at is null
-    and u.subworkspace_id in (${modules.toString()})
-    and pqa.course_id in (${courses_selected.toString()})
-    and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()}) ${where_between_dates}`;
+    join users as u on u.id = pqa.user_id join poll_questions as pq on pq.id = pqa.poll_question_id `;
+    query += poll.type.code == 'xcurso' ? ' join courses c on c.id = pqa.course_id ' :'';
+    query += ` where u.active =1 and u.deleted_at is null and u.subworkspace_id in (${modules.toString()}) `;
+    query += poll.type.code == 'xcurso' ? ` and pqa.course_id in (${courses_selected.toString()})
+    and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()}) ` : '';
+    query += where_between_dates; 
+    console.log(query);
     const [rows]  = await con.raw(query);
     return rows;
     // return await con('poll_question_answers as pqa')

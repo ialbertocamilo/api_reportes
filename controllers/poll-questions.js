@@ -20,7 +20,10 @@ async function exportReportPollQuestion(filters) {
     if(!es_anonimo){
         defaultHeaders = [...defaultHeaders,...['Nombre','Apellido Paterno','Apellido Materno','Documento']];
     }
-    defaultHeaders = [...defaultHeaders,...['Escuela','Curso','Pregunta']];
+    if(filters.poll.type.code == 'xcurso'){
+        defaultHeaders = [...defaultHeaders,...['Escuela','Curso']];
+    }
+    defaultHeaders = [...defaultHeaders,...['Pregunta']];
     if(filters.type_poll_question.code =='califica'){
         defaultHeaders = [...defaultHeaders,...['Respuesta numérica','Respuesta texto','Fecha']];
     }else{
@@ -53,8 +56,10 @@ async function exportReportPollQuestion(filters) {
                     cellRow.push(poll_questions_answer.surname);
                     cellRow.push(poll_questions_answer.document);
                 }
-                cellRow.push(schools_name);
-                cellRow.push(poll_questions_answer.course_name);
+                if(filters.poll.type.code == 'xcurso'){
+                    cellRow.push(schools_name);
+                    cellRow.push(poll_questions_answer.course_name);
+                }
                 cellRow.push(poll_questions_answer.titulo);
                 // cellRow.push(poll_questions_answer.respuestas);
                 cellRow.push(response_user_multiple);
@@ -70,8 +75,10 @@ async function exportReportPollQuestion(filters) {
                 cellRow.push(poll_questions_answer.surname);
                 cellRow.push(poll_questions_answer.document);
             }
-            cellRow.push(schools_name);
-            cellRow.push(poll_questions_answer.course_name);
+            if(filters.poll.type.code == 'xcurso'){
+                cellRow.push(schools_name);
+                cellRow.push(poll_questions_answer.course_name);
+            }
             cellRow.push(poll_questions_answer.titulo);
             // cellRow.push(poll_questions_answer.respuestas);
             cellRow.push(response_user);
