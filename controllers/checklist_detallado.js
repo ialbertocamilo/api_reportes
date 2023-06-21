@@ -102,7 +102,7 @@ async function generateReport ({
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
     // cellRow.push(user.school_name)
-    cellRow.push(user.course_name ?? '-')
+    cellRow.push(user.course_name || '-')
     cellRow.push(user.type_checklist)
     cellRow.push(user.checklists_title)
     cellRow.push(user.progress)
