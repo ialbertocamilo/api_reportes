@@ -251,7 +251,7 @@ left join courses c on
 
   // Add group sentence
 
-  query += ' group by s.id, c.id, u.id'
+  // query += ' group c.id, u.id'
 
   // Execute query
   // logtime(query);
