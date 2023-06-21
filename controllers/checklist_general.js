@@ -150,7 +150,7 @@ left JOIN summary_user_checklist suc on suc.user_id = u.id`
   //             left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   // `
   const workspaceCondition = `  where
-        checklists.active = 1 and
+        tu.active = 1
         u.subworkspace_id in (${modulos.join()}) `;
 
   if(areas.length > 0) {
@@ -178,14 +178,14 @@ left JOIN summary_user_checklist suc on suc.user_id = u.id`
 
   if (start && end) {
     query += ` and (
-      ca.updated_at between '${start} 00:00' and '${end} 23:59'
+      suc.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
   }
 
   // Add group sentence
   // logtime(query);
 
-  query += ' group by u.id'
+  // query += ' group by u.id'
 
   // Execute query
 
