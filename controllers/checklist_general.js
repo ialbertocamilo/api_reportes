@@ -149,9 +149,7 @@ left JOIN summary_user_checklist suc on suc.user_id = u.id`
               
   //             left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   // `
-  const workspaceCondition = `  where
-        tu.active = 1
-        u.subworkspace_id in (${modulos.join()}) `;
+  const workspaceCondition = `  where tu.active = 1 and u.subworkspace_id in (${modulos.join()}) `;
 
   if(areas.length > 0) {
     query += ` inner join criterion_value_user cvu on cvu.user_id = u.id
