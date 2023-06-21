@@ -17,9 +17,9 @@ const {
 const headers = [
   'Documento (entrenador)',
   'Nombre (entrenador)',
-  'Escuela',
+  // 'Escuela',
   'Curso(s) Asignado',
-  'Tipo Curso',
+  'Tipo Checklist',
   'Checklist',
   'Cumplimiento del Checklist',
   'Actividad',
@@ -95,17 +95,17 @@ async function generateReport ({
 
     // Add additional values
 
-    const progress = user.completed_checklists > 0
-      ?  (user.completed_checklists / user.assigned_checklists) * 100
-      : 0
+    // const progress = user.completed_checklists > 0
+    //   ?  (user.completed_checklists / user.assigned_checklists) * 100
+    //   : 0
 
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
-    cellRow.push(user.school_name)
-    cellRow.push(user.course_name)
-    cellRow.push(user.course_type)
+    // cellRow.push(user.school_name)
+    cellRow.push(user.course_name ?? '-')
+    cellRow.push(user.type_checklist)
     cellRow.push(user.checklists_title)
-    cellRow.push(Math.round(progress) + '%')
+    cellRow.push(user.progress)
     cellRow.push(user.activity)
     cellRow.push(getChecklistTypeName(user.checklist_item_type, checklistTypesTaxonomies))
     cellRow.push(user.qualification)
@@ -135,41 +135,83 @@ async function generateReport ({
 async function loadUsersCheckists (
   modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas
 ) {
-  let query = `
-      select
-          u.id,
-          u.name,
-          u.lastname,
-          u.surname,
-          u.document,
-          u.active,
+  let query = `SELECT
+	u.id,
+	u.name,
+	u.lastname,
+	u.surname,
+	u.document,
+	u.active,
+	c.name course_name,
+	checklists.title checklists_title,
+	tx.name as type_checklist,
+	ifnull(trainers.fullname, trainers.name) trainer_name,
+	ifnull(suc.completed, 0) as completed_checklists,
+	ifnull(suc.assigned , 0) as assigned_checklists,
+	ifnull(suc.advanced_percentage , 0) as progress,
+	cli.activity,
+	cli.type_id checklist_item_type,
+	cai.qualification,
+	ca.id checklist_answers_id,
+	ca.updated_at checklist_answer_created_at
+from
+	trainer_user tu
+inner join users u on
+	u.id = tu.user_id
+inner join users trainers on
+	trainers.id = tu.trainer_id
+inner join checklist_answers ca on
+	ca.student_id = u.id
+inner join checklists on
+	ca.checklist_id = checklists.id
+inner join taxonomies tx on
+	tx.id = checklists.type_id
+left JOIN summary_user_checklist suc on
+	suc.user_id = u.id
+left join checklist_items cli on
+	checklists.id = cli.checklist_id
+left join checklist_answers_items cai on
+	ca.id = cai.checklist_answer_id
+left join checklist_relationships cr on
+	cr.checklist_id = ca.checklist_id
+left join courses c on
+	c.id = cr.course_id
+`;
+  // let query = `
+  //     select
+  //         u.id done,
+  //         u.name done,
+  //         u.lastname done,
+  //         u.surname done,
+  //         u.document done,
+  //         u.active done,
           
-          ifnull(trainers.fullname, trainers.name) trainer_name,
-          trainers.document trainer_document,
-          s.name school_name,
-          c.name course_name,
-          tx.name as course_type,
-          checklists.title checklists_title,
-          count(ca.checklist_id) assigned_checklists,
-          sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists,
+  //         ifnull(trainers.fullname, trainers.name) trainer_name done,
+  //         trainers.document trainer_document done,
+  //         s.name school_name deprecated,
+  //         c.name course_name done,
+  //         tx.name as course_type deprecated,
+  //         checklists.title checklists_title done,
+  //         count(ca.checklist_id) assigned_checklists done,
+  //         sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists done,
           
-          cli.activity,
-          cli.type_id checklist_item_type,
-          cai.qualification,
-          ca.id checklist_answers_id,
-          ca.updated_at checklist_answer_created_at
-      from
-          checklist_answers ca
-              inner join checklists on ca.checklist_id = checklists.id
-              inner join users trainers on ca.coach_id = trainers.id
-              inner join users u on u.id = ca.student_id
-              inner join schools s on s.id = ca.school_id
-              inner join checklist_relationships cr on cr.checklist_id = ca.checklist_id
-              inner join courses c on c.id = cr.course_id
-              inner join taxonomies tx on tx.id = c.type_id
-              left join checklist_items cli on checklists.id = cli.checklist_id 
-              left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
-  `
+  //         cli.activity,
+  //         cli.type_id checklist_item_type,
+  //         cai.qualification,
+  //         ca.id checklist_answers_id,
+  //         ca.updated_at checklist_answer_created_at
+  //     from
+  //         checklist_answers ca
+  //             inner join checklists on ca.checklist_id = checklists.id
+  //             inner join users trainers on ca.coach_id = trainers.id
+  //             inner join users u on u.id = ca.student_id
+  //             left join schools s on s.id = ca.school_id
+  //             left join checklist_relationships cr on cr.checklist_id = ca.checklist_id
+  //             left join courses c on c.id = cr.course_id
+  //             inner join taxonomies tx on tx.id = c.type_id
+  //             left join checklist_items cli on checklists.id = cli.checklist_id 
+  //             left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
+  // `
   //a checklist could be associated with one or more courses
   const staticCondition = ` where 
           checklists.active = 1 and

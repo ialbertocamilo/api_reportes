@@ -72,9 +72,9 @@ async function generateReport ({
     userValues.forEach(item => cellRow.push(item.criterion_value || '-'))
 
     // Add additional values
-    const progress = user.completed_checklists > 0
-      ? (user.completed_checklists / user.assigned_checklists) * 100
-      : 0
+    // const progress = user.completed_checklists > 0
+    //   ? (user.completed_checklists / user.assigned_checklists) * 100
+    //   : 0
 
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
@@ -83,7 +83,7 @@ async function generateReport ({
     // cellRow.push(user.checklists_title)
     cellRow.push(user.assigned_checklists)
     cellRow.push(user.completed_checklists)
-    cellRow.push(Math.round(progress) + '%')
+    cellRow.push(user.progress)
 
     worksheet.addRow(cellRow).commit()
   }
