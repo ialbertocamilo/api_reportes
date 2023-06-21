@@ -17,9 +17,9 @@ const {
 const headers = [
   'Documento (entrenador)',
   'Nombre (entrenador)',
-  'Escuela',
-  'Curso',
-  'Checklist',
+  // 'Escuela',
+  // 'Curso',
+  // 'Checklist',
   'Checklist asignados',
   'Checklist realizados',
   'Avance total'
@@ -78,9 +78,9 @@ async function generateReport ({
 
     cellRow.push(user.trainer_document)
     cellRow.push(user.trainer_name)
-    cellRow.push(user.school_name)
-    cellRow.push(user.course_name)
-    cellRow.push(user.checklists_title)
+    // cellRow.push(user.school_name)
+    // cellRow.push(user.course_name)
+    // cellRow.push(user.checklists_title)
     cellRow.push(user.assigned_checklists)
     cellRow.push(user.completed_checklists)
     cellRow.push(Math.round(progress) + '%')
@@ -100,36 +100,55 @@ async function generateReport ({
 async function loadUsersCheckists (
   modulos, activeUsers, inactiveUsers, start, end, areas
 ) {
-  let query = `
-      select
-          u.id,
-          u.name,
-          u.lastname,
-          u.surname,
-          u.document,
-          u.active,
+  let query = `SELECT
+	u.id,
+	u.name,
+	u.lastname,
+	u.surname,
+	u.document,
+	u.active,
+	ifnull(trainers.fullname, trainers.name) trainer_name,
+	ifnull(suc.completed,0) as completed_checklists,
+	ifnull(suc.assigned ,0) as assigned_checklists,
+	ifnull(suc.advanced_percentage  ,0) as progress
+from
+	trainer_user tu
+inner join users u on
+	u.id = tu.user_id
+inner join users trainers on
+	trainers.id = tu.trainer_id
+left JOIN summary_user_checklist suc on suc.user_id = u.id`
+;
+  // let query = `
+  //     select
+  //         u.id,
+  //         u.name,
+  //         u.lastname,
+  //         u.surname,
+  //         u.document,
+  //         u.active,
           
-          ifnull(trainers.fullname, trainers.name) trainer_name,
-          trainers.document trainer_document,
+  //         ifnull(trainers.fullname, trainers.name) trainer_name,
+  //         trainers.document trainer_document,
 
-          s.name school_name,
-          c.name course_name,
-          checklists.title checklists_title,
+  //         s.name school_name,
+  //         c.name course_name,
+  //         checklists.title checklists_title,
 
-          count(checklist_id) assigned_checklists,
-          sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
+  //         count(checklist_id) assigned_checklists,
+  //         sum(if(cai.qualification = 'Cumple', 1, 0)) completed_checklists
 
-      from
-          checklist_answers ca
-              inner join checklists on ca.checklist_id = checklists.id
-              inner join users trainers on ca.coach_id = trainers.id
-              inner join users u on u.id = ca.student_id
+  //     from
+  //         checklist_answers ca
+  //             inner join checklists on ca.checklist_id = checklists.id
+  //             inner join users trainers on ca.coach_id = trainers.id
+  //             inner join users u on u.id = ca.student_id
               
-              inner join schools s on s.id = ca.school_id
-              inner join courses c on c.id = ca.course_id
+  //             inner join schools s on s.id = ca.school_id
+  //             inner join courses c on c.id = ca.course_id
               
-              left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
-  `
+  //             left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
+  // `
   const workspaceCondition = `  where
         checklists.active = 1 and
         u.subworkspace_id in (${modulos.join()}) `;
