@@ -217,7 +217,7 @@ module.exports = {
       from
         checklists c 
         where
-        c.active = 1 and workspace_id = ${workspaceId}
+        c.active = 1 and workspace_id = ${workspaceId} and c.deleted_at is null
         `)
         // group by c.id
         // inner join checklists c on c.id = cr.checklist_id
