@@ -251,7 +251,7 @@ left join courses c on
 
   // Add group sentence
 
-  query += ' group by u.id'
+  query += ' group by u.id ,cai.checklist_item_id'
 
   // Execute query
   // logtime(query);
