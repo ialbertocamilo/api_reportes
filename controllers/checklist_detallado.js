@@ -145,6 +145,7 @@ async function loadUsersCheckists (
 	c.name course_name,
 	checklists.title checklists_title,
 	tx.name as type_checklist,
+  trainers.document as trainer_document,
 	ifnull(trainers.fullname, trainers.name) trainer_name,
 	ifnull(suc.completed, 0) as completed_checklists,
 	ifnull(suc.assigned , 0) as assigned_checklists,
