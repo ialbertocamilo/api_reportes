@@ -245,7 +245,7 @@ left join courses c on
 
   if (start && end) {
     query += ` and (
-      ca.updated_at between '${start} 00:00' and '${end} 23:59'
+      suc.updated_at between '${start} 00:00' and '${end} 23:59'
     )`
   }
 

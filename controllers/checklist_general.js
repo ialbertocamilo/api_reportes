@@ -83,7 +83,7 @@ async function generateReport ({
     // cellRow.push(user.checklists_title)
     cellRow.push(user.assigned_checklists)
     cellRow.push(user.completed_checklists)
-    cellRow.push(user.progress)
+    cellRow.push(user.progress + ' %')
 
     worksheet.addRow(cellRow).commit()
   }
