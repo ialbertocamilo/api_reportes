@@ -251,7 +251,7 @@ left join courses c on
 
   // Add group sentence
 
-  query += ' group u.id'
+  query += ' group by u.id'
 
   // Execute query
   // logtime(query);
