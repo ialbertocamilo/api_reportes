@@ -16,8 +16,8 @@ exports.pollQuestionReportData =async({courses_selected,modules,poll,type_poll_q
     join users as u on u.id = pqa.user_id join poll_questions as pq on pq.id = pqa.poll_question_id `;
     query += poll.type.code == 'xcurso' ? ' join courses c on c.id = pqa.course_id ' :'';
     query += ` where u.active =1 and u.deleted_at is null and u.subworkspace_id in (${modules.toString()}) `;
-    query += poll.type.code == 'xcurso' ? ` and pqa.course_id in (${courses_selected.toString()})
-    and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()}) ` : '';
+    query += poll.type.code == 'xcurso' ? ` and pqa.course_id in (${courses_selected.toString()})` : '';
+    query += `and pqa.poll_question_id in (${pluck(poll_questions_ids,'id').toString()}) `;
     query += where_between_dates; 
     console.log(query);
     const [rows]  = await con.raw(query);
