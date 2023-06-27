@@ -32,10 +32,12 @@ async function generateSegmentationReport ({
   // Generate Excel file header
   await createHeaders(headers)
   //Load Courses
-  const courses = await loadCourses({cursos,escuelas},workspaceId); 
+  const courses_s = (Array.isArray(cursos)) ? cursos : [cursos];
+  
+  const courses = await loadCourses({cursos:courses_s,escuelas,tipocurso:'include_free'},workspaceId); 
   const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
-    const users = await loadUsersSegmented(course.course_id)
+    const users = await loadUsersSegmented(course.course_id,false)
     for (const user of users) {
         const cellRow = []
         const user_status = (user.status_id) ? coursesStatuses.find(status=>status.id == user.status_id) : {name:'Pendiente'};

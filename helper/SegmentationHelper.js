@@ -34,7 +34,7 @@ const StackBuildQuery = {
 
 };
 
-exports.loadUsersSegmented = async (course_id) => {
+exports.loadUsersSegmented = async (course_id,only_active_users=true) => {
   // select `id` from `users`
   // inner join `criterion_value_user` as `cvu1` on `users`.`id` = `cvu1`.`user_id` and `cvu1`.`criterion_value_id` in (?)
   // inner join `criterion_value_user` as `cvu46` on `users`.`id` = `cvu46`.`user_id` and `cvu46`.`criterion_value_id` in (?)
@@ -88,8 +88,8 @@ exports.loadUsersSegmented = async (course_id) => {
       await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at from users
         LEFT OUTER join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id}
         ${join_criterions_values_user} 
-        where users.active=1 
-        and users.deleted_at is null`);
+        ${only_active_users ? ' where users.active=1 and ' : ' where '} 
+         users.deleted_at is null`);
     if (rows.length > 0) {
       users = [...users, ...rows];
     }
