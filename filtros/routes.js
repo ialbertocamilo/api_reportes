@@ -166,6 +166,10 @@ router.post(`/criterion-values/:criterionCode`, async (req, res) => {
   res.json(datos)
 });
 
-
+router.get(`/sub-workspace/:subworkspacesIds/campaigns`, async (req, res) => {
+  const { subworkspacesIds } = req.params;
+  const datos = await tablas.loadCampaignsSubworkspaceById(subworkspacesIds)
+  res.json(datos)
+});
 
 module.exports = router

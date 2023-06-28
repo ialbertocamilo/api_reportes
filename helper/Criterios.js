@@ -83,3 +83,47 @@ exports.getGenericHeaders = async (workspaceId,criteria_id=[]) => {
   workspaceCriteria.forEach(el => headers.push(el.name))
   return headers
 }
+
+exports.getGenericHeadersByCriterioCodes = async (workspaceId, codes = '') => {
+  const headers = [
+    'Nombre', 'Apellido Paterno', 'Apellido Materno',
+    'Documento', 'Estado (Usuario)'
+  ];
+  const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId, codes);
+  workspaceCriteria.forEach(el => headers.push(el.name));
+  return headers;
+}
+
+
+exports.getWorkspaceCriteriaByCodes = async (workspaceId, codes = '') => {
+  logtime('method: getWorkspaceCriteriaByCodes');
+
+  let query = `
+        select 
+            c.*
+        from 
+            criteria c 
+                inner join criterion_workspace cw on c.id = cw.criterion_id
+                inner join workspaces w on w.id = cw.workspace_id
+        where 
+            w.id = :workspaceId and 
+            ${codes.length > 0 ? ` c.code in (${codes}) and ` : ''}
+            c.show_in_reports = 1 and
+            w.active = 1 and
+            c.active = 1
+        group by c.id
+    `
+  // logtime(query)
+
+  const [rows] = await con.raw(query, { workspaceId })
+
+  return rows
+}
+
+
+exports.getCriterioValuesByCriterioId = async (criterioId) => {
+
+  let query = `select cv.* from criterion_values cv where cv.criterion_id = :criterioId`;
+  const [rows] = await con.raw(query, { criterioId })
+  return rows
+}

@@ -1,8 +1,10 @@
 const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
+const { getCampaignsBySubworspaceId } = require('../helper/Votaciones.js')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const knex = require('../db').con
+
 module.exports = {
   async datosIniciales(workspaceId) {
     const modules = await this.cargarModulos(workspaceId)
@@ -586,5 +588,11 @@ module.exports = {
     ]
 
     return { workspaces, recommendations }
+  },
+
+  // === votaciones ===
+  async loadCampaignsSubworkspaceById(subworkspacesIds) { 
+    return await getCampaignsBySubworspaceId(subworkspacesIds);
   }
+  // === votaciones ===
 }

@@ -8,3 +8,11 @@ exports.getSuboworkspacesIds = async (workspaceId) => {
 
   return pluck(subworkspaces, 'id')
 }
+
+exports.getCriterioFechaReconocimiento = async (workspaceId) => {
+  return await con('workspaces')
+    .select('criterio_id_fecha_inicio_reconocimiento')
+    .where('active', 1)
+    .where('id', workspaceId)
+    .first();
+}
