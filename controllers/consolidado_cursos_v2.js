@@ -21,7 +21,7 @@ const {
   loadCoursesStatuses,
   loadCompatiblesId,
   getCourseStatusName,
-  getCourseStatusId
+  getCourseStatusId, calculateTopicsReviewedPercentage
 } = require("../helper/CoursesTopicsHelper");
 
 
@@ -97,6 +97,7 @@ async function generateSegmentationReport({
     defaultsCriteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
+    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
     headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
     headers.unshift('RANGO DE ANTIGÜEDAD')
   }
@@ -294,6 +295,7 @@ async function generateSegmentationReport({
 
       // criterios de usuario
 
+      const assigned = user.assigned || 0;
       const passed = user.course_passed || 0;
       const taken = user.taken || 0;
       const reviewed = user.reviewed || 0;
@@ -302,12 +304,12 @@ async function generateSegmentationReport({
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
 
-
       if (isPromart) {
         const schoolTotals = calculateSchoolProgressPercentage(
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
+        cellRow.push(calculateTopicsReviewedPercentage(assigned, reviewed) + '%');
       }
 
       cellRow.push(course.course_name);

@@ -194,3 +194,10 @@ exports.loadTopicsByCoursesIds = async (
 
   return indexId ? setCustomIndexAtObject(topics) : topics;
 }
+
+
+exports.calculateTopicsReviewedPercentage = (assigned, reviewed) => {
+  if (assigned === 0) return 0;
+
+  return Math.round(reviewed * 100 / assigned, 2);
+}
