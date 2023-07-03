@@ -41,7 +41,8 @@ const {
 const { getSuboworkspacesIds } = require("../helper/Workspace");
 const { con } = require('../db')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
-  loadUsersWithCourses
+  loadUsersWithCourses, loadSummaryTopicsCount,
+  calculateSchoolAccomplishmentPercentage, countCoursesActiveTopics
 } = require('../helper/Courses')
 
 // Headers for Excel file
@@ -91,7 +92,7 @@ async function generateSegmentationReport({
   let defaultsCriteriaIds = [1, 5, 13, 4, 40, 41];
 
   // Homecenters Peruanos -> id 11
-  let isPromart = workspaceId === 11
+  let isPromart = workspaceId === 25
   if (isPromart) {
     defaultsCriteriaIds.push(7) // Date_Start
     defaultsCriteriaIds.push(8) // seniority date
@@ -171,6 +172,12 @@ async function generateSegmentationReport({
     }
   }
 
+  // Count summary topics and course topics
+  const coursesIds = pluck(courses, 'course_id')
+  const coursesTopics = await countCoursesActiveTopics(coursesIds)
+  const summaryTopicsCount = await loadSummaryTopicsCount(coursesIds, allUsersIds)
+
+
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -192,7 +199,7 @@ async function generateSegmentationReport({
     logtime(`-- end: user segmentation --`);
 
 
-    const countTopics = await getCountTopics(course.course_id);
+
 
     // filtro para usuarios nulos y no nulos
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
@@ -295,11 +302,11 @@ async function generateSegmentationReport({
 
       // criterios de usuario
 
-      const assigned = user.assigned || 0;
       const passed = user.course_passed || 0;
       const taken = user.taken || 0;
       const reviewed = user.reviewed || 0;
       const completed = passed + taken + reviewed;
+      const userTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
@@ -309,7 +316,11 @@ async function generateSegmentationReport({
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
-        cellRow.push(calculateTopicsReviewedPercentage(assigned, reviewed) + '%');
+        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
+
+        if (user.id == 20 || user.id == 77879) {
+          console.log('asdf', coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id)
+        }
       }
 
       cellRow.push(course.course_name);

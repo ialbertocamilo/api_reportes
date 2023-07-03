@@ -121,13 +121,14 @@ exports.calculateSchoolProgressPercentage = (
         if (courseIndex >= 0) {
           let coursePercentage = +coursesPercentages[courseIndex]
           progressSum += coursePercentage
-          coursesCount++
-          coursedAdded.push(segmentedCourseId)
 
           if (coursePercentage === 100) {
             completedCourses++
           }
         }
+
+        coursesCount++
+        coursedAdded.push(segmentedCourseId)
       }
     }
   })
@@ -224,4 +225,85 @@ exports.loadUsersWithCourses = async (
 
   const [rows] = await con.raw(query)
   return rows
+}
+
+/**
+ * Calculate summary topics count for provided users
+ * of a specific course
+ */
+exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
+
+  const query = `
+      select
+          c.id course_id,
+          st.user_id,
+          count(*) summary_topics_count
+      from courses c
+          left join topics t on t.course_id = c.id
+          left join summary_topics st on st.topic_id = t.id
+          left join summary_courses sc on sc.course_id = c.id and sc.user_id = st.user_id
+      where 
+          c.id in (${coursesIds.join(',')}) and
+          t.active = 1 and
+          st.user_id in (${usersIds.join(',')})
+      group by c.id, st.user_id
+  `
+
+  const [rows] = await con.raw(query)
+  return rows || []
+}
+
+/**
+ * Calculate percentage of total amount of topics viewed by the user
+ * from segmented courses
+ */
+exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userTopicsCount, userSegmentedSchoolsCourses, schoolId) => {
+
+  if (!userTopicsCount || !coursesTopics) return 0
+  if (!userSegmentedSchoolsCourses) return 0
+
+  // Count topics of all courses
+
+  const coursedAdded = [];
+  let assignedTopicsCount = 0;
+  let summaryTopicsCount = 0;
+  userSegmentedSchoolsCourses.forEach(ussc => {
+    if (+ussc.school_id === +schoolId) {
+
+      const segmentedCourseId = +ussc.course_id;
+      const alreadyProcessed = coursedAdded.includes(segmentedCourseId);
+
+      if (!alreadyProcessed) {
+        let courseInfo = coursesTopics.find(ct => ct.course_id === segmentedCourseId)
+        assignedTopicsCount += courseInfo.topics_count
+
+        let summaryTopicsInfo = userTopicsCount.find(utc => utc.course_id === segmentedCourseId)
+        if (summaryTopicsInfo) {
+          summaryTopicsCount += summaryTopicsInfo.summary_topics_count
+        }
+
+        coursedAdded.push(segmentedCourseId)
+      }
+    }
+  })
+
+  // Course user summary topics
+
+  return Math.round(summaryTopicsCount * 100 / assignedTopicsCount, 2);
+}
+
+
+exports.countCoursesActiveTopics = async (coursesIds) => {
+  const query = `
+      select 
+          c.id course_id,
+          count(*) topics_count
+      from courses c
+        inner join topics t on t.course_id = c.id
+      where t.active = 1 and c.id in (${coursesIds.join(',')})
+      group by c.id
+  `
+
+  const [rows] = await con.raw(query)
+  return rows || []
 }
