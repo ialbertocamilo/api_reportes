@@ -241,8 +241,8 @@ async function generateSegmentationReport({
         const additionalData = {
           ...user,
           ...RestCompatible,
-          assigned: countTopics,
-          course_passed: countTopics,
+          assigned: countTopics || 0,
+          course_passed: countTopics || 0,
           course_status_name: 'Convalidado',
           compatible: course_name
         }

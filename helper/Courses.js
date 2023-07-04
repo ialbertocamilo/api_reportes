@@ -237,7 +237,7 @@ exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
       select
           c.id course_id,
           st.user_id,
-          count(*) summary_topics_count
+          count(distinct st.topic_id) summary_topics_count
       from courses c
           left join topics t on t.course_id = c.id
           left join summary_topics st on st.topic_id = t.id
@@ -245,7 +245,8 @@ exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
       where 
           c.id in (${coursesIds.join(',')}) and
           t.active = 1 and
-          st.user_id in (${usersIds.join(',')})
+          st.user_id in (${usersIds.join(',')}) and
+          st.deleted_at is null
       group by c.id, st.user_id
   `
 
@@ -288,6 +289,10 @@ exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userTopicsCoun
   })
 
   // Course user summary topics
+
+  if (summaryTopicsCount > assignedTopicsCount) {
+    summaryTopicsCount = assignedTopicsCount
+  }
 
   return Math.round(summaryTopicsCount * 100 / assignedTopicsCount, 2);
 }
