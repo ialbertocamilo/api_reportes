@@ -275,7 +275,7 @@ exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userTopicsCoun
 
       if (!alreadyProcessed) {
         let courseInfo = coursesTopics.find(ct => ct.course_id === segmentedCourseId)
-        assignedTopicsCount += courseInfo.topics_count
+        assignedTopicsCount += courseInfo ? courseInfo.topics_count : 0
 
         let summaryTopicsInfo = userTopicsCount.find(utc => utc.course_id === segmentedCourseId)
         if (summaryTopicsInfo) {

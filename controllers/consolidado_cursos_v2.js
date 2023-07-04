@@ -92,7 +92,7 @@ async function generateSegmentationReport({
   let defaultsCriteriaIds = [1, 5, 13, 4, 40, 41];
 
   // Homecenters Peruanos -> id 11
-  let isPromart = workspaceId === 25
+  let isPromart = workspaceId === 11
   if (isPromart) {
     defaultsCriteriaIds.push(7) // Date_Start
     defaultsCriteriaIds.push(8) // seniority date
