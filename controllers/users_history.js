@@ -26,6 +26,7 @@ moment.locale('es')
 
 let headers = [
   'ULTIMA SESIÓN',
+  'MÓDULO',
   'ESCUELA',
   'CURSO',
   'RESULTADO CURSO',
@@ -110,7 +111,7 @@ async function UsersHistory ({
     // Add topic values
 
     cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
-
+    cellRow.push(user.module)
     cellRow.push(user.school_name)
     cellRow.push(user.course_name)
 
@@ -162,6 +163,7 @@ async function loadUsersWithCoursesAndTopics (
         u.*, 
         group_concat(distinct(s.name) separator ', ') school_name,
         tx.name as course_type,
+        old_subworkspace.name module,
         c.name course_name,
         c.active course_active,
         sc.status_id course_status_id,
@@ -189,6 +191,8 @@ async function loadUsersWithCoursesAndTopics (
         inner join taxonomies tx on tx.id = c.type_id
         inner join course_school cs on c.id = cs.course_id
         inner join schools s on cs.school_id = s.id
+        left join school_subworkspace ss on s.id = ss.school_id
+        left join workspaces old_subworkspace on old_subworkspace.id = ss.subworkspace_id
   `
 
   query += `where sc.user_id in (${subworkspaceUsersIds.join(',')})`
@@ -203,7 +207,7 @@ async function loadUsersWithCoursesAndTopics (
   query += ' group by u.id, st.topic_id'
 
   // Execute query
-  console.log(query)
+
   const [rows] = await con.raw(query)
 
   return rows
