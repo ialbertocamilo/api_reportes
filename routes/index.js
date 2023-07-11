@@ -275,5 +275,14 @@ module.exports = {
       res.send(data)
       children.kill()
     })
+  },
+  /*Benefit*/
+  benefit_report({body},res){
+    const children = fork('./controllers/benefit_report.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
   }
 }
