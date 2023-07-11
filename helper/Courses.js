@@ -233,6 +233,8 @@ exports.loadUsersWithCourses = async (
  */
 exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
 
+  if (!usersIds.length) return []
+
   const query = `
       select
           c.id course_id,
