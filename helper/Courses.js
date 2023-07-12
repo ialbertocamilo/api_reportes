@@ -75,6 +75,10 @@ exports.calculateSchoolProgressPercentage = (
       +us.user_id === +userId
   })
 
+  if (userId === 87365) {
+    console.log(usersCoursesProgress, userId, schoolId, userSegmentedSchoolsCourses)
+  }
+
   if (!schoolInfo) return 0
 
   let progressSum = 0;
