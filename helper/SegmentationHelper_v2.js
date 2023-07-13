@@ -688,6 +688,7 @@ exports.loadCoursesV3 = async (
       c.name as course_name,
       s.name as school_name,
       s.id as school_id,
+      c.qualification_type_id,
       c.active as course_active,
       tx.name as course_type
 
@@ -740,6 +741,7 @@ exports.loadCoursesV3 = async (
       c.name as course_name,
       s.name as school_name,
       s.id as school_id,
+      c.qualification_type_id,
       c.active as course_active,
       tx.name as course_type
 
