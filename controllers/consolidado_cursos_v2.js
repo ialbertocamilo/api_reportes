@@ -328,13 +328,13 @@ async function generateSegmentationReport({
 
       cellRow.push(course.course_name);
       const qualification = QualificationTypes[course.qualification_type_id];
-      cellRow.push(qualification.code); // tipo calificacion
       
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
       );
       cellRow.push(user.course_views || "-");
-      cellRow.push(getTopicCourseGrade(user.grade_average, qualification.position));
+      cellRow.push(qualification.name); // tipo calificacion
+      cellRow.push(getTopicCourseGrade(user.grade_average, qualification.position)); //promedio
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {

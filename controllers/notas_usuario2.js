@@ -117,7 +117,7 @@ async function notasUsuario2 ({ document }) {
       
       // === tipo calificacion ===
       const qualification = QualificationTypes[summaryTopic.qualification_type_id];
-      topicObj.tipo_calificacion = qualification.code;
+      topicObj.tipo_calificacion = qualification.name;
       topicObj.nota = getTopicCourseGrade(summaryTopic.grade, qualification.position);
       // === tipo calificacion ===
 
@@ -162,7 +162,7 @@ async function notasUsuario2 ({ document }) {
     
     // === tipo calificacion ===
     const qualification = QualificationTypes[summaryCourse.qualification_type_id];
-    courseObj.tipo_calificacion = qualification.code;
+    courseObj.tipo_calificacion = qualification.name;
     courseObj.nota_prom = getTopicCourseGrade(summaryCourse.grade_average, qualification.position);
     // === tipo calificacion ===
 

@@ -93,7 +93,7 @@ async function historialUsuario ({ document, type, page, schoolId, search, works
 
     // === tipo calificacion ===
     const qualification = QualificationTypes[user.qualification_type_id];
-    courseObj.tipo_calificacion = qualification.code;
+    courseObj.tipo_calificacion = qualification.name;
     courseObj.grade = getTopicCourseGrade(user.course_grade, qualification.position);
     // === tipo calificacion ===
     courseObj.course_status = getCourseStatusName(userCoursesStatuses, user.course_status_id)

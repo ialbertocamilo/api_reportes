@@ -47,9 +47,9 @@ let headers = [
   'REINICIOS CURSO',
   'TIPO CURSO',
   'TEMA',
-  'TIPO CALIFICACIÓN',
   'RESULTADO TEMA', // convalidado
   'ESTADO TEMA',
+  'TIPO CALIFICACIÓN', // tipo calificacion
   'NOTA TEMA',
   'REINICIOS TEMA',
   'INTENTOS PRUEBA',
@@ -283,7 +283,6 @@ async function exportarUsuariosDW({
       const qualification = QualificationTypes[topicStore.qualification_type_id];
 
       cellRow.push(topicStore.topic_name) // topicStore
-      cellRow.push(qualification.code) // tipo de calificacion
 
         // estado para - 'RESULTADO DE TEMA'
         if(!user.topic_status_name) {
@@ -294,6 +293,7 @@ async function exportarUsuariosDW({
 
       cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
 
+      cellRow.push(qualification.name) // tipo de calificacion
       cellRow.push(getTopicCourseGrade(user.topic_grade, qualification.position))
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
@@ -302,7 +302,7 @@ async function exportarUsuariosDW({
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
       cellRow.push(user.topic_views || '-')
-      cellRow.push(user.minimum_grade || '-')
+      cellRow.push(getTopicCourseGrade(user.minimum_grade, qualification.position)) // minimum_grade
       cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
 
       cellRow.push(user.compatible || `-`);
