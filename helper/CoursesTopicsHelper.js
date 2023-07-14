@@ -207,9 +207,8 @@ exports.loadTopicQualificationTypes = async () => {
 exports.getTopicCourseGrade = (topic_grade, topic_escala) => {
 
   if(topic_grade) {
-    const availableDecimal = (topic_escala <= 10);
     const grade = (topic_grade / 20 * topic_escala);
-    return availableDecimal ? grade.toFixed(1) : grade;
+    return parseFloat(grade.toFixed(2));
   }
   return '-';
 }
