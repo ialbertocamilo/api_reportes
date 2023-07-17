@@ -147,7 +147,7 @@ async function jsonResponse (user, courseResults, pagination) {
  * @returns {Promise<void>}
  */
 async function excelResponse (courseResults) {
-  await createHeaders(['Módulos','Escuelas', 'Curso', 'Tipo de calificación', 'Nota', 'Estado'])
+  await createHeaders(['Módulos','Escuelas', 'Curso', 'Sistema de calificación', 'Nota', 'Estado'])
   for (const course of courseResults) {
     const cellRow = []
     cellRow.push(course.subworkspaces_name)
