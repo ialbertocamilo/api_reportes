@@ -53,9 +53,9 @@ const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
-  'TIPO CALIFICACIÓN',
   'AVANCE CURSO (%)',
   'VISITAS',
+  'SISTEMA DE CALIFICACIÓN',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
   'ESTADO CURSO',

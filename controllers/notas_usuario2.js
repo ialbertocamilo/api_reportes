@@ -115,11 +115,11 @@ async function notasUsuario2 ({ document }) {
       // const evaluationType = getEvaluationTypeName(evaluationTypes, summaryTopic.type_evaluation_id)
       topicObj.tema = summaryTopic.topic_name
       
-      // === tipo calificacion ===
+      // === sistema calificacion ===
       const qualification = QualificationTypes[summaryTopic.qualification_type_id];
       topicObj.tipo_calificacion = qualification.name;
       topicObj.nota = getTopicCourseGrade(summaryTopic.grade, qualification.position);
-      // === tipo calificacion ===
+      // === sistema calificacion ===
 
       topicObj.puntaje = ''// summaryTopic.grade ? parseInt(summaryTopic.grade) : '-'
       topicObj.correctas = summaryTopic.correct_answers || '-'

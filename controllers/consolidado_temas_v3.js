@@ -49,7 +49,7 @@ let headers = [
   'TEMA',
   'RESULTADO TEMA', // convalidado
   'ESTADO TEMA',
-  'TIPO CALIFICACIÓN', // tipo calificacion
+  'SISTEMA DE CALIFICACIÓN', // tipo calificacion
   'NOTA TEMA',
   'REINICIOS TEMA',
   'INTENTOS PRUEBA',
