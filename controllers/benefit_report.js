@@ -3,8 +3,7 @@ process.on('message', requestData => {
 })
 
 const { con } = require('../db')
-const moment = require('moment')
-const { parseDateFromString } = require("../helper/Helper");
+const { parseDateFromString,pluck,uniqueElements } = require("../helper/Helper");
 
 const { worksheet, workbook, createAt, createHeaders } = require('../exceljs')
 const { response } = require('../response')
@@ -14,6 +13,9 @@ const Benefit = require('../models/Benefit')
 const Taxonomie = require('../models/Taxonomie');
 const BenefitProperty = require('../models/BenefitProperty');
 const Speaker = require('../models/Speaker');
+const UserBenefit = require('../models/UserBenefit');
+const { getSuboworkspacesIds } = require('../helper/Workspace')
+
 
 // Headers for Excel file
 
@@ -23,15 +25,14 @@ const headers = [
     'Estado',
     'Estado actual',
     'Inicio de Inscripción',
-    'Fin de Inscripción',
-    'Inicio',
+    'Cierre de Inscripción',
+    'Liberación',
     'Promotor',
-    'Speaker',
-    'Vacantes',
+    'Expositor',
+    'Cupos',
     'Cantidad de segmentados',
     'Inscritos',
     '% de Inscritos',
-    'Valoración',
     'Inscripciones extraordinarias'
 ]
 
@@ -55,10 +56,34 @@ async function generateReport({
             { model: BenefitProperty,as:'properties'},
         ]
     });
+    const taxonomy_register = await Taxonomie.findOne({
+        where:{
+            group:'benefit',
+            type:'user_status',
+            code : 'subscribed'
+        }
+    });
+    const users_register_in_benefits = await UserBenefit.findAll({
+        where: {
+            benefit_id: {
+                [Op.in]: benefit
+            },
+            status_id: taxonomy_register.id,
+            deleted_at:null
+        }
+    })
+    const modulos = await getSuboworkspacesIds(workspaceId);
 
     for (const benefit of benefits_list) {
         const cellRow = []
-        console.log(benefit.speaker);
+        const users_id_segmented = await Benefit.getUsersSegmentedInBenefit(modulos,benefit.id);
+        const users_registered_id = pluck(uniqueElements(users_register_in_benefits.filter(ur => ur.benefit_id == benefit.id), "user_id"),'user_id') ;
+        const users_segmented_subscribed_id = users_id_segmented.filter((value) => users_registered_id.includes(value));
+        let percent_subscribed = 0;
+        if(users_id_segmented.length>0 && users_segmented_subscribed_id.length>0){
+            percent_subscribed = Math.floor(( users_segmented_subscribed_id.length / users_id_segmented.length) * 100);
+        }
+
         cellRow.push(benefit.title)
         cellRow.push(benefit.type.name)
         cellRow.push(benefit.active ? 'Activo' : 'Inactivo')
@@ -69,11 +94,10 @@ async function generateReport({
         cellRow.push(benefit.promotor || 'No configurado')
         cellRow.push(benefit.speaker ? benefit.speaker.name : 'No aplica')
         cellRow.push(benefit.cupos)
-        cellRow.push('-')
-        cellRow.push('-')
-        cellRow.push('-')
-        cellRow.push('-')
-        cellRow.push('-')
+        cellRow.push(users_id_segmented.length)
+        cellRow.push(users_segmented_subscribed_id.length)
+        cellRow.push( percent_subscribed+' %' )
+        cellRow.push( '-' )
         worksheet.addRow(cellRow).commit()
     }
 

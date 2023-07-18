@@ -176,6 +176,7 @@ function getReportFilePath (reportType) {
     case 'avance_curricula': file = 'avance_curricula.js'; break
     case 'empty_criteria': file = 'empty_criteria.js'; break
     case 'benefit_report': file = 'benefit_report.js'; break
+    case 'user_benefit_report': file = 'user_benefit_report.js'; break
   }
 
   return `./controllers/${file}`
