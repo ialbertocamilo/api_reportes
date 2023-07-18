@@ -22,7 +22,9 @@ const { loadUsersBySubWorspaceIds, getUserCriterionValues2 } = require('../helpe
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
-  loadUsersWithCourses
+  loadUsersWithCourses, calculateSchoolAccomplishmentPercentage,
+  countCoursesActiveTopics,
+  loadSummaryTopicsCount
 } = require('../helper/Courses')
 const { loadCoursesSegmentedToUsersInSchool } = require('../helper/SegmentationHelper_v2')
 
@@ -76,6 +78,7 @@ async function generateSegmentationReport ({
     criteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
+    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
     headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
     headers.unshift('RANGO DE ANTIGÜEDAD')
   }
@@ -141,6 +144,11 @@ async function generateSegmentationReport ({
       segmentedCoursesByUsers = await loadCoursesSegmentedToUsersInSchool(escuelas, supervisedUsersIds)
     }
   }
+
+  const coursesIds = pluck(courses, 'course_id')
+  const coursesTopics = await countCoursesActiveTopics(coursesIds)
+  const summaryTopicsCount = await loadSummaryTopicsCount(coursesIds, supervisedUsersIds)
+
 
   for (const course of courses) {
     // Load workspace user criteria
@@ -262,11 +270,11 @@ async function generateSegmentationReport ({
       }
 
       // criterios de usuario
-
       const passed = user.course_passed || 0
       const taken = user.taken || 0
       const reviewed = user.reviewed || 0
       const completed = passed + taken + reviewed
+      const userTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
 
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
       cellRow.push(course.school_name)
@@ -275,6 +283,7 @@ async function generateSegmentationReport ({
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
+        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
 
       cellRow.push(course.course_name)

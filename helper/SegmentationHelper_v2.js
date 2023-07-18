@@ -888,13 +888,11 @@ async function loadCoursesSegmentedToUsersInSchool (schoolsIds, usersIds) {
   let addedUsers = []
   let usersCourses = []
   usersIds.forEach(userId => {
-    segmentsUsersCriterionValues.forEach(sucv => {
+
+    let matchesSegmentsIds = userMatchesSegments(userId, segments, segmentsUsersCriterionValues.filter(u => +u.user_id === +userId))
+
       for (let i = 0; i < segments.length; i++) {
-        if (
-            +userId === +sucv.user_id &&
-            +segments[i].criterion_value_id === +sucv.criterion_value_id &&
-            +segments[i].criterion_id === +sucv.criterion_id
-          ) {
+        if (matchesSegmentsIds.includes(segments[i].segment_id)) {
 
             if (!addedUsers.includes(userId)) {
               addedUsers.push(userId)
@@ -911,12 +909,57 @@ async function loadCoursesSegmentedToUsersInSchool (schoolsIds, usersIds) {
                 usersCourses[userId].push(schoolCourseToBeAdded)
               }
             }
-
         }
       }
-    })
+
   })
 
   return usersCourses
 }
 exports.loadCoursesSegmentedToUsersInSchool = loadCoursesSegmentedToUsersInSchool
+
+/**
+ * Checks whether user criteria values matches segments
+ * @returns {*[]}
+ */
+function userMatchesSegments(userId, segments, userCriteriaValues) {
+
+  if (!userCriteriaValues) return []
+  if (!segments) return []
+
+  let processedSegments = []
+  let matchesSegmentsIds = []
+  segments.forEach(segment => {
+
+    const segmentId = +segment.segment_id
+    const processed = processedSegments.includes(segmentId)
+    if (!processed) {
+      processedSegments.push(segmentId)
+      let segmentValues = segments.filter(s => +s.segment_id === segmentId)
+      let uniqueCriterionIds = pluckUnique(segmentValues, 'criterion_id')
+      let userCriterionMatches = []
+      segmentValues.forEach(sv => {
+
+        let userCriteriaValue = userCriteriaValues.find(uscv => {
+          return +sv.criterion_value_id === +uscv.criterion_value_id &&
+            +sv.criterion_id === +uscv.criterion_id
+        })
+
+        // Save criterion id of found value
+        if (userCriteriaValue) {
+          if (!userCriterionMatches.includes(userCriteriaValue.criterion_id)) {
+            userCriterionMatches.push(userCriteriaValue.criterion_id)
+          }
+        }
+      })
+
+      // At least one of every criteria should match
+
+      if (uniqueCriterionIds.length <= userCriterionMatches.length) {
+        matchesSegmentsIds.push(segmentId)
+      }
+    }
+  })
+
+  return matchesSegmentsIds
+}

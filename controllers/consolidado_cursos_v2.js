@@ -21,7 +21,7 @@ const {
   loadCoursesStatuses,
   loadCompatiblesId,
   getCourseStatusName,
-  getCourseStatusId
+  getCourseStatusId, calculateTopicsReviewedPercentage
 } = require("../helper/CoursesTopicsHelper");
 
 
@@ -41,7 +41,8 @@ const {
 const { getSuboworkspacesIds } = require("../helper/Workspace");
 const { con } = require('../db')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
-  loadUsersWithCourses
+  loadUsersWithCourses, loadSummaryTopicsCount,
+  calculateSchoolAccomplishmentPercentage, countCoursesActiveTopics
 } = require('../helper/Courses')
 
 // Headers for Excel file
@@ -97,6 +98,7 @@ async function generateSegmentationReport({
     defaultsCriteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
+    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
     headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
     headers.unshift('RANGO DE ANTIGÜEDAD')
   }
@@ -170,6 +172,12 @@ async function generateSegmentationReport({
     }
   }
 
+  // Count summary topics and course topics
+  const coursesIds = pluck(courses, 'course_id')
+  const coursesTopics = await countCoursesActiveTopics(coursesIds)
+  const summaryTopicsCount = await loadSummaryTopicsCount(coursesIds, allUsersIds)
+
+
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -191,7 +199,7 @@ async function generateSegmentationReport({
     logtime(`-- end: user segmentation --`);
 
 
-    const countTopics = await getCountTopics(course.course_id);
+
 
     // filtro para usuarios nulos y no nulos
     const { users_null, users_not_null } = getUsersNullAndNotNull(users);
@@ -233,8 +241,8 @@ async function generateSegmentationReport({
         const additionalData = {
           ...user,
           ...RestCompatible,
-          assigned: countTopics,
-          course_passed: countTopics,
+          assigned:  0,
+          course_passed: 0,
           course_status_name: 'Convalidado',
           compatible: course_name
         }
@@ -298,16 +306,17 @@ async function generateSegmentationReport({
       const taken = user.taken || 0;
       const reviewed = user.reviewed || 0;
       const completed = passed + taken + reviewed;
+      const userTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
-
 
       if (isPromart) {
         const schoolTotals = calculateSchoolProgressPercentage(
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
+        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
 
       cellRow.push(course.course_name);
