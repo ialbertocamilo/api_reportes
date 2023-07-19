@@ -26,8 +26,8 @@ moment.locale('es')
 
 let headers = [
   'ULTIMA SESIÓN',
-  'MÓDULO',
-  'ESCUELA',
+  'MÓDULOS',
+  'ESCUELAS',
   'CURSO',
   'RESULTADO CURSO',
   'REINICIOS CURSO',
@@ -56,12 +56,6 @@ async function UsersHistory ({
   ]
   await createHeaders(headersEstaticos.concat(headers))
 
-
-  // Load workspace criteria
-
-  // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
-  // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
-
   // When no modules are provided, get its ids using its parent id
 
   if (modules.length === 0) {
@@ -84,11 +78,6 @@ async function UsersHistory ({
   const users = await loadUsersWithCoursesAndTopics(
     workspaceId, modules, start, end
   )
-  const usersIds = pluck(users, 'id')
-
-  // Load workspace user criteria
-
-  // const usersCriterionValues = await loadUsersCriteriaValues(modules, usersIds)
 
   // Add users to Excel rows
 
@@ -159,40 +148,40 @@ async function loadUsersWithCoursesAndTopics (
   const subworkspaceUsersIds = await subworkspacesUsersids(modules)
 
   let query = `
-    select 
-        u.*, 
-        group_concat(distinct(s.name) separator ', ') school_name,
-        tx.name as course_type,
-        old_subworkspace.name module,
-        c.name course_name,
-        c.active course_active,
-        sc.status_id course_status_id,
-        sc.views course_views,
-        sc.passed course_passed,
-        sc.grade_average,
-        sc.restarts course_restarts,
-        t.name topic_name,
-        t.active topic_active,
-        t.assessable topic_assessable,
-        t.type_evaluation_id,
-        st.grade topic_grade,
-        st.attempts topic_attempts,
-        st.restarts topic_restarts,
-        st.views topic_views,
-        st.status_id topic_status_id,
-        st.last_time_evaluated_at topic_last_time_evaluated_at,
-        json_extract(c.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
-    from users u
-        inner join workspaces w on u.subworkspace_id = w.id
-        inner join summary_topics st on u.id = st.user_id
-        inner join topics t on t.id = st.topic_id
-        inner join summary_courses sc on u.id = sc.user_id and sc.course_id = t.course_id
-        inner join courses c on t.course_id = c.id
-        inner join taxonomies tx on tx.id = c.type_id
-        inner join course_school cs on c.id = cs.course_id
-        inner join schools s on cs.school_id = s.id
-        left join school_subworkspace ss on s.id = ss.school_id
-        left join workspaces old_subworkspace on old_subworkspace.id = ss.subworkspace_id
+      select
+          u.*,
+          group_concat(distinct(s.name) separator ', ') school_name,
+          tx.name as course_type,
+          group_concat(distinct(old_subworkspace.name) separator ', ') module,
+          c.name course_name,
+          c.active course_active,
+          sc.status_id course_status_id,
+          sc.views course_views,
+          sc.passed course_passed,
+          sc.grade_average,
+          sc.restarts course_restarts,
+          t.name topic_name,
+          t.active topic_active,
+          t.assessable topic_assessable,
+          t.type_evaluation_id,
+          st.grade topic_grade,
+          st.attempts topic_attempts,
+          st.restarts topic_restarts,
+          st.views topic_views,
+          st.status_id topic_status_id,
+          st.last_time_evaluated_at topic_last_time_evaluated_at,
+          json_extract(c.mod_evaluaciones, '$.nota_aprobatoria') minimum_grade
+      from users u
+               inner join workspaces w on u.subworkspace_id = w.id
+               inner join summary_topics st on u.id = st.user_id
+               inner join topics t on t.id = st.topic_id
+               inner join summary_courses sc on u.id = sc.user_id and sc.course_id = t.course_id
+               inner join courses c on t.course_id = c.id
+               inner join taxonomies tx on tx.id = c.type_id
+               inner join course_school cs on c.id = cs.course_id
+               inner join schools s on cs.school_id = s.id
+               left join school_subworkspace ss on s.id = ss.school_id
+               left join workspaces old_subworkspace on old_subworkspace.id = ss.subworkspace_id
   `
 
   query += `where sc.user_id in (${subworkspaceUsersIds.join(',')})`
