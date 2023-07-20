@@ -21,22 +21,26 @@ const {
 // Headers for Excel file
 
 const headers = [
+    'Módulo',
+    'Nombre', 'Apellido Paterno', 'Apellido Materno',
+    'Documento', 'Estado (Usuario)',
     'Beneficio',
     'Tipo de Beneficio',
     'Estado',
     'Estado actual',
-    'Inicio de Inscripción',
+    'Estado/etapa actual del Beneficio en la plataforma',
+    'Descripción del estado',
+    'Fecha de inscripción al beneficio',
     'Cierre de Inscripción',
     'Tipo de Inscripción',
-    'Valoración',
 ]
 
 async function generateReport({
     workspaceId, benefit
 }) {
-    const headersEstaticos = await getGenericHeaders(workspaceId)
-    await createHeaders(headersEstaticos.concat(headers))
-    
+    // const headersEstaticos = await getGenericHeaders(workspaceId)
+    // await createHeaders(headersEstaticos.concat(headers))
+    await createHeaders(headers)
     const benefits_list = await Benefit.findAll({
         where: {
             workspace_id: workspaceId,
@@ -50,47 +54,48 @@ async function generateReport({
         ]
     });
 
-    // const users_benefits = await UserBenefit.findAll({
-    //     where: {
-    //         benefit_id: {
-    //             [Op.in]: benefit
-    //         },
-    //         deleted_at:null,
-    //         include: [
-    //             { model: Taxonomie, as: 'status' },
-    //         ]
-    //     }
-    // })
-    const select_users = 'users.id,users.subworkspace_id,users.document,users.name,users.lastname,users.surname';
-    const modulos_id = await getSuboworkspacesIds(workspaceId);
+    const users_benefits = await UserBenefit.findAll({
+        where: {
+            benefit_id: {
+                [Op.in]: benefit
+            },
+            deleted_at:null,
+        },
+        include: [
+            { model: Taxonomie, as: 'status' },
+        ]
+    })
+    const select_users = 'users.id,users.active,users.subworkspace_id,users.document,users.name,users.lastname,users.surname';
+    const modulos = await getSuboworkspacesIds(workspaceId,type = 'full');
+    const modulos_id = pluck(modulos,'id');
+    console.log(modulos_id);
     // Load workspace criteria
-    // const modulos_id = pluck(modulos,'id');
-    const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
-    const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+    // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+    // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
     for (const benefit of benefits_list) {
         const users = await Benefit.getUsersSegmentedInBenefit(modulos_id,benefit.id,select_users,'all_users');
         for (const user of users) {
+            const subworkspace = modulos.find(m =>m.id == user.subworkspace_id);
+            const users_benefit = users_benefits.find(ub => ub.user_id = user.id && ub.benefit_id == benefit.id);
+            const date_subscribed_benefit = (users_benefit && users_benefit.status.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
             const cellRow = []
-            const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
-
+            // const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
+            cellRow.push(subworkspace.name)
             cellRow.push(user.name)
             cellRow.push(user.lastname)
             cellRow.push(user.surname)
             cellRow.push(user.document)
             cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
 
-            userValues.forEach((item) => cellRow.push(item.criterion_value || "-"))
+            // userValues.forEach((item) => cellRow.push(item.criterion_value || "-"))
             cellRow.push(benefit.title)
             cellRow.push(benefit.type.name)
             cellRow.push(benefit.active ? 'Activo' : 'Inactivo')
             cellRow.push(benefit.status.name)
-            cellRow.push(parseDateFromString(benefit.inicio_inscripcion))
+            cellRow.push(users_benefit.status.name || 'Pendiente')
+            cellRow.push(users_benefit.status.description || 'El usuario aún no esta inscrito al beneficio')
+            cellRow.push(date_subscribed_benefit)
             cellRow.push(parseDateFromString(benefit.fin_inscripcion))
-            cellRow.push(parseDateFromString(benefit.fecha_liberacion))
-            cellRow.push( '-' )
-            cellRow.push( '-' )
-            cellRow.push( '-' )
-            cellRow.push( '-' )
             cellRow.push( '-' )
             worksheet.addRow(cellRow).commit()
         }

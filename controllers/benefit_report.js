@@ -26,13 +26,14 @@ const headers = [
     'Estado actual',
     'Inicio de Inscripción',
     'Cierre de Inscripción',
-    'Liberación',
+    'Confirmación',
     'Promotor',
     'Expositor',
     'Cupos',
     'Cantidad de segmentados',
     'Inscritos',
-    '% de Inscritos',
+    '% de Inscritos (segmentación)',
+    '% de Inscritos (cupos)',
     'Inscripciones extraordinarias'
 ]
 
@@ -79,11 +80,18 @@ async function generateReport({
         const users_id_segmented = await Benefit.getUsersSegmentedInBenefit(modulos,benefit.id);
         const users_registered_id = pluck(uniqueElements(users_register_in_benefits.filter(ur => ur.benefit_id == benefit.id), "user_id"),'user_id') ;
         const users_segmented_subscribed_id = users_id_segmented.filter((value) => users_registered_id.includes(value));
-        let percent_subscribed = 0;
+        let percent_subscribed_segmented = 0;
+        let percent_subscribed_cupos= 0+'%';
+        let cupos = benefit.cupos || 'Ilimitado';
         if(users_id_segmented.length>0 && users_segmented_subscribed_id.length>0){
-            percent_subscribed = Math.floor(( users_segmented_subscribed_id.length / users_id_segmented.length) * 100);
+            percent_subscribed_segmented = Math.floor(( users_segmented_subscribed_id.length / users_id_segmented.length) * 100);
         }
-
+        if(cupos > 0 && users_segmented_subscribed_id.length>0){
+            percent_subscribed_cupos = Math.floor(( users_segmented_subscribed_id.length / cupos) * 100) + '%';
+        }
+        if(cupos == 'Ilimitado' ){
+            percent_subscribed_cupos = 'No aplica';   
+        }
         cellRow.push(benefit.title)
         cellRow.push(benefit.type.name)
         cellRow.push(benefit.active ? 'Activo' : 'Inactivo')
@@ -91,13 +99,14 @@ async function generateReport({
         cellRow.push(parseDateFromString(benefit.inicio_inscripcion))
         cellRow.push(parseDateFromString(benefit.fin_inscripcion))
         cellRow.push(parseDateFromString(benefit.fecha_liberacion))
-        cellRow.push(benefit.promotor || 'No configurado')
-        cellRow.push(benefit.speaker ? benefit.speaker.name : 'No aplica')
-        cellRow.push(benefit.cupos)
+        cellRow.push(benefit.promotor || 'No asignado')
+        cellRow.push(benefit.speaker ? benefit.speaker.name : 'No asignado')
+        cellRow.push(cupos)
         cellRow.push(users_id_segmented.length)
         cellRow.push(users_segmented_subscribed_id.length)
-        cellRow.push( percent_subscribed+' %' )
-        cellRow.push( '-' )
+        cellRow.push( percent_subscribed_segmented +' %' )
+        cellRow.push( percent_subscribed_cupos)
+        cellRow.push(' - ')
         worksheet.addRow(cellRow).commit()
     }
 

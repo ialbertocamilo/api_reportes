@@ -26,6 +26,7 @@ UserBenefit.init({
 UserBenefit.belongsTo(Taxonomie, {
     foreignKey: 'status_id',
     as: 'status'
+
 });
 
 module.exports = UserBenefit;
