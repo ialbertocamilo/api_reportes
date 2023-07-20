@@ -78,6 +78,9 @@ async function generateReport({
             const subworkspace = modulos.find(m =>m.id == user.subworkspace_id);
             const users_benefit = users_benefits.find(ub => ub.user_id = user.id && ub.benefit_id == benefit.id);
             const date_subscribed_benefit = (users_benefit && users_benefit.status.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
+            const status_user_benefit = users_benefit.status ? users_benefit.status.name : 'Pendiente';
+            const description_status_user_benefit = users_benefit.status ? users_benefit.status.description : 'El usuario aún no esta inscrito al beneficio';
+
             const cellRow = []
             // const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
             cellRow.push(subworkspace.name)
@@ -92,8 +95,8 @@ async function generateReport({
             cellRow.push(benefit.type.name)
             cellRow.push(benefit.active ? 'Activo' : 'Inactivo')
             cellRow.push(benefit.status.name)
-            cellRow.push(users_benefit.status.name || 'Pendiente')
-            cellRow.push(users_benefit.status.description || 'El usuario aún no esta inscrito al beneficio')
+            cellRow.push(status_user_benefit)
+            cellRow.push(description_status_user_benefit)
             cellRow.push(date_subscribed_benefit)
             cellRow.push(parseDateFromString(benefit.fin_inscripcion))
             cellRow.push( '-' )
