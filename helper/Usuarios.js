@@ -379,3 +379,16 @@ exports.loadUsersBySubWorspaceIds = async (
 return indexId ? setCustomIndexAtObject(users) : users;
 
 };
+
+exports.subworkspacesUsersids = async (subWorkspaceIds) => {
+  const [users] = await con.raw(
+
+    ` 
+    select
+      *
+    from users u where
+      u.subworkspace_id IN (${subWorkspaceIds.join()})
+`);
+
+  return pluck(users, 'id');
+}
