@@ -172,7 +172,7 @@ async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], tem
   for(const question in questions) {
 
     const { id: question_id, pregunta: question_name, topic_id } = questions[question];
-    const { total_evaluations, total_corrects, total_incorrects } = TopicsQuestionsData[question] ;
+    const { total_evaluations, total_corrects, total_incorrects } = TopicsQuestionsData[question] || { total_evaluations: 0, total_corrects:0, total_incorrects: 0 }
     const { subworkspaces_names, school_name, course_name, topic_name } = EvaluationsInData[topic_id];
 
     TopicsQuestionsResult.push({
