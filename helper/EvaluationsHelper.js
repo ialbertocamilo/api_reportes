@@ -1,4 +1,5 @@
 const { con } = require('../db');
+const { decode } = require('html-entities');
 const { setCustomIndexAtObject, groupArrayOfObjects_v2 } = require('../helper/Helper'); 
 
 async function loadAllEvaluationsResults({ type, modulos, escuelas, cursos, temas, start, end}) {
@@ -47,8 +48,8 @@ async function loadTopicResults(cursos, temas, start, end) {
 
   // fecha inicio - fin
   let whereConditionSumaryTopic = '';
-  if(start) whereConditionSumaryTopic = ` and summary_topics.updated_at >= '${start}'`;
-  if(end) whereConditionSumaryTopic += ` and summary_topics.updated_at <= '${end}'`;
+  if(start) whereConditionSumaryTopic = ` and summary_topics.last_time_evaluated_at >= '${start}'`;
+  if(end) whereConditionSumaryTopic += ` and summary_topics.last_time_evaluated_at <= '${end}'`;
 
   // console.log(whereConditionSumaryTopic);
 
@@ -182,7 +183,7 @@ async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], tem
       topic_name,
       // === by api reusable ===
       question_id,
-      question_name,
+      question_name: decode(question_name),
       total_evaluations, 
       total_corrects, 
       total_incorrects
