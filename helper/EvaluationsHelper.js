@@ -46,11 +46,14 @@ async function loadTopicResults(cursos, temas, start, end) {
   const evaluationType = await con('taxonomies').where('group', 'topic').where('code', 'qualified');
   const type = evaluationType[0];
 
-  // fecha inicio - fin
-  let whereConditionSumaryTopic = '';
-  if(start) whereConditionSumaryTopic = ` and summary_topics.last_time_evaluated_at >= '${start}'`;
-  if(end) whereConditionSumaryTopic += ` and summary_topics.last_time_evaluated_at <= '${end}'`;
+  let statusTypes = await con('taxonomies').select('id').where('group', 'topic')
+                                           .where('type', 'user-status').whereIn('code', ['aprobado','desaprobado']);
+  statusTypes = statusTypes.map((ele) => ele.id);
 
+  // fecha inicio - fin
+  let whereConditionSumaryTopic = `and summary_topics.status_id in(${statusTypes.join()})`;
+  if(start) whereConditionSumaryTopic += ` and summary_topics.last_time_evaluated_at >= '${start}'`;
+  if(end) whereConditionSumaryTopic += ` and summary_topics.last_time_evaluated_at <= '${end}'`;
   // console.log(whereConditionSumaryTopic);
 
   let query = `
@@ -74,7 +77,7 @@ async function loadTopicResults(cursos, temas, start, end) {
   INNER JOIN course_school cs ON cs.course_id = c.id
   INNER JOIN schools s ON s.id = cs.school_id
 
-  WHERE t.course_id in (${cursos.join()}) and t.assessable = 1 and t.type_evaluation_id = ${type.id} `;
+  WHERE t.course_id in (${cursos.join()}) and t.assessable = 1 and t.type_evaluation_id = ${type.id}`;
   
 /*  
   sin fecha
@@ -91,6 +94,7 @@ async function loadTopicResults(cursos, temas, start, end) {
   if(temas.length) query += ` and t.id in (${temas.join()})`;
   query += ` and t.deleted_at IS NULL`;
   
+  // console.log(query);
   const [ rows ] = await con.raw(query);
 
   return rows;
@@ -119,7 +123,7 @@ async function loadSchoolsSubworkspaces(escuelas) {
 }
 
 
-async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], temas }) {
+async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], temas, start, end }) {
 
   const temas_ids = topicId ? [ topicId ] : temas;
   
@@ -131,7 +135,7 @@ async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], tem
       questions = setCustomIndexAtObject(questions);
   
   // summaries
-  let summariesResults = await loadSummariesTopic(temas_ids);
+  let summariesResults = await loadSummariesTopic(temas_ids, start, end);
   let TopicsQuestionsData = {};
 
   for(const summarie of summariesResults) {
@@ -160,7 +164,7 @@ async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], tem
         TopicsQuestionsData[preg_id] = {
           total_evaluations: 1,
           total_corrects: (is_correct) ? 1 : 0,
-          total_incorrects: (is_correct) ? 1 : 0
+          total_incorrects: (is_correct) ? 0 : 1
         }
       
       }
@@ -212,7 +216,13 @@ async function loadQuetions(temas) {
   return rows;
 }
 
-async function loadSummariesTopic(temas) {
+async function loadSummariesTopic(temas, start, end) {
+
+  // fecha inicio - fin
+  let whereConditionSumaryTopic = '';
+  if(start) whereConditionSumaryTopic = ` and st.last_time_evaluated_at >= '${start}'`;
+  if(end) whereConditionSumaryTopic += ` and st.last_time_evaluated_at <= '${end}'`;
+  // fecha inicio - fin
 
   let query = `
     SELECT  st.id, 
@@ -223,7 +233,10 @@ async function loadSummariesTopic(temas) {
     WHERE st.topic_id in(${temas.join()})
     and st.topic_id IS not NULL
     and st.answers IS not NULL
-    and st.deleted_at IS NULL`;
+    and st.deleted_at IS NULL
+
+    ${whereConditionSumaryTopic}
+    `;
 
   const [ rows ] = await con.raw(query);
 
