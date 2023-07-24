@@ -32,7 +32,7 @@ async function evaluationsDetailExcel(indata) {
     cellRow.push(question.school_name);
     cellRow.push(question.course_name);
     cellRow.push(question.topic_name);
-    cellRow.push(strippedString(question.question_name));
+    cellRow.push(question.question_name);
     cellRow.push(question.total_corrects);
     cellRow.push(question.total_incorrects);
     cellRow.push(question.total_evaluations);
@@ -47,8 +47,4 @@ async function evaluationsDetailExcel(indata) {
   } else {
     process.send({ alert: "No se encontraron resultados" });
   }
-}
-
-function strippedString(value) {
-  return value.replace(/(<([^>]+)>)/gi, '');
 }
