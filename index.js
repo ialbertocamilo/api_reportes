@@ -11,7 +11,7 @@ require('./cron')
 const handler = require('./routes')
 const { restartQueueExecution } = require('./helper/Queue')
 const moment = require('moment-timezone')
-
+const { downloadFile } = require('./s3/storage')
 // Server config
 
 // app.use(queue({ activeLimit: 10, queuedLimit: -1 }))
@@ -74,7 +74,11 @@ app.post('/reports/queue/started/:workspaceId', async (req, res) => {
   const protocol = process.env.IS_LOCALHOST == 1 ? 'http' : 'https'
   res.json({ started: await restartQueueExecution(io, req.body.adminId, req.params.workspaceId, protocol + '://' + req.headers.host) })
 })
-app.get('/reports/:filename', (req, res) => {
-  const file = CARPETA_DESCARGA + `/${req.params.filename}`
-  res.download(file)
+app.get('/reports/:filename',async (req, res) => {
+   try {
+    await downloadFile(req.params.filename, res); // Pasamos 'res' como segundo argumento
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Error al procesar la solicitud." });
+  }
 })

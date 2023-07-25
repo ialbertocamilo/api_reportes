@@ -10,7 +10,7 @@ const {
 } = require('../helper/Queue')
 const { fork } = require('child_process')
 const { reportErrorInSlackError } = require('../helper/Slack')
-
+const { uploadFile } = require('../s3/storage')
 module.exports = function (io) {
   router.get('/', async (req, res) => {
     console.log(db.con)
@@ -96,7 +96,6 @@ module.exports = function (io) {
 const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed) => {
 
   const rutaDescarga = result ? result.ruta_descarga : ''
-
   await markReportAsReady(
     reportType,
     rutaDescarga || '',
@@ -145,7 +144,7 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
 
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
-
+  uploadFile(rutaDescarga)  
   children.kill()
 }
 
