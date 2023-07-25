@@ -169,10 +169,10 @@ inner join taxonomies tx on
 	tx.id = checklists.type_id
 left JOIN summary_user_checklist suc on
 	suc.user_id = u.id
-left join checklist_items cli on
-	checklists.id = cli.checklist_id
 left join checklist_answers_items cai on
 	ca.id = cai.checklist_answer_id
+left join checklist_items cli on
+  cli.id = cai.checklist_item_id 
 left join checklist_relationships cr on
 	cr.checklist_id = ca.checklist_id
 left join courses c on
