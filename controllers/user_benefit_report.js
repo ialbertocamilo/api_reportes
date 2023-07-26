@@ -44,8 +44,8 @@ async function generateReport({
     const taxonomy_register = await Taxonomie.findOne({
         where:{
             group:'benefit',
-            type:'user_status',
-            code : 'subscribed'
+            type:'type_register',
+            code : 'extraordinario'
         }
     });
     const benefits_list = await Benefit.findAll({
