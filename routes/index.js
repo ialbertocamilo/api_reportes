@@ -285,13 +285,21 @@ module.exports = {
       children.kill()
     })
   },
-  /*Evaluaciones data Detalle*/
-  evaluationsDetailData({body}, res){
-    const children = fork('./controllers/evaluations_detail_data.js')
+  /*Benefit*/
+  benefit_report({body},res){
+    const children = fork('./controllers/benefit_report.js')
     children.send(body)
     children.on('message', (data) => {
       res.send(data)
       children.kill()
     })
   },
+  user_benefit_report({body},res){
+    const children = fork('./controllers/user_benefit_report.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  }
 }

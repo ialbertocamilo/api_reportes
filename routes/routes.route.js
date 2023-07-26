@@ -181,6 +181,8 @@ function getReportFilePath (reportType) {
     case 'users_history': file = 'users_history.js'; break
     case 'evaluations_excel': file = 'evaluations_excel.js'; break
     case 'evaluations_detail_excel': file = 'evaluations_detail_excel.js'; break
+    case 'benefit_report': file = 'benefit_report.js'; break
+    case 'user_benefit_report': file = 'user_benefit_report.js'; break
   }
 
   return `./controllers/${file}`

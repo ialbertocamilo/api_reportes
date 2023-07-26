@@ -176,3 +176,11 @@ exports.calculateUserSeniorityRange = (dateString) => {
 
   return seniorityValue
 }
+exports.parseDateFromString = (datestring) =>{
+  const date = new Date(datestring);
+  const day = date.getDate();
+  const month = date.getMonth() + 1; 
+  const year= date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
