@@ -82,7 +82,7 @@ async function generateReport({
         const users = await Benefit.getUsersSegmentedInBenefit(modulos_id,benefit.id,select_users,'all_users');
         for (const user of users) {
             const subworkspace = modulos.find(m =>m.id == user.subworkspace_id);
-            const users_benefit = users_benefits.find(ub => ub.user_id = user.id && ub.benefit_id == benefit.id);
+            const users_benefit = users_benefits.find(ub => ub.user_id == user.id && ub.benefit_id == benefit.id);
             const date_subscribed_benefit = (users_benefit && users_benefit.status.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
             const status_user_benefit = users_benefit ? users_benefit.status.name : 'Pendiente';
             const description_status_user_benefit = users_benefit ? users_benefit.status.description : 'El usuario aún no esta inscrito al beneficio';
