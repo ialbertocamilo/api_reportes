@@ -75,6 +75,7 @@ async function generateReport({
     const select_users = 'users.id,users.active,users.subworkspace_id,users.document,users.name,users.lastname,users.surname';
     const modulos = await getSuboworkspacesIds(workspaceId,type = 'full');
     const modulos_id = pluck(modulos,'id');
+    const default_status = {code:null,name:'Pendiente',description:'El usuario aún no esta inscrito al beneficio'}  
     // Load workspace criteria
     // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
     // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
@@ -83,11 +84,11 @@ async function generateReport({
         for (const user of users) {
             const subworkspace = modulos.find(m =>m.id == user.subworkspace_id);
             const users_benefit = users_benefits.find(ub => ub.user_id == user.id && ub.benefit_id == benefit.id);
-            const date_subscribed_benefit = (users_benefit && users_benefit.status.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
-            const status_user_benefit = users_benefit ? users_benefit.status.name : 'Pendiente';
-            const description_status_user_benefit = users_benefit ? users_benefit.status.description : 'El usuario aún no esta inscrito al beneficio';
+            const status_users_benefit = users_benefit.status || default_status;
+
+            const date_subscribed_benefit = (status_users_benefit.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
             let type_register = '-' 
-            if(status_user_benefit == 'subscribed'){
+            if(status_users_benefit.code == 'subscribed' || status_users_benefit.code == 'approved'){
                 type_register = users_benefit.type_id == taxonomy_register.id ? 'Extraordinario' : 'Regular';
             }
             const cellRow = []
@@ -104,8 +105,8 @@ async function generateReport({
             cellRow.push(benefit.type.name)
             cellRow.push(benefit.active ? 'Activo' : 'Inactivo')
             cellRow.push(benefit.status.name)
-            cellRow.push(status_user_benefit)
-            cellRow.push(description_status_user_benefit)
+            cellRow.push(status_users_benefit.name)
+            cellRow.push(status_users_benefit.description)
             cellRow.push(date_subscribed_benefit)
             cellRow.push(parseDateFromString(benefit.fin_inscripcion))
             cellRow.push( type_register )
