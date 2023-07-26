@@ -64,6 +64,13 @@ async function generateReport({
             code : 'subscribed'
         }
     });
+    const taxonomy_type_extraordinary = await Taxonomie.findOne({
+        where:{
+            group:'benefit',
+            type:'type_register',
+            code : 'extraordinario'
+        }
+    });
     const users_register_in_benefits = await UserBenefit.findAll({
         where: {
             benefit_id: {
@@ -78,7 +85,9 @@ async function generateReport({
     for (const benefit of benefits_list) {
         const cellRow = []
         const users_id_segmented = await Benefit.getUsersSegmentedInBenefit(modulos,benefit.id);
-        const users_registered_id = pluck(uniqueElements(users_register_in_benefits.filter(ur => ur.benefit_id == benefit.id), "user_id"),'user_id') ;
+        const users_register_in_benefit = uniqueElements(users_register_in_benefits.filter(ur => ur.benefit_id == benefit.id), "user_id");
+        const users_subscribed_extraordinary= users_register_in_benefit.filter(ur => ur.type_id == taxonomy_type_extraordinary.id);
+        const users_registered_id = pluck(users_register_in_benefit,'user_id') ;
         const users_segmented_subscribed_id = users_id_segmented.filter((value) => users_registered_id.includes(value));
         let percent_subscribed_segmented = 0;
         let percent_subscribed_cupos= 0+'%';
@@ -106,7 +115,7 @@ async function generateReport({
         cellRow.push(users_segmented_subscribed_id.length)
         cellRow.push( percent_subscribed_segmented +' %' )
         cellRow.push( percent_subscribed_cupos)
-        cellRow.push(' - ')
+        cellRow.push(users_subscribed_extraordinary.length)
         worksheet.addRow(cellRow).commit()
     }
 

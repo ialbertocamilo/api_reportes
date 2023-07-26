@@ -41,6 +41,13 @@ async function generateReport({
     // const headersEstaticos = await getGenericHeaders(workspaceId)
     // await createHeaders(headersEstaticos.concat(headers))
     await createHeaders(headers)
+    const taxonomy_register = await Taxonomie.findOne({
+        where:{
+            group:'benefit',
+            type:'user_status',
+            code : 'subscribed'
+        }
+    });
     const benefits_list = await Benefit.findAll({
         where: {
             workspace_id: workspaceId,
@@ -68,7 +75,6 @@ async function generateReport({
     const select_users = 'users.id,users.active,users.subworkspace_id,users.document,users.name,users.lastname,users.surname';
     const modulos = await getSuboworkspacesIds(workspaceId,type = 'full');
     const modulos_id = pluck(modulos,'id');
-    console.log(modulos_id);
     // Load workspace criteria
     // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
     // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
@@ -80,7 +86,10 @@ async function generateReport({
             const date_subscribed_benefit = (users_benefit && users_benefit.status.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
             const status_user_benefit = users_benefit ? users_benefit.status.name : 'Pendiente';
             const description_status_user_benefit = users_benefit ? users_benefit.status.description : 'El usuario aún no esta inscrito al beneficio';
-
+            let type_register = '-' 
+            if(status_user_benefit == 'subscribed'){
+                type_register = users_benefit.type_id == taxonomy_register.id ? 'Extraordinario' : 'Regular';
+            }
             const cellRow = []
             // const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
             cellRow.push(subworkspace.name)
@@ -99,7 +108,7 @@ async function generateReport({
             cellRow.push(description_status_user_benefit)
             cellRow.push(date_subscribed_benefit)
             cellRow.push(parseDateFromString(benefit.fin_inscripcion))
-            cellRow.push( '-' )
+            cellRow.push( type_register )
             worksheet.addRow(cellRow).commit()
         }
     }

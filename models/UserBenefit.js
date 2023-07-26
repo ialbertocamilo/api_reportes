@@ -11,6 +11,7 @@ class UserBenefit extends Model {
 UserBenefit.init({
     user_id: INTEGER,
     status_id: INTEGER,
+    type_id: INTEGER,
     benefit_id: INTEGER,
     updated_at:DATE,
     deleted_at:DATE
@@ -26,7 +27,9 @@ UserBenefit.init({
 UserBenefit.belongsTo(Taxonomie, {
     foreignKey: 'status_id',
     as: 'status'
-
 });
-
+UserBenefit.belongsTo(Taxonomie, {
+    foreignKey: 'type_id',
+    as: 'type'
+});
 module.exports = UserBenefit;
