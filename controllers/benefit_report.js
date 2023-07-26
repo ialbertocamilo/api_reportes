@@ -57,11 +57,13 @@ async function generateReport({
             { model: BenefitProperty,as:'properties'},
         ]
     });
-    const taxonomy_register = await Taxonomie.findOne({
+    const taxo_user_status = await Taxonomie.findAll({
         where:{
             group:'benefit',
             type:'user_status',
-            code : 'subscribed'
+            code: {
+                [Op.in]: ['subscribed','approved']
+            }
         }
     });
     const taxonomy_type_extraordinary = await Taxonomie.findOne({
@@ -76,7 +78,9 @@ async function generateReport({
             benefit_id: {
                 [Op.in]: benefit
             },
-            status_id: taxonomy_register.id,
+            status_id: {
+                [Op.in]: pluck(taxo_user_status,'id')
+            },
             deleted_at:null
         }
     })
