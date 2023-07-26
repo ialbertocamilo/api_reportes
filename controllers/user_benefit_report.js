@@ -84,7 +84,7 @@ async function generateReport({
         for (const user of users) {
             const subworkspace = modulos.find(m =>m.id == user.subworkspace_id);
             const users_benefit = users_benefits.find(ub => ub.user_id == user.id && ub.benefit_id == benefit.id);
-            const status_users_benefit = users_benefit.status || default_status;
+            const status_users_benefit = users_benefit ? users_benefit.status : default_status;
 
             const date_subscribed_benefit = (status_users_benefit.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
             let type_register = '-' 
