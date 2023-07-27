@@ -1,15 +1,13 @@
+const { extension } = require('./config')
 const moment = require('moment')
 const { generateReportPath } = require('./helper/Queue')
-const {downloadFile} = require('./s3/storage')
-const { extension } = require('./config')
 
 // moment('es')
 exports.response = (responseData) => {
   const { createAt, modulo, error, alert } = responseData
-  const url =  downloadFile(createAt+extension)
   if (modulo) {
     return {
-      ruta_descarga: url,
+      ruta_descarga: generateReportPath(createAt),
       createAt,
       modulo,
       new_name: `${modulo}_${moment(createAt)
