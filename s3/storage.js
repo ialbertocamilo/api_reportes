@@ -1,4 +1,11 @@
+const fs = require('fs')
+const path = require('path');
+const { AWS_BUCKET_NAME, MARCA } = require('../config.js')
+const { PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3')
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
+const { CARPETA_DESCARGA } = require("../config");
 const { client } = require('../helper/s3-helpers.js')
+
 const uploadFile = async (filePath) => {
   try {
 
@@ -37,3 +44,4 @@ async function downloadFile(filePath) {
 }
 
 module.exports = { uploadFile, downloadFile }
+
