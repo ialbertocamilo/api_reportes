@@ -27,7 +27,7 @@ const uploadFile = async (filePath) => {
   }
 }
 
-async function downloadFile(filePath) {
+function downloadFile(filePath) {
   try{
     const expiresIn = 60 * 5
   
@@ -35,7 +35,7 @@ async function downloadFile(filePath) {
       Bucket: AWS_BUCKET_NAME,
       Key: `${MARCA}/reports/${filePath}`,
     })
-    const url = await getSignedUrl(client, command, { expiresIn })
+    const url = getSignedUrl(client, command, { expiresIn })
     return url
   } catch (err) {
     console.log(err)

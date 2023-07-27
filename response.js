@@ -4,9 +4,9 @@ const {downloadFile} = require('./s3/storage')
 const { extension } = require('./config')
 
 // moment('es')
-exports.response = async (responseData) => {
+exports.response = (responseData) => {
   const { createAt, modulo, error, alert } = responseData
-  const url = await downloadFile(createAt+extension)
+  const url =  downloadFile(createAt+extension)
   if (modulo) {
     return {
       ruta_descarga: url,
