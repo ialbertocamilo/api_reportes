@@ -1,14 +1,12 @@
-const fs = require('fs')
-
-const { AWS_BUCKET_NAME, MARCA } = require('../config.js')
-const { PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3')
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
-
 const { client } = require('../helper/s3-helpers.js')
 const uploadFile = async (filePath) => {
   try {
-    const fileStream = fs.createReadStream('./' + filePath)
-    const keyFile = MARCA + fileStream.path.slice(1)
+
+    const fileName = path.basename(filePath);
+    const fileStream = fs.createReadStream(CARPETA_DESCARGA+'/'+fileName)
+    console.log(CARPETA_DESCARGA+'/'+fileName)
+    const keyFile = MARCA +'/reports/'+ fileName
+    console.log(keyFile)
     const compressedCommand = new PutObjectCommand({
       Bucket: AWS_BUCKET_NAME,
       Key: keyFile,
@@ -16,7 +14,7 @@ const uploadFile = async (filePath) => {
     })
     await client.send(compressedCommand)
     console.log(`Uploaded successfully! ${keyFile} `)
-    fs.unlinkSync(filePath)
+    fs.unlinkSync(CARPETA_DESCARGA+'/'+fileName)
   } catch (err) {
     console.error(err)
   }
