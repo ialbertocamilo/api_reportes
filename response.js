@@ -1,4 +1,3 @@
-const { extension } = require('./config')
 const moment = require('moment')
 const { generateReportPath } = require('./helper/Queue')
 const {downloadFile} = require('./s3/storage')
