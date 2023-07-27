@@ -14,6 +14,8 @@ UserBenefit.init({
     type_id: INTEGER,
     benefit_id: INTEGER,
     updated_at:DATE,
+    fecha_confirmado:DATE,
+    fecha_registro:DATE,
     deleted_at:DATE
 }, {
     sequelize,
