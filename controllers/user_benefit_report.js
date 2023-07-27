@@ -88,19 +88,14 @@ async function generateReport({
             const status_users_benefit = users_benefit ? users_benefit.status : default_status;
 
             let type_register = '-' 
+            let date_approved = '-';
+            let date_subscribed = '-';
             if(status_users_benefit.code == 'subscribed' || status_users_benefit.code == 'approved'){
                 type_register = users_benefit.type_id == taxonomy_register.id ? 'Extraordinario' : 'Regular';
-            }
-
-            let date_subscribed = '-';
-            if(status_users_benefit.code == 'subscribed'){
+                date_approved = users_benefit.fecha_confirmado ? parseDateFromString(users_benefit.fecha_confirmado) : '-'
                 date_subscribed = users_benefit.fecha_registro ? parseDateFromString(users_benefit.fecha_registro) : '-'
             }
-            
-            let date_approved = '-';
-            if(status_users_benefit.code == 'approved'){
-                date_approved = users_benefit.fecha_confirmado ? parseDateFromString(users_benefit.fecha_confirmado) : '-'
-            }
+
             const cellRow = []
             // const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
             cellRow.push(subworkspace.name)
