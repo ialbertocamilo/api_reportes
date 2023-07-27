@@ -1,6 +1,6 @@
 const { con } = require('../db');
 const { decode } = require('html-entities');
-const { setCustomIndexAtObject, groupArrayOfObjects_v2 } = require('../helper/Helper'); 
+const { setCustomIndexAtObject, strippedString, groupArrayOfObjects_v2 } = require('../helper/Helper'); 
 
 async function loadAllEvaluationsResults({ type, modulos, escuelas, cursos, temas, start, end}) {
 
@@ -187,7 +187,7 @@ async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], tem
       topic_name,
       // === by api reusable ===
       question_id,
-      question_name: decode(question_name),
+      question_name: decode(strippedString(question_name)),
       total_evaluations, 
       total_corrects, 
       total_incorrects
