@@ -31,6 +31,7 @@ const headers = [
     'Estado/etapa actual del Beneficio en la plataforma',
     'Descripción del estado',
     'Fecha de inscripción al beneficio',
+    'Fecha de confirmación al beneficio',
     'Cierre de Inscripción',
     'Tipo de Inscripción',
 ]
@@ -75,7 +76,7 @@ async function generateReport({
     const select_users = 'users.id,users.active,users.subworkspace_id,users.document,users.name,users.lastname,users.surname';
     const modulos = await getSuboworkspacesIds(workspaceId,type = 'full');
     const modulos_id = pluck(modulos,'id');
-    const default_status = {code:null,name:'Pendiente',description:'El usuario aún no esta inscrito al beneficio'}  
+    const default_status = {code:null,name:'Pendiente',fecha_confirmado:null,fecha_registro:null,description:'El usuario aún no esta inscrito al beneficio'}  
     // Load workspace criteria
     // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
     // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
@@ -86,10 +87,19 @@ async function generateReport({
             const users_benefit = users_benefits.find(ub => ub.user_id == user.id && ub.benefit_id == benefit.id);
             const status_users_benefit = users_benefit ? users_benefit.status : default_status;
 
-            const date_subscribed_benefit = (status_users_benefit.code ==  'subscribed') ? parseDateFromString(users_benefit.updated_at) : '-';
             let type_register = '-' 
             if(status_users_benefit.code == 'subscribed' || status_users_benefit.code == 'approved'){
                 type_register = users_benefit.type_id == taxonomy_register.id ? 'Extraordinario' : 'Regular';
+            }
+
+            let date_subscribed = '-';
+            if(status_users_benefit.code == 'subscribed'){
+                date_subscribed = users_benefit.fecha_registro ? parseDateFromString(users_benefit.fecha_registro) : '-'
+            }
+            
+            let date_approved = '-';
+            if(status_users_benefit.code == 'approved'){
+                date_approved = users_benefit.fecha_confirmado ? parseDateFromString(users_benefit.fecha_confirmado) : '-'
             }
             const cellRow = []
             // const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames)
@@ -107,7 +117,8 @@ async function generateReport({
             cellRow.push(benefit.status.name)
             cellRow.push(status_users_benefit.name)
             cellRow.push(status_users_benefit.description)
-            cellRow.push(date_subscribed_benefit)
+            cellRow.push(date_subscribed)
+            cellRow.push(date_approved)
             cellRow.push(parseDateFromString(benefit.fin_inscripcion))
             cellRow.push( type_register )
             worksheet.addRow(cellRow).commit()
