@@ -42,7 +42,8 @@ const { getSuboworkspacesIds } = require("../helper/Workspace");
 const { con } = require('../db')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
   loadUsersWithCourses, loadSummaryTopicsCount,
-  calculateSchoolAccomplishmentPercentage, countCoursesActiveTopics
+  calculateSchoolAccomplishmentPercentage, countCoursesActiveTopics,
+  calculateCourseAccomplishmentPercentage
 } = require('../helper/Courses')
 
 // Headers for Excel file
@@ -101,6 +102,8 @@ async function generateSegmentationReport({
     headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
     headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
     headers.unshift('RANGO DE ANTIGÜEDAD')
+
+    headers.splice(7, 0, 'CUMPLIMIENTO CURSO (%)');
   }
 
   // Generate Excel file header
@@ -197,8 +200,6 @@ async function generateSegmentationReport({
       completed
     );
     logtime(`-- end: user segmentation --`);
-
-
 
 
     // filtro para usuarios nulos y no nulos
@@ -306,7 +307,7 @@ async function generateSegmentationReport({
       const taken = user.taken || 0;
       const reviewed = user.reviewed || 0;
       const completed = passed + taken + reviewed;
-      const userTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
+      const userSummaryTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
@@ -316,13 +317,18 @@ async function generateSegmentationReport({
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
-        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
+        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userSummaryTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
 
       cellRow.push(course.course_name);
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
       );
+
+      if (isPromart) {
+        cellRow.push((calculateCourseAccomplishmentPercentage(course.course_id, coursesTopics, userSummaryTopicsCount) || 0) + '%')
+      }
+
       cellRow.push(user.course_views || "-");
       cellRow.push(user.grade_average);
 
