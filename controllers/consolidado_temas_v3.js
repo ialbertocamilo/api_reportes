@@ -49,7 +49,7 @@ let headers = [
   'ESTADO TEMA',
   'NOTA TEMA',
   'REINICIOS TEMA',
-  'INTENTOS PRUEBA',
+  'INTENTOS',
   'EVALUABLE TEMA',
   'TIPO TEMA',
   'VISITAS TEMA',

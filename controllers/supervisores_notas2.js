@@ -34,7 +34,7 @@ const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
-  'AVANCE CURSO (%)',
+  'APROBACIÓN CURSO',
   'VISITAS',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
@@ -78,11 +78,11 @@ async function generateSegmentationReport ({
     criteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
-    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
-    headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
+    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
+    headers.splice(schoolProgressIndex, 0, 'APROBACIÓN ESCUELA');
     headers.unshift('RANGO DE ANTIGÜEDAD');
 
-    headers.splice(7, 0, 'CUMPLIMIENTO CURSO (%)');
+    headers.splice(7, 0, 'CUMPLIMIENTO CURSO');
   }
 
   // Generate Excel file header
