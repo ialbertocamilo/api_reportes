@@ -240,6 +240,8 @@ exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
   const userTopicsStatuses = await loadTopicsStatuses()
   const aprobadoId = getTopicStatusId(userTopicsStatuses, 'aprobado')
   const desaprobadoId = getTopicStatusId(userTopicsStatuses, 'desaprobado')
+  const revisadoId = getTopicStatusId(userTopicsStatuses, 'revisado')
+  const realizadoId = getTopicStatusId(userTopicsStatuses, 'realizado')
 
   const query = `
       select
@@ -254,7 +256,7 @@ exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
           c.id in (${coursesIds.join(',')}) and
           t.active = 1 and
           st.user_id in (${usersIds.join(',')}) and
-          st.status_id in (${aprobadoId}, ${desaprobadoId}) and
+          st.status_id in (${aprobadoId}, ${desaprobadoId}, ${revisadoId}, ${realizadoId}) and
           st.deleted_at is null
       group by c.id, st.user_id
   `
