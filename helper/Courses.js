@@ -98,12 +98,7 @@ exports.calculateSchoolProgressPercentage = (
 
       const segmentedCourseId = +ussc.course_id;
       const alreadyProcessed = coursedAdded.includes(segmentedCourseId);
-      let isInactive = false
-      inactiveCoursesIds.forEach(i => {
-        if(+i === segmentedCourseId) {
-          isInactive = true
-        }
-      })
+      let isInactive = !ussc.course_is_active;
 
       if (!alreadyProcessed && !isInactive) {
 
@@ -160,10 +155,12 @@ exports.calculateSchoolProgressPercentage = (
 const getSchoolsCoursesIds = async (schoolsIds) => {
 
   const query = `
-      select s.id school_id, cs.course_id
+      select s.id school_id, cs.course_id, c.active course_is_active
       from schools s
                join course_school cs on cs.school_id = s.id
+               join courses c on cs.course_id = c.id
       where cs.school_id in (${schoolsIds.join(',')})
+      group by s.id, c.id
   `
   const [schoolsCourses] = await con.raw(query)
 
