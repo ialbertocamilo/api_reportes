@@ -8,17 +8,83 @@ const moment = require("moment");
  * @param supervisorId
  * @returns {Promise<void>}
  */
+exports.loadUsersByResource = async ({modulos,model_type, model_id,select_users='users.id',type='only_id'}) => {
+  const segments = await loadSegmentsByModel(model_type, model_id);
+  
+  const segments_groupby = groupArrayOfObjects(
+    segments,
+    "segment_id",
+    "get_array"
+  );
+  
+  let users = [];
+  for (segment of segments_groupby) {
+    const grouped = groupArrayOfObjects(segment, "criterion_id", "get_array");
+    let join_criterions_values_user = "";
+    grouped.forEach((values, idx) => {
+      if (values[0].code != "date") {
+        const criterios_id = pluckUnique(
+          values,
+          "criterion_value_id"
+        ).toString();
+        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${criterios_id}) `;
+      } else {
+        let select_date = "select id from criterion_values where ";
+        values.forEach((value, index) => {
+          const starts_at = moment(value.starts_at).format("YYYY-MM-DD");
+          const finishes_at = moment(value.finishes_at).format("YYYY-MM-DD");
+          select_date += ` ${index > 0 ? "or" : ""
+            } value_date between '${starts_at}' and '${finishes_at}' and criterion_id=${value.criterion_id
+            }`;
+        });
+        select_date += " and deleted_at is null";
+        join_criterions_values_user += `inner join criterion_value_user as cvu${idx} on users.id = cvu${idx}.user_id and cvu${idx}.criterion_value_id in (${select_date}) `;
+      }
+    });
+    const [rows] =
+      await con.raw(`select ${select_users} from users
+        ${join_criterions_values_user}
+        where users.active=1
+        and users.subworkspace_id in (${modulos.join()})
+        and users.deleted_at is null`);
+    if (rows.length > 0) {
+      users = [...users, ...rows];
+    }
+  }
+  if(type == 'only_id'){
+    return pluck(uniqueElements(users, "id"),'id');
+  }
+  return uniqueElements(users, "id");
+}
+async function loadSegmentsByModel(model_type='App\\Models\\User',model_id){
+  return await con("segments_values as sv")
+  .select(
+    "sv.criterion_id",
+    "sv.starts_at",
+    "sv.finishes_at",
+    "sv.segment_id",
+    "sv.criterion_value_id",
+    "t.code"
+  )
+  .join("segments as sg", "sg.id", "sv.segment_id")
+  .join("criteria as c", "c.id", "sv.criterion_id")
+  .join("taxonomies as t", "t.id", "c.field_id")
+  .where("sg.model_type", model_type)
+  .where("sg.model_id", model_id)
+  .where("sg.deleted_at", null)
+  .where("sv.deleted_at", null);
+}
 async function loadSupervisorSegmentCriterionValues (supervisorId) {
   // Load taxonomy for supervisors
 
   const [taxonomies] = await con.raw(`
-    select * 
+    select *
     from taxonomies
     where
         \`group\` = 'segment' and
         code = 'user-supervise' and
         type = 'code' and
-        active = 1 and 
+        active = 1 and
         deleted_at is null
   `)
 
@@ -42,10 +108,10 @@ async function loadSupervisorSegmentCriterionValues (supervisorId) {
   .where("sg.deleted_at", null)
   .where("sv.deleted_at", null);
   // const query = `
-  //   select 
+  //   select
   //     sv.*
   //   from
-  //     segments s 
+  //     segments s
   //       inner join segments_values sv on s.id = sv.segment_id
   //   where
   //       s.model_id = :supervisorId and
@@ -98,8 +164,8 @@ exports.loadSupervisorSegmentUsersIds = async (modulos, supervisorId) => {
     });
     const [rows] =
       await con.raw(`select users.id from users
-        ${join_criterions_values_user} 
-        where users.active=1 
+        ${join_criterions_values_user}
+        where users.active=1
         and users.subworkspace_id in (${modulos.join()})
         and users.deleted_at is null`);
     if (rows.length > 0) {
@@ -164,8 +230,8 @@ exports.loadSupervisorSegmentUsersIds = async (modulos, supervisorId) => {
   //       criterion_value_user cvu
   //       inner join criterion_values cv on cv.id = cvu.criterion_value_id
   //       inner join users u on u.id = cvu.user_id
-        
-  //       where 
+
+  //       where
   //           cv.criterion_id in (${criterionIds}) and
   //           u.subworkspace_id in (${modulos.join()})
   //     ) scv
@@ -174,7 +240,7 @@ exports.loadSupervisorSegmentUsersIds = async (modulos, supervisorId) => {
 
   //     group by
   //       user_id
-      
+
   //     having count(user_id) = ${criterionCount}
   // `
   // const [rows] = await con.raw(query)

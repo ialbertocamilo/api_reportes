@@ -10,7 +10,7 @@ const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck, logtime, groupArrayOfObjects } = require('../helper/Helper')
+const { pluck, logtime, groupArrayOfObjects, setCustomIndexAtObject } = require('../helper/Helper')
 const { loadUsersCriteriaValues, 
         getUserCriterionValues,
         getUsersNullAndNotNull,
@@ -24,7 +24,9 @@ const {
   loadCompatiblesId,
   loadTopicsByCourseId,
   loadTopicsByCoursesIds,
-  loadTopicsByCourseUniqueId
+  loadTopicsByCourseUniqueId,
+  loadTopicQualificationTypes,
+  getTopicCourseGrade
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadCoursesV2, 
@@ -47,6 +49,7 @@ let headers = [
   'TEMA',
   'RESULTADO TEMA', // convalidado
   'ESTADO TEMA',
+  'SISTEMA DE CALIFICACIÓN', // tipo calificacion
   'NOTA TEMA',
   'REINICIOS TEMA',
   'INTENTOS',
@@ -108,6 +111,10 @@ async function exportarUsuariosDW({
 
   // Load evaluation types
   const evaluationTypes = await loadEvaluationTypes()
+
+  // load qualification types
+  let QualificationTypes = await loadTopicQualificationTypes();
+      QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
   let users_to_export = [];
 
@@ -270,8 +277,10 @@ async function exportarUsuariosDW({
       cellRow.push(course.course_type || '-')
       
       // encontrar topic por 'id'
-      const { topic_id } = user;
+      const { topic_id, qualification_type_id } = user;
+
       const topicStore = StackTopicsData[topic_id];
+      const qualification = QualificationTypes[topicStore.qualification_type_id];
 
       cellRow.push(topicStore.topic_name) // topicStore
 
@@ -284,7 +293,8 @@ async function exportarUsuariosDW({
 
       cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
 
-      cellRow.push(user.topic_grade || '-')
+      cellRow.push(qualification.name) // tipo de calificacion
+      cellRow.push(getTopicCourseGrade(user.topic_grade, qualification.position))
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
       cellRow.push(topicStore .topic_assessable ? 'Sí' : 'No') // topicStore
@@ -292,7 +302,7 @@ async function exportarUsuariosDW({
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
       cellRow.push(user.topic_views || '-')
-      cellRow.push(user.minimum_grade || '-')
+      cellRow.push(getTopicCourseGrade(user.minimum_grade, qualification.position)) // minimum_grade
       cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
 
       cellRow.push(user.compatible || `-`);
@@ -302,6 +312,7 @@ async function exportarUsuariosDW({
     }
   }
 
+  logtime(`FIN reporte temas`);
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: 'ConsolidadoCompatibleTemas' }))

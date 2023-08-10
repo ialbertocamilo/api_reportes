@@ -187,10 +187,28 @@ exports.loadTopicsByCoursesIds = async (
       t.name topic_name,
       t.active topic_active,
       t.assessable topic_assessable,
-      t.type_evaluation_id
+      t.type_evaluation_id,
+      t.qualification_type_id
+
     from topics t
         inner join courses c on c.id = t.course_id
     where c.id in (${coursesIds.join()})`); 
 
   return indexId ? setCustomIndexAtObject(topics) : topics;
+}
+
+
+exports.loadTopicQualificationTypes = async () => {
+  return con("taxonomies")
+    .where("group", "system")
+    .where("type", "qualification-type");
+} 
+
+exports.getTopicCourseGrade = (topic_grade, topic_escala) => {
+
+  if(topic_grade) {
+    const grade = (topic_grade / 20 * topic_escala);
+    return parseFloat(grade.toFixed(2));
+  }
+  return '-';
 }
