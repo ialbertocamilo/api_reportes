@@ -226,7 +226,11 @@ async function exportarUsuariosDW({
       
       // === filtro de checks === 
       if(!StateChecks && !StackChecks.includes(user.topic_status_id)) continue;
-
+      // encontrar topic por 'id'
+      const { topic_id } = user;
+      const topicStore = StackTopicsData[topic_id];
+      //si no encuentra el tema es por que esta eliminado
+      if(!topicStore) continue;
       const cellRow = []
 
       // encontrar usuario por 'id'
@@ -269,9 +273,7 @@ async function exportarUsuariosDW({
       cellRow.push(user.course_restarts || '-')
       cellRow.push(course.course_type || '-')
       
-      // encontrar topic por 'id'
-      const { topic_id } = user;
-      const topicStore = StackTopicsData[topic_id];
+      
 
       cellRow.push(topicStore.topic_name) // topicStore
 
