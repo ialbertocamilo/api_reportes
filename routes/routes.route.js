@@ -10,7 +10,8 @@ const {
 } = require('../helper/Queue')
 const { fork } = require('child_process')
 const { reportErrorInSlackError } = require('../helper/Slack')
-const { uploadFile } = require('../s3/storage')
+const { uploadFile,downloadFile } = require('../s3/storage')
+
 module.exports = function (io) {
   router.get('/', async (req, res) => {
     console.log(db.con)
@@ -113,6 +114,7 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
       File: ${getReportFilePath(reportType)}
     `)
   }
+  uploadFile(rutaDescarga)  
 
   // Broadcast event to frontend
 
@@ -122,16 +124,18 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     message = `Tu reporte "${reportName}" se encuentra listo.`
     success = true
   }
-
+  const rutaCompleta = await downloadFile(rutaDescarga)
+  const partes = rutaCompleta.split('/');
+  const nombreArchivo = partes[partes.length - 1];
+  console.log(nombreArchivo,'nombreArchivo')
   console.log('Notify user: report-finished')
   io.sockets.emit('report-finished', {
     adminId: body.adminId,
     success,
     message,
     name: reportName,
-    url: rutaDescarga || null
+    url: nombreArchivo || null
   })
-
   // Start the next report
 
   const nextReport = await findNextPendingReport(body.workspaceId)
@@ -144,7 +148,6 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
 
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
-  uploadFile(rutaDescarga)  
   children.kill()
 }
 
