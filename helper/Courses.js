@@ -342,7 +342,10 @@ exports.countCoursesActiveTopics = async (coursesIds) => {
           count(*) topics_count
       from courses c
         inner join topics t on t.course_id = c.id
-      where t.active = 1 and c.id in (${coursesIds.join(',')})
+      where 
+        t.active = 1 
+        and t.deleted_at is null
+        and c.id in (${coursesIds.join(',')})
       group by c.id
   `
 
