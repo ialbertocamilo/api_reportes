@@ -133,7 +133,7 @@ module.exports = {
       select
         *
       from topics
-      where course_id in (${coursesIds})
+      where course_id in (${coursesIds}) and deleted_at is null
     `)
 
     return rows
