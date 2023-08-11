@@ -171,7 +171,7 @@ exports.loadTopicsByCourseId = async (courses_id) => {
         from 
             topics t
         where 
-          t.course_id in (${courses_id.join()})
+          t.course_id in (${courses_id.join()}) and t.deleted_at is null
     `
   );
 
@@ -190,7 +190,7 @@ exports.loadTopicsByCoursesIds = async (
       t.type_evaluation_id
     from topics t
         inner join courses c on c.id = t.course_id
-    where c.id in (${coursesIds.join()})`); 
+    where c.id in (${coursesIds.join()}) and t.deleted_at is null`); 
 
   return indexId ? setCustomIndexAtObject(topics) : topics;
 }
