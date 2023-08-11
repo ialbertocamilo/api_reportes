@@ -124,17 +124,17 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     message = `Tu reporte "${reportName}" se encuentra listo.`
     success = true
   }
-  const rutaCompleta = await downloadFile(rutaDescarga)
-  const partes = rutaCompleta.split('/');
+  const partes = rutaDescarga.split('/');
   const nombreArchivo = partes[partes.length - 1];
-  console.log(nombreArchivo,'nombreArchivo')
+  const urlS3 = await downloadFile(nombreArchivo)
+  console.log(urlS3,'urlDownload')
   console.log('Notify user: report-finished')
   io.sockets.emit('report-finished', {
     adminId: body.adminId,
     success,
     message,
     name: reportName,
-    url: nombreArchivo || null
+    url: urlS3 || null
   })
   // Start the next report
 
