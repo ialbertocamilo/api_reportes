@@ -319,7 +319,7 @@ async function generateSegmentationReport({
         if (user.id === 100935) {
 
           const userCoursesProgress = usersCoursesProgress.find(us => {
-            return  +us.user_id === +userId
+            return  +us.user_id === 100935
           })
 
           console.log(userCoursesProgress, segmentedCoursesByUsers[user.id])
