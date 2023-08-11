@@ -316,6 +316,14 @@ async function generateSegmentationReport({
         const schoolTotals = calculateSchoolProgressPercentage(
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
+        if (user.id === 100935) {
+
+          const userCoursesProgress = usersCoursesProgress.find(us => {
+            return  +us.user_id === +userId
+          })
+
+          console.log(userCoursesProgress, segmentedCoursesByUsers[user.id])
+        }
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
         cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userSummaryTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
