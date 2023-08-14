@@ -331,7 +331,7 @@ async function generateSegmentationReport({
       }
 
       cellRow.push(user.course_views || "-");
-      cellRow.push(user.grade_average);
+      cellRow.push(user.grade_average ?? 0);
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {
