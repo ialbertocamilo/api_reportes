@@ -290,7 +290,11 @@ async function exportarUsuariosDW({
       cellRow.push(user.topic_attempts || '-')
       cellRow.push(topicStore ? (topicStore.topic_assessable ? 'Sí' : 'No') : '') // topicStore
 
-      cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
+      cellRow.push(
+        topicStore
+          ? getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)
+          : ''
+      ) // topicStore
 
       cellRow.push(user.topic_views || '-')
       cellRow.push(user.minimum_grade || '-')
