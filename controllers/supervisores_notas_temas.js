@@ -279,12 +279,16 @@ async function exportarUsuariosDW({
         cellRow.push(user.topic_status_name)
       }
 
-      cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
+      cellRow.push(
+        topicStore
+          ? (topicStore.topic_active === 1 ? 'ACTIVO' : 'INACTIVO')
+          : ''
+      ) // topicStore
 
       cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
-      cellRow.push(topicStore .topic_assessable ? 'Sí' : 'No') // topicStore
+      cellRow.push(topicStore ? (topicStore.topic_assessable ? 'Sí' : 'No') : '') // topicStore
 
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
