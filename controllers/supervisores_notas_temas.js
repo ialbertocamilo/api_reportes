@@ -307,7 +307,7 @@ async function exportarUsuariosDW({
 
       // add row only when it has content
 
-      if (!topicStore) {
+      if (topicStore) {
         worksheet.addRow(cellRow).commit()
       }
     }
