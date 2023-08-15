@@ -810,9 +810,10 @@ exports.loadCoursesV2 = async (
         on sw.school_id = s.id
       inner join topics as t
           on t.course_id = c.id
-    
+        
     where  
-      sw.subworkspace_id in( ${subworkspacesIds.join()} )  
+      t.deleted_at is null  
+      and sw.subworkspace_id in( ${subworkspacesIds.join()} )
   `
   if(deleted_at) query += ` and c.deleted_at is null `; // mms para eliminado
 
