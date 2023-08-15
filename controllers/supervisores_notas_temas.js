@@ -270,6 +270,8 @@ async function exportarUsuariosDW({
       const { topic_id } = user;
       const topicStore = StackTopicsData[topic_id];
 
+
+
       cellRow.push(topicStore ? topicStore.topic_name : '') // topicStore
 
       // estado para - 'RESULTADO DE TEMA'
@@ -303,8 +305,11 @@ async function exportarUsuariosDW({
 
       cellRow.push(user.compatible || `-`);
 
-      // añadir fila
-      worksheet.addRow(cellRow).commit()
+      // add row only when it has content
+
+      if (!topicStore) {
+        worksheet.addRow(cellRow).commit()
+      }
     }
   }
 
