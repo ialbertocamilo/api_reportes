@@ -21,11 +21,13 @@ const {
   loadCoursesStatuses,
   loadCompatiblesId,
   getCourseStatusName,
-  getCourseStatusId, calculateTopicsReviewedPercentage
+  getCourseStatusId, calculateTopicsReviewedPercentage,
+  loadTopicQualificationTypes,
+  getTopicCourseGrade
 } = require("../helper/CoursesTopicsHelper");
 
 
-const { pluck, logtime, pluckUnique, calculateUserSeniorityRange } = require("../helper/Helper");
+const { pluck, logtime, pluckUnique, calculateUserSeniorityRange, setCustomIndexAtObject } = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -54,6 +56,7 @@ const headers = [
   'CURSO',
   'APROBACIÓN CURSO',
   'VISITAS',
+  'SISTEMA DE CALIFICACIÓN',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
   'ESTADO CURSO',
@@ -133,6 +136,10 @@ async function generateSegmentationReport({
                                       CursosActivos, CursosInactivos }, 
                                       modulos);
   const coursesStatuses = await loadCoursesStatuses();
+
+  // load qualification types
+  let QualificationTypes = await loadTopicQualificationTypes();
+      QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
   // console.log('courses_count', courses.length)
 
@@ -316,12 +323,13 @@ async function generateSegmentationReport({
         const schoolTotals = calculateSchoolProgressPercentage(
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
-
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
         cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userSummaryTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
 
       cellRow.push(course.course_name);
+      const qualification = QualificationTypes[course.qualification_type_id];
+      
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
       );
@@ -331,7 +339,8 @@ async function generateSegmentationReport({
       }
 
       cellRow.push(user.course_views || "-");
-      cellRow.push(user.grade_average || 0);
+      cellRow.push(qualification.name); // tipo calificacion
+      cellRow.push(getTopicCourseGrade(user.grade_average, qualification.position)); //promedio
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {

@@ -276,9 +276,27 @@ module.exports = {
       children.kill()
     })
   },
+  /*Evaluaciones data*/
+  evaluationsData({body}, res){
+    const children = fork('./controllers/evaluations_data.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   /*Benefit*/
   benefit_report({body},res){
     const children = fork('./controllers/benefit_report.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
+  /*Evaluaciones data Detalle*/
+  evaluationsDetailData({body}, res){
+    const children = fork('./controllers/evaluations_detail_data.js')
     children.send(body)
     children.on('message', (data) => {
       res.send(data)
@@ -292,5 +310,5 @@ module.exports = {
       res.send(data)
       children.kill()
     })
-  }
+  },
 }

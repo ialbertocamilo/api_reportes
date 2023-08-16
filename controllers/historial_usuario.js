@@ -9,8 +9,10 @@ const { con } = require('../db')
 const { response } = require('../response')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { findUserByDocument } = require('../helper/Usuarios')
-const { getCourseStatusName, loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
-const { generatePagination, pluck } = require('../helper/Helper')
+const { getCourseStatusName, loadCoursesStatuses,
+        getTopicCourseGrade, loadTopicQualificationTypes
+} = require('../helper/CoursesTopicsHelper')
+const { generatePagination, pluck, setCustomIndexAtObject } = require('../helper/Helper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 async function historialUsuario ({ document, type, page, schoolId, search, workspaceId }) {
@@ -29,6 +31,10 @@ async function historialUsuario ({ document, type, page, schoolId, search, works
   // Load user topic statuses
 
   const userCoursesStatuses = await loadCoursesStatuses()
+
+  // load qualification types
+  let QualificationTypes = await loadTopicQualificationTypes();
+      QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
   // Load subworkspaces ids
 
@@ -84,7 +90,12 @@ async function historialUsuario ({ document, type, page, schoolId, search, works
     courseObj.subworkspaces_name = user.subworkspaces_name
     courseObj.schools_names = user.schools_names
     courseObj.course_name = user.course_name
-    courseObj.grade = user.course_grade || '-'
+
+    // === tipo calificacion ===
+    const qualification = QualificationTypes[user.qualification_type_id];
+    courseObj.tipo_calificacion = qualification.name;
+    courseObj.grade = getTopicCourseGrade(user.course_grade, qualification.position);
+    // === tipo calificacion ===
     courseObj.course_status = getCourseStatusName(userCoursesStatuses, user.course_status_id)
 
     courseResults.push(courseObj)
@@ -136,12 +147,13 @@ async function jsonResponse (user, courseResults, pagination) {
  * @returns {Promise<void>}
  */
 async function excelResponse (courseResults) {
-  await createHeaders(['Módulos','Escuelas', 'Curso', 'Nota', 'Estado'])
+  await createHeaders(['Módulos','Escuelas', 'Curso', 'Sistema de calificación', 'Nota', 'Estado'])
   for (const course of courseResults) {
     const cellRow = []
     cellRow.push(course.subworkspaces_name)
     cellRow.push(course.schools_names)
     cellRow.push(course.course_name)
+    cellRow.push(course.tipo_calificacion)
     cellRow.push(course.grade)
     cellRow.push(course.course_status)
 
@@ -186,6 +198,7 @@ function generateQuery (
         group_concat(distinct (w.name) separator ', ') subworkspaces_name,
         group_concat(distinct (s.name) separator ', ') schools_names,
         c.name                                         course_name,
+        c.qualification_type_id,
         sc.grade_average                               course_grade,
         sc.status_id                                   course_status_id
     from users u
