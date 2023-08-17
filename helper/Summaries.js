@@ -36,7 +36,8 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
         left outer join taxonomies tx 
           on tx.id = sc.status_id
 
-        where 
+        where
+         sc.delete_at is null and
           c.active = 1 and s.active = 1
           and sc.status_id = 4568 -- aprobados
           and sc.course_id in (${courses_id.join()})
@@ -75,7 +76,8 @@ exports.loadSummaryCoursesByUsersAndCoursesTopics = async (
         join summary_courses sc 
           on sc.course_id = c.id and cs.course_id = c.id 
 
-        where 
+        where
+         sc.delete_at is null and
           c.active = 1 and s.active = 1
           and sc.status_id = 4568
           and sc.course_id in (${courses_id.join()})

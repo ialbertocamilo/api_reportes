@@ -192,6 +192,7 @@ exports.loadUsersWithCourses = async (
 
   `
   query += ` where 
+      sc.delete_at is null and
       u.subworkspace_id in (${modulesIds.join()}) and
       sw.workspace_id = ${workspaceId} `
 
