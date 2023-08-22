@@ -39,7 +39,6 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
         where
          sc.deleted_at is null and
           c.active = 1 and s.active = 1
-          ${only_approved  ? 'and sc.status_id = 4568 ' : ''}
           and sc.course_id in (${courses_id.join()})
           and sc.user_id in (${users_id.join()})
       `;
