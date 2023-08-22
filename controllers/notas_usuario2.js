@@ -265,7 +265,7 @@ async function getCriterionValueId (document) {
   { document }
   )
 
-  return criterionValue ? criterionValue[0].id : null
+  return criterionValue[0].id ? criterionValue[0].id : null
 }
 async function getCourseName(courseId) {
   const [courses] = await con.raw(`
