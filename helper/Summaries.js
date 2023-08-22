@@ -3,7 +3,7 @@ const { logtime } = require("./Helper");
 
 exports.loadSummaryCoursesByUsersAndCourses = async (
   users_id, 
-  courses_id) => {
+  courses_id,only_approved = true) => {
 
   courses_id = courses_id.filter((val) => val != null);
   users_id = users_id.filter((val) => val != null);
@@ -39,7 +39,7 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
         where
          sc.deleted_at is null and
           c.active = 1 and s.active = 1
-          and sc.status_id = 4568 -- aprobados
+          ${only_approved  ? 'and sc.status_id = 4568 ' : ''}
           and sc.course_id in (${courses_id.join()})
           and sc.user_id in (${users_id.join()})
       `;
