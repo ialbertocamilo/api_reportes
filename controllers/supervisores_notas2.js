@@ -303,9 +303,9 @@ async function generateSegmentationReport ({
       cellRow.push(
         user.course_passed > 0
           ? user.grade_average
-          : user.compatible_grade_average || '-'
+          : (user.compatible_grade_average || user.grade_average)
       )
-
+      
       // estado para - 'RESULTADO DE TEMA'
       if (!user.course_status_name) {
         cellRow.push(course_status_name)

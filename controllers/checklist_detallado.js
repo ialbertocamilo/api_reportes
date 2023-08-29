@@ -146,7 +146,7 @@ async function loadUsersCheckists (
 	checklists.title checklists_title,
 	tx.name as type_checklist,
   trainers.document as trainer_document,
-	ifnull(trainers.fullname, trainers.name) trainer_name,
+	CONCAT_WS(' ', trainers.name, trainers.lastname, trainers.surname) trainer_name,
 	ifnull(suc.completed, 0) as completed_checklists,
 	ifnull(suc.assigned , 0) as assigned_checklists,
 	ifnull(suc.advanced_percentage , 0) as progress,
