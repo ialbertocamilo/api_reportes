@@ -299,12 +299,16 @@ async function generateSegmentationReport ({
         cellRow.push((calculateCourseAccomplishmentPercentage(course.course_id, coursesTopics, userSummaryTopicsCount) || 0) + '%')
       }
 
+      let gradeAverage =  user.course_passed > 0
+        ? user.grade_average
+        : user.compatible_grade_average;
+
+      if (!gradeAverage) {
+        gradeAverage = user.grade_average
+      }
+
       cellRow.push(user.course_views || '-')
-      cellRow.push(
-        user.course_passed > 0
-          ? user.grade_average
-          : (user.compatible_grade_average || user.grade_average)
-      )
+      cellRow.push(gradeAverage)
       
       // estado para - 'RESULTADO DE TEMA'
       if (!user.course_status_name) {
