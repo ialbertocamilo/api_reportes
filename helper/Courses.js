@@ -31,7 +31,7 @@ exports.loadUsersCoursesProgress = async (schoolsIds) => {
           s.id school_id,
           -- When course has a pending poll, its progress
           -- is cosidered zero
-          group_
+          group_concat(
             if (
               sc.status_id = ${idPendingPoll},
               0,
