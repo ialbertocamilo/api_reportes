@@ -14,7 +14,7 @@ const { Op } = require('sequelize');
 const { logtime, pluck } = require('../helper/Helper');
 const { getSchoolStatesWorkspace,
   getSchoolCoursesStates,
-  generateQuery
+  generateQuery, removeCoursesWithDisabledDiplomas
 } = require('../helper/Diplomas')
 
 /* models */
@@ -49,9 +49,15 @@ async function exportarDiplomas({ data, states }) {
     estados_escuela,
     estados_curso } = states;
 
-  const { workspaceId, modules, date,
+  let { workspaceId, modules, date,
     course: course_ids,
     school: school_ids } = data;
+
+  // Remove courses with disabled diplomas
+
+  course_ids = !(course_ids.length)
+    ? await removeCoursesWithDisabledDiplomas(course_ids)
+    : course_ids;
 
   // === schools and courses ===
   const stackSchools = !(school_ids.length)
