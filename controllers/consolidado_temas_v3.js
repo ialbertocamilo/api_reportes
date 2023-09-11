@@ -276,6 +276,8 @@ async function exportarUsuariosDW({
       const { topic_id } = user;
       const topicStore = StackTopicsData[topic_id];
 
+      if (!topicStore) continue;
+
       cellRow.push(topicStore.topic_name) // topicStore
 
         // estado para - 'RESULTADO DE TEMA'
