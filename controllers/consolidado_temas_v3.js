@@ -136,8 +136,6 @@ async function exportarUsuariosDW({
                             pluck(courses, 'course_id'), true);
   }
 
-  console.log(StackTopicsData)
-
   const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true);
   let StackUserCriterios = [];
   // === precargar topics, usuarios y criterios ===

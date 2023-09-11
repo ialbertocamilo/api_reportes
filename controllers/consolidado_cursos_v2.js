@@ -274,6 +274,8 @@ async function generateSegmentationReport({
       // encontrar usuario por 'id'
       const { id } = user;
       const userStore = StackUsersData[id];
+      if (!userStore) continue;
+
       const lastLogin = moment(userStore.last_login).format("DD/MM/YYYY H:mm:ss");
       cellRow.push(userStore.name);
       cellRow.push(userStore.lastname);
