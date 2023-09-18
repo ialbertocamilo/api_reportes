@@ -43,6 +43,7 @@ let headers = [
   'NOTA TEMA',
   'REINICIOS TEMA',
   'INTENTOS PRUEBA',
+  'INTENTOS TOTALES',
   'EVALUABLE TEMA',
   'TIPO TEMA',
   'VISITAS TEMA',
@@ -290,6 +291,7 @@ async function exportarUsuariosDW({
       cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
+      cellRow.push(user.topic_total_attempts || '-')
       cellRow.push(topicStore ? (topicStore.topic_assessable ? 'Sí' : 'No') : '') // topicStore
 
       cellRow.push(

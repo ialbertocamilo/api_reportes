@@ -388,6 +388,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
         st.grade topic_grade,
         st.attempts topic_attempts,
+        st.total_attempts topic_total_attempts,
         st.restarts topic_restarts,
         st.views topic_views,
         st.status_id topic_status_id,
