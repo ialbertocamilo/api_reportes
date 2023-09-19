@@ -85,7 +85,9 @@ exports.loadUsersSegmented = async (course_id,only_active_users=true) => {
       }
     });
     const [rows] =
-      await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at from users
+      await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at,
+       sc.last_time_evaluated_at        
+        from users
         LEFT OUTER join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id}
         ${join_criterions_values_user} 
         ${only_active_users ? ' where users.active=1 and ' : ' where '} 
