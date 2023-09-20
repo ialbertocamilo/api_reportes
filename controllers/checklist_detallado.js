@@ -161,7 +161,7 @@ inner join users u on
 	u.id = tu.user_id
 inner join users trainers on
 	trainers.id = tu.trainer_id
-inner join checklist_answers ca on
+left join checklist_answers ca on
 	ca.student_id = u.id
 inner join checklists on
 	ca.checklist_id = checklists.id

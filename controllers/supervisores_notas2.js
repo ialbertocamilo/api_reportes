@@ -67,15 +67,10 @@ async function generateSegmentationReport ({
   CursosActivos = false, // posible filtro en estado de curso
   CursosInactivos = false // posible filtro en estado de curso
 }) {
-  const criteriaIds = workspaceId === 25
-    ? [1, 5, 13, 4, 40, 41]
-    : [1, 5, 13, 4]
 
   // Homecenters Peruanos -> id 11
   let isPromart = workspaceId === 11
   if (isPromart) {
-    criteriaIds.push(7) // Date_Start
-    criteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
     headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
@@ -86,9 +81,7 @@ async function generateSegmentationReport ({
   }
 
   // Generate Excel file header
-  const headersEstaticos = await getGenericHeadersNotasXCurso(
-    workspaceId, criteriaIds
-  )
+  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   const modulos = await getSuboworkspacesIds(workspaceId)
