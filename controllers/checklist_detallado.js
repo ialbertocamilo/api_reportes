@@ -11,6 +11,7 @@ const { pluck, pluckUnique, logtime, formatDatetimeToString } = require('../help
 const {
   getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
 } = require('../helper/Usuarios')
+const { loadSegments } = require('../helper/SegmentationHelper_v2')
 
 // Headers for Excel file
 
@@ -161,11 +162,11 @@ inner join users u on
 	u.id = tu.user_id
 inner join users trainers on
 	trainers.id = tu.trainer_id
-inner join checklist_answers ca on
+left join checklist_answers ca on
 	ca.student_id = u.id
-inner join checklists on
+left join checklists on
 	ca.checklist_id = checklists.id
-inner join taxonomies tx on
+left join taxonomies tx on
 	tx.id = checklists.type_id
 left JOIN summary_user_checklist suc on
 	suc.user_id = u.id
@@ -214,11 +215,14 @@ left join courses c on
   //             left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   // `
   //a checklist could be associated with one or more courses
-  const staticCondition = ` where 
+  let staticCondition = ` where 
           checklists.active = 1 and
           u.subworkspace_id in (${modulos.join()}) and
           ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
           `
+
+  staticCondition = ` where u.subworkspace_id in (${modulos.join()}) `
+
   // ca.school_id in (${schoolId}) and
   // cr.course_id in (${courseId}) and
 
@@ -310,4 +314,11 @@ function filterUserActivities (activitiesHeaders, checklistActivities, userId) {
 function getChecklistTypeName (id, checklistTypesTaxonomies) {
   const type = checklistTypesTaxonomies.find(tx => tx.id === id)
   return type ? type.name : null
+}
+
+async function loadUserIdsForChecklist (checklistId) {
+
+  const segments = await loadSegments(
+    "App\\Models\\Checklist", [checklistId]
+  );
 }
