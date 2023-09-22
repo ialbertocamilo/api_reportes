@@ -9,9 +9,10 @@ const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const { pluck, pluckUnique, logtime, formatDatetimeToString } = require('../helper/Helper')
 const {
-  getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
+  getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition,
+  loadUsersBySubWorspaceIds
 } = require('../helper/Usuarios')
-const { loadSegments } = require('../helper/SegmentationHelper_v2')
+const { loadSegments, loadUsersSegmentsCriterionValues, userMatchesSegments } = require('../helper/SegmentationHelper_v2')
 
 // Headers for Excel file
 
@@ -49,9 +50,11 @@ async function generateReport ({
   }
 
   // Load users from database and generate ids array
+  let checklistIds = Array.isArray(checklist) ? checklist : [checklist];
+  let userIdsSegmentedToChecklist = await loadUserIdsForChecklist (checklistIds, modulos)
 
   const users = await loadUsersCheckists(
-    modulos, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas
+    modulos, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas, userIdsSegmentedToChecklist
   )
   const usersIds = pluck(users, 'id')
 
@@ -134,7 +137,7 @@ async function generateReport ({
 }
 
 async function loadUsersCheckists (
-  modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas
+  modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas, userIdsSegmentedToChecklist
 ) {
   let query = `SELECT
 	u.id,
@@ -216,12 +219,8 @@ left join courses c on
   // `
   //a checklist could be associated with one or more courses
   let staticCondition = ` where 
-          checklists.active = 1 and
-          u.subworkspace_id in (${modulos.join()}) and
-          ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
+         u.id in (${userIdsSegmentedToChecklist.join(',')})
           `
-
-  staticCondition = ` where u.subworkspace_id in (${modulos.join()}) `
 
   // ca.school_id in (${schoolId}) and
   // cr.course_id in (${courseId}) and
@@ -316,9 +315,29 @@ function getChecklistTypeName (id, checklistTypesTaxonomies) {
   return type ? type.name : null
 }
 
-async function loadUserIdsForChecklist (checklistId) {
+/**
+ * Load ids of users segmented to checklist
+ */
+async function loadUserIdsForChecklist (checklistIds, modulos) {
 
   const segments = await loadSegments(
-    "App\\Models\\Checklist", [checklistId]
+    "App\\Models\\Checklist", checklistIds
   );
+  const moduleUsers = await loadUsersBySubWorspaceIds(modulos);
+  const usersIds = pluck(moduleUsers, 'id');
+  const segmentsUsersCriterionValues = await loadUsersSegmentsCriterionValues(segments, usersIds)
+
+  // Check if module users match checklist segment
+
+  let checklistUsersIds = []
+  usersIds.forEach(userId => {
+
+    let matchesSegmentsIds = userMatchesSegments(userId, segments, segmentsUsersCriterionValues.filter(u => +u.user_id === +userId))
+
+    if (matchesSegmentsIds.length) {
+      checklistUsersIds.push(userId)
+    }
+  })
+
+  return checklistUsersIds
 }
