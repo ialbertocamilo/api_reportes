@@ -276,6 +276,7 @@ left join courses c on
   rows = rows.map(r => {
 
     let checklist = checklists.find(c => +c.checklist_id === +r.checklist_id)
+    console.log(checklist)
     if (!r.checklist_title && checklist) {
       r.checklist_title = checklist.checklist_title
     }
