@@ -148,6 +148,7 @@ async function loadUsersCheckists (
 	u.active,
 	c.name course_name,
 	checklists.title checklists_title,
+  checklists.id checklist_id,
 	tx.name as type_checklist,
   trainers.document as trainer_document,
 	CONCAT_WS(' ', trainers.name, trainers.lastname, trainers.surname) trainer_name,
@@ -264,7 +265,34 @@ left join courses c on
 
   // Execute query
   // logtime(query);
-  const [rows] = await con.raw(query, { })
+  let [rows] = await con.raw(query, { })
+
+  // Fill empty cells with checklist data
+
+  let checklists = await loadChecklistData(
+    Array.isArray(checklistId) ? checklistId : [checklistId]
+  )
+
+  rows = rows.map(r => {
+
+    let checklist = checklists.find(c => +c.checklist_id === +r.checklist_id)
+    if (!r.checklist_title && checklist) {
+      r.checklist_title = checklist.checklist_title
+    }
+
+    if (!r.type_checklist && checklist) {
+      r.type_checklist = checklist.checklist_type
+    }
+
+    if (checklist) {
+      if (checklist.course_name) {
+        r.course_name = checklist.course_name
+      }
+    }
+
+    return r;
+  })
+
   return rows
 }
 
@@ -345,4 +373,26 @@ async function loadUserIdsForChecklist (checklistIds, modulos) {
   })
 
   return checklistUsersIds
+}
+
+async function loadChecklistData(checklistsIds) {
+
+  const query = `
+    select
+        checkl.id checklist_id,
+        checkl.title checklist_title,
+        tx.name checklist_type,
+        c.name course_name  
+      
+    from checklists checkl
+      join taxonomies tx on tx.id = checkl.type_id
+      left join checklist_relationships cr on cr.checklist_id = checkl.id
+      left join courses c on c.id = cr.course_id  
+      
+    where
+        checkl.id in (${checklistsIds.join(',')})
+  `;
+
+  const [rows] = await con.raw(query, { })
+  return rows
 }
