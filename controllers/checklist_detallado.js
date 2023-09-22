@@ -277,8 +277,8 @@ left join courses c on
 
     let checklist = checklists[0]
 
-    if (!r.checklist_title && checklist) {
-      r.checklist_title = checklist.checklist_title
+    if (!r.checklists_title && checklist) {
+      r.checklists_title = checklist.checklist_title
     }
 
     if (!r.type_checklist && checklist) {
