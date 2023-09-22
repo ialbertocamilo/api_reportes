@@ -291,6 +291,10 @@ left join courses c on
       }
     }
 
+    if (!r.qualification) {
+      r.qualification = 'Pendiente'
+    }
+
     return r;
   })
 
