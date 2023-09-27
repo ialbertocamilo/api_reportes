@@ -84,22 +84,28 @@ module.exports = {
   /**
    * Load workspace's courses
    * @param {string} schoolIds separated by commas
+   * @param includeInactive include inactive courses
    * @returns {Promise<*>}
    */
-  async loadSchoolCourses (schoolIds) {
+  async loadSchoolCourses (schoolIds, includeInactive = false) {
     if (!schoolIds) {
       return []
     }
 
+    let columns = includeInactive
+      ? `c.id, if(c.active = 1, c.name, concat(c.name, ' [inactivo]')) name`
+      : `c.*`;
+
     const [rows] = await con.raw(`
       select
-        c.*
+        ${columns}
       from courses c 
           inner join course_school cs on c.id = cs.course_id
       where 
-          cs.school_id in (${schoolIds}) and 
-          c.active = 1 and 
-          c.deleted_at is null
+          cs.school_id in (${schoolIds})
+          ${includeInactive ? '' : ' and c.active = 1'}
+          and c.deleted_at is null
+      order by c.active desc, name asc
     `)
 
     return rows
