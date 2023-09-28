@@ -124,7 +124,7 @@ async function generateSegmentationReport ({
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId, criteriaIds)
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
   let segmentedCoursesByUsers = []
