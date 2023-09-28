@@ -53,12 +53,6 @@ async function exportarDiplomas({ data, states }) {
     course: course_ids,
     school: school_ids } = data;
 
-  // Remove courses with disabled diplomas
-
-  course_ids = !(course_ids.length)
-    ? await removeCoursesWithDisabledDiplomas(course_ids)
-    : course_ids;
-
   // === schools and courses ===
   const stackSchools = !(school_ids.length)
     ? await getSchoolStatesWorkspace(workspaceId, estados_escuela)
