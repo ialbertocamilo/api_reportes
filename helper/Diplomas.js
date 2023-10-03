@@ -6,6 +6,7 @@ const School = require('../models/School');
 const SchoolWorkspace = require('../models/SchoolWorkspace');
 const Course = require('../models/Course');
 const CourseSchool = require('../models/CourseSchool');
+const { pluck } = require('./Helper')
 
 exports.getSchoolStatesWorkspace = async (workspaceId, school_sts) => {
 
@@ -224,6 +225,7 @@ exports.generateConditions = (
 
     return `
       (
+        c.show_certification_to_user = 1 and
         certification_issued_at is not null
         ${datesCondition}
         and
@@ -241,4 +243,19 @@ exports.generateConditions = (
       )
     `
   }
+}
+
+exports.removeCoursesWithDisabledDiplomas = async (coursesIds) => {
+
+
+  const [courses] = await con.raw(`
+      select
+        c.id
+      from courses c
+      where
+        c.id in (${coursesIds.join()})
+        and c.show_certification_to_user = 1
+  `);
+
+  return pluck(courses, 'id')
 }
