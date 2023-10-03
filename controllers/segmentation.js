@@ -19,6 +19,7 @@ const headers = [
     'Documento','EMAIL',
     'ESCUELA',
     'CURSO',
+    'ESTADO DEL CURSO',
     'PROMEDIO',
     'AVANCE (%)',
     'RESULTADO CURSO',
@@ -49,6 +50,7 @@ async function generateSegmentationReport ({
         cellRow.push(user.email)
         cellRow.push(course.school_name)
         cellRow.push(course.course_name)
+        cellRow.push(course.course_active ? 'Activo' : 'Inactivo')
         cellRow.push(user.grade_average || '-')
         cellRow.push(user.advanced_percentage ? user.advanced_percentage+'%' : '0%')
         cellRow.push(user_status.name)
