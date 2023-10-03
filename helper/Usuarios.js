@@ -392,3 +392,28 @@ exports.subworkspacesUsersids = async (subWorkspaceIds) => {
 
   return pluck(users, 'id');
 }
+
+/**
+ * Check whether user is super administrador or not
+ *
+ * @param adminId
+ * @returns {Promise<boolean>}
+ */
+exports.isSuper = async (adminId) => {
+
+  if (!adminId) return false
+
+  const [user] = await con.raw(`
+    select
+      *
+    from users u 
+        join assigned_roles ar on u.id = ar.entity_id
+    
+    where
+      u.id = ${adminId}
+      and ar.role_id = 1
+      and ar.entity_type = "App\\\\Models\\\\User"
+`);
+
+  return !!user.length
+}
