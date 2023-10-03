@@ -91,16 +91,9 @@ async function generateSegmentationReport({
   completed = true
 }) {
 
-  // Default criteria to be shown on report
-
-  let defaultsCriteriaIds = [1, 5, 13, 4, 40, 41];
-
   // Homecenters Peruanos -> id 11
   let isPromart = workspaceId === 11
   if (isPromart) {
-    defaultsCriteriaIds.push(7) // Date_Start
-    defaultsCriteriaIds.push(8) // seniority date
-
     let schoolProgressIndex = 2
     headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
     headers.splice(schoolProgressIndex, 0, 'APROBACIÓN ESCUELA');
@@ -110,18 +103,12 @@ async function generateSegmentationReport({
   }
 
   // Generate Excel file header
-  const headersEstaticos = await getGenericHeadersNotasXCurso(
-    workspaceId,
-    defaultsCriteriaIds
-  );
+  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId);
   await createHeaders(headersEstaticos.concat(headers));
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(
-    workspaceId,
-    defaultsCriteriaIds
-  );
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId);
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
   // console.log('workpace_criteria_data: ',{ workspaceCriteria });
 
