@@ -266,7 +266,7 @@ left join courses c on
   // Execute query
   // logtime(query);
   let [rows] = await con.raw(query, { })
-
+  console.log(query)
   // Fill empty cells with checklist data
 
   let checklists = await loadChecklistData(
