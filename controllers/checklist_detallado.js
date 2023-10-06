@@ -225,16 +225,18 @@ left join courses c on
   //a checklist could be associated with one or more courses
   let staticCondition = ` where 
          (
-           u.id in (${userIdsSegmentedToChecklist.join(',')})
-           and (
-              ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
-              or
-              ca.checklist_id is null
+           (
+             u.id in (${userIdsSegmentedToChecklist.join(',')})
+             and (
+                ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
+                or
+                ca.checklist_id is null
+             )
            )
-         )
-         or (
-          u.id in (${userIdsSegmentedToChecklist.join(',')})
-         )
+           or (
+            u.id in (${userIdsSegmentedToChecklist.join(',')})
+           )
+         )  
           `
 
   // ca.school_id in (${schoolId}) and
