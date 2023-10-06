@@ -308,7 +308,7 @@ left join courses c on
 
     return r;
   })
-  console.log(query)
+
   return rows
 }
 
