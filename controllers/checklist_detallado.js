@@ -140,6 +140,10 @@ async function loadUsersCheckists (
   modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas, userIdsSegmentedToChecklist
 ) {
   let query = `SELECT
+ -- when user is segmented but does not have checklist answers
+ if(ca.checklist_id not in (
+     ${Array.isArray(checklistId) ? checklistId.join(',') : checklistId}
+   ), 1, 0) needs_override,
 	u.id,
 	u.name,
 	u.lastname,
@@ -279,21 +283,19 @@ left join courses c on
 
     let checklist = checklists[0]
 
-    if (!r.checklists_title && checklist) {
+    if (r.needs_override == 1 && checklist) {
       r.checklists_title = checklist.checklist_title
     }
 
-    if (!r.type_checklist && checklist) {
+    if (r.needs_override == 1 && checklist) {
       r.type_checklist = checklist.checklist_type
     }
 
-    if (checklist) {
-      if (checklist.course_name) {
-        r.course_name = checklist.course_name
-      }
+    if (r.needs_override == 1 && checklist.course_name) {
+      r.course_name = checklist.course_name
     }
 
-    if (!r.qualification) {
+    if (r.needs_override == 1) {
       r.qualification = 'Pendiente'
     }
 
