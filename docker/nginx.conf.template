@@ -1,0 +1,57 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Content-Type-Options "nosniff";
+	add_header Cache-Control "public, max-age=300";
+
+    # We need to set the root for our sevrer,
+    # so any static file requests gets loaded from the correct path
+    # root /usr/share/nginx/html;
+
+    index index.php index.html index.htm index.nginx-debian.html;
+
+    # _ makes sure that nginx does not try to map requests to a specific hostname
+    # This allows us to specify the urls to our application as infrastructure changes,
+    # without needing to change the application
+    server_name _;
+
+    location / {
+        proxy_pass http://${NODE_HOST};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+
+        proxy_connect_timeout 1500;
+        proxy_read_timeout 1500;
+        proxy_send_timeout 1500;
+    }
+
+    
+
+    # Some static assets are loaded on every page load,
+    # and logging these turns into a lot of useless logs.
+    # If you would prefer to see these requests for catching 404's etc.
+    # Feel free to remove them
+    # location = /favicon.ico { access_log off; log_not_found off; }
+    # location = /robots.txt  { access_log off; log_not_found off; }
+
+    # When a 404 is returned, we want to display our applications 404 page,
+    # so we redirect it to index.php to load the correct page
+    error_page 404 /index.php;
+
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    client_max_body_size 100M;
+    fastcgi_read_timeout 1500s;
+}
