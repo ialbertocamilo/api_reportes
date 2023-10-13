@@ -128,7 +128,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
         cvu.user_id, 
         cv.criterion_id,
         c.name criterion_name,
-        group_concat(cv.value_text separator ', ') value_text,
+        group_concat(distinct cv.value_text separator ', ') value_text,
         if (c.code = 'cycle', 1, 0) is_cycle,
         cv.value_datetime,
         cv.value_date,

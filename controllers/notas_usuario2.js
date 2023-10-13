@@ -259,10 +259,29 @@ async function getModuleIdFromSubworkspace (subworkspaceId) {
   return workspaces ? workspaces[0].criterion_value_id : null
 }
 async function getCriterionValueId (document) {
+
+  const criteria = con("criteria").where("code", "document");
+
+  let documentCriterionId
+  if (criteria) {
+    if (criteria[0]) {
+      documentCriterionId = criteria[0].id
+    } else {
+      return null
+    }
+  } else {
+    return null
+  }
+
   const [criterionValue] = await con.raw(`
-    select id from criterion_values where criterion_id = 48 and  value_text = :document limit 1
+    select id 
+    from criterion_values 
+    where 
+        criterion_id = :documentCriterionId
+      and value_text = :document 
+        limit 1
   `,
-  { document }
+  { documentCriterionId, document }
   )
 
   return criterionValue ? criterionValue[0].id : null
