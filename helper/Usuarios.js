@@ -163,7 +163,9 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
 
   // Add sorting order
 
-  query += 'group by u.id,cv.criterion_id order by cv.id'
+  query += '' +
+    'group by u.id,cv.criterion_id ' +
+    'order by c.position'
   // logtime(query);
   const [rows] = await con.raw(query)
   return rows

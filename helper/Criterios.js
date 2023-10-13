@@ -18,6 +18,7 @@ exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
             w.active = 1 and
             c.active = 1
         group by c.id
+        order by c.position
     `
   // logtime(query)
 

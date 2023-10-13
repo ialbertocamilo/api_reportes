@@ -36,7 +36,7 @@ exports.loadCriterionValuesByUser = async (userId) => {
 		  cvu.user_id, 
 		  cv.criterion_id,
 		  c.name criterion_name,
-		  cv.value_text,
+			group_concat(distinct cv.value_text separator ', ') value_text,
 		  cv.value_datetime,
 		  cv.value_date,
 		  cv.value_boolean,
@@ -47,11 +47,12 @@ exports.loadCriterionValuesByUser = async (userId) => {
 			  inner join criterion_value_user cvu on cvu.user_id = u.id
 			  inner join criterion_values cv on cv.id = cvu.criterion_value_id
 			  inner join criteria c on c.id = cv.criterion_id
+				inner join criterion_workspace cw on c.id = cw.criterion_id
 	  where
-		c.show_in_reports = 1
-		and u.id = ${userId}
+			cw.available_in_reports = 1
+			and u.id = ${userId}
 
-		group by cv.criterion_id 
+		group by cv.criterion_id
 	  `;
   
 	const [rows] = await con.raw(query);

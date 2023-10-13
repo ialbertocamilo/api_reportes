@@ -260,7 +260,7 @@ async function getModuleIdFromSubworkspace (subworkspaceId) {
 }
 async function getCriterionValueId (document) {
 
-  const criteria = con("criteria").where("code", "document");
+  const criteria = await con("criteria").where("code", "document");
 
   let documentCriterionId
   if (criteria) {

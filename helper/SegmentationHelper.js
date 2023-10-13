@@ -914,6 +914,9 @@ exports.loadCoursesV2 = async (
  * @returns {Promise<array>}
  */
 exports.loadModuleCoursesIds = async (moduleId) => {
+
+  const moduleCriterion = await con("criteria").where("code", "module");
+
   const query = `
       select distinct model_id as course_id
 
@@ -924,11 +927,14 @@ exports.loadModuleCoursesIds = async (moduleId) => {
         and id in (
             select distinct segment_id
             from segments_values sv
-            where criterion_id = 1 -- module criterion
+            where criterion_id = :moduleCriteriaId
                 and criterion_value_id = :moduleId -- module
       )
   `
-  const [rows] = await con.raw(query, { moduleId })
+  const [rows] = await con.raw(query, {
+    moduleCriteriaId: moduleCriterion[0].id,
+    moduleId
+  })
 
   return pluck(rows, 'course_id')
 }
