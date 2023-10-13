@@ -139,8 +139,9 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
             inner join criterion_value_user cvu on cvu.user_id = u.id
             inner join criterion_values cv on cv.id = cvu.criterion_value_id
             inner join criteria c on c.id = cv.criterion_id
+            inner join criterion_workspace cw on c.id = cw.criterion_id
     where
-      c.show_in_reports = 1
+        cw.available_in_reports = 1
     `;
 
   // When module ids array has been provided, add condition to filter them
