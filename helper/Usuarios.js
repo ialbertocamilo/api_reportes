@@ -120,6 +120,7 @@ exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers, inValues =
  * @param userIds
  * @returns {Promise<*>}
  */
+
 exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
   logtime("method: loadUsersCriteriaValues");
   let query = `
