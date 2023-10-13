@@ -117,8 +117,8 @@ async function notasUsuario2 ({ document }) {
       
       // === sistema calificacion ===
       const qualification = QualificationTypes[summaryTopic.qualification_type_id];
-      topicObj.tipo_calificacion = qualification.name;
-      topicObj.nota = getTopicCourseGrade(summaryTopic.grade, qualification.position);
+      topicObj.tipo_calificacion = qualification ? qualification.name : '-';
+      topicObj.nota = qualification ? getTopicCourseGrade(summaryTopic.grade, qualification.position) : '-';
       // === sistema calificacion ===
 
       topicObj.puntaje = ''// summaryTopic.grade ? parseInt(summaryTopic.grade) : '-'
