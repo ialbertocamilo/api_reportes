@@ -27,7 +27,9 @@ const {
 } = require("../helper/CoursesTopicsHelper");
 
 
-const { pluck, logtime, pluckUnique, calculateUserSeniorityRange, setCustomIndexAtObject } = require("../helper/Helper");
+const { pluck, logtime, pluckUnique, calculateUserSeniorityRange, setCustomIndexAtObject,
+  generateSqlScript
+} = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -40,7 +42,7 @@ const {
   getUsersNullAndNotNull,
   getUserCriterionValues2,
 } = require("../helper/Usuarios");
-const { getSuboworkspacesIds } = require("../helper/Workspace");
+const { getSuboworkspacesIds, loadWorkspace } = require("../helper/Workspace");
 const { con } = require('../db')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
   loadUsersWithCourses, loadSummaryTopicsCount,
@@ -71,6 +73,8 @@ const headers = [
 async function generateSegmentationReport({
   modulos = [],
   workspaceId,
+  format,
+
   cursos,
   escuelas,
   areas,
@@ -91,8 +95,10 @@ async function generateSegmentationReport({
   completed = true
 }) {
 
+
+
   // Homecenters Peruanos -> id 11
-  let isPromart = workspaceId === 11
+  let isPromart = (workspaceId === 11 && format !== "sql")
   if (isPromart) {
     let schoolProgressIndex = 2
     headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
@@ -103,12 +109,17 @@ async function generateSegmentationReport({
   }
 
   // Generate Excel file header
-  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId);
+  let defaultsCriteriaIds = (format === 'sql')
+    ? [1, 5, 13, 4, 40, 41]
+    : []
+
+  let headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId, defaultsCriteriaIds)
+
   await createHeaders(headersEstaticos.concat(headers));
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId);
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId, defaultsCriteriaIds);
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
   // console.log('workpace_criteria_data: ',{ workspaceCriteria });
 
@@ -174,7 +185,7 @@ async function generateSegmentationReport({
   const coursesTopics = await countCoursesActiveTopics(coursesIds)
   const summaryTopicsCount = await loadSummaryTopicsCount(coursesIds, allUsersIds)
 
-
+  let rowsToBeExported = [];
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -278,7 +289,8 @@ async function generateSegmentationReport({
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
       } else {
-        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+        const userValues =
+          await getUserCriterionValues2(user.id, workspaceCriteriaNames, defaultsCriteriaIds);
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
         StackUserCriterios[id] = userValues; 
@@ -352,6 +364,11 @@ async function generateSegmentationReport({
 
       // añadir fila 
       worksheet.addRow(cellRow).commit();
+
+      if (format === 'sql')  {
+        rowsToBeExported.push(cellRow)
+      }
+
     }
     logtime(`FIN addRow`);
   }
@@ -359,6 +376,19 @@ async function generateSegmentationReport({
   logtime(`FIN Cursos`);
 
   if (worksheet._rowZero > 1) {
+
+    if (format === 'sql')  {
+      const workspace = await loadWorkspace(workspaceId)
+      const timestamp = Math.floor((new Date).getTime() / 1000)
+      generateSqlScript(
+        'notas_curso',
+        workspace.name,
+        headersEstaticos.concat(headers),
+        rowsToBeExported,
+        `consolidado-notas-${workspace.name}.sql`
+      )
+    }
+
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: "ConsolidadoCompatibleCursos" }));
     });
