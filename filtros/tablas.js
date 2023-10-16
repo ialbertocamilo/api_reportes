@@ -104,8 +104,8 @@ module.exports = {
     }
 
     let columns = includeInactive
-      ? `c.id, if(c.active = 1, c.name, concat(c.name, ' [inactivo]')) name`
-      : `c.*`;
+      ? `distinct c.id, if(c.active = 1, c.name, concat(c.name, ' [inactivo]')) name`
+      : `distinct c.id, c.*`;
 
     const [rows] = await con.raw(`
       select
