@@ -193,7 +193,7 @@ exports.generateSqlScript= (tableName, workspaceName, columns, rowsArray, filena
   columns.unshift('Workspace');
   columns.unshift('id');
   columns = columns.map(c => {
-    return stringToSlug(c).replaceAll('-', '_')
+    return stringToSlug(c).replace(/-/g, '_')
   })
 
   // Generate SQL script
