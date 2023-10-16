@@ -245,12 +245,12 @@ exports.getUserCriterionValues = (
   return result;
 };
 
-exports.getUserCriterionValues2 = async (userId, criterionNames) => {
+exports.getUserCriterionValues2 = async (userId, criterionNames, criteriaIds = []) => {
   const result = [];
   const found = [];
 
   // const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
-  const userValues = await loadCriterionValuesByUser(userId);
+  const userValues = await loadCriterionValuesByUser(userId, criteriaIds);
 
   criterionNames.forEach((name) => {
     userValues.forEach((userCriterionValue) => {

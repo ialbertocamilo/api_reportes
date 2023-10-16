@@ -28,7 +28,7 @@ exports.getCriterianUserByCode = async (UserId, UserCode, Instance = false ) => 
 	/*return (Instance) ? criterianValues : criterianValues?.criterion_values[0]?.value_text;*/
 }
 
-exports.loadCriterionValuesByUser = async (userId) => {
+exports.loadCriterionValuesByUser = async (userId, criteriaIds = []) => {
 
 		  // GROUP_CONCAT(cv.value_text SEPARATOR ', ') value_text,
 	let query = `
@@ -47,9 +47,9 @@ exports.loadCriterionValuesByUser = async (userId) => {
 			  inner join criterion_value_user cvu on cvu.user_id = u.id
 			  inner join criterion_values cv on cv.id = cvu.criterion_value_id
 			  inner join criteria c on c.id = cv.criterion_id
-				inner join criterion_workspace cw on c.id = cw.criterion_id
+				left join criterion_workspace cw on c.id = cw.criterion_id
 	  where
-			cw.available_in_reports = 1
+			(cw.available_in_reports = 1 ${criteriaIds.length ? `or c.id in (${criteriaIds.join(',')})` : ''})
 			and u.id = ${userId}
 
 		group by cv.criterion_id

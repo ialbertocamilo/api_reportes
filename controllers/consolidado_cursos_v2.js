@@ -95,8 +95,10 @@ async function generateSegmentationReport({
   completed = true
 }) {
 
+
+
   // Homecenters Peruanos -> id 11
-  let isPromart = workspaceId === 11
+  let isPromart = (workspaceId === 11 && format !== "sql")
   if (isPromart) {
     let schoolProgressIndex = 2
     headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
@@ -107,12 +109,17 @@ async function generateSegmentationReport({
   }
 
   // Generate Excel file header
-  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId);
+  let defaultsCriteriaIds = (format === 'sql')
+    ? [1, 5, 13, 4, 40, 41]
+    : []
+
+  let headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId, defaultsCriteriaIds)
+
   await createHeaders(headersEstaticos.concat(headers));
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId);
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId, defaultsCriteriaIds);
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
   // console.log('workpace_criteria_data: ',{ workspaceCriteria });
 
@@ -282,7 +289,8 @@ async function generateSegmentationReport({
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
       } else {
-        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+        const userValues =
+          await getUserCriterionValues2(user.id, workspaceCriteriaNames, defaultsCriteriaIds);
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
         StackUserCriterios[id] = userValues; 
