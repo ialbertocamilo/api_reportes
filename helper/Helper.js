@@ -5,6 +5,7 @@
  * @returns {*}
  */
 const moment = require('moment/moment')
+const fs = require('fs')
 exports.pluck = (collection, key) => {
   return collection.map(obj => obj[key])
 }
@@ -183,4 +184,55 @@ exports.parseDateFromString = (datestring) =>{
   const year= date.getFullYear();
 
   return `${day}/${month}/${year}`;
+}
+
+exports.generateSqlScript= (tableName, workspaceName, columns, rowsArray, filename) => {
+
+  // Convert columns to slugs and adds id and workspace columns
+
+  columns.unshift('Workspace');
+  columns.unshift('id');
+  columns = columns.map(c => {
+    return stringToSlug(c).replaceAll('-', '_')
+  })
+
+  // Generate SQL script
+
+  let sql = `insert into ${tableName} (${columns.join(',')}) values ` +  "\n";
+
+  // Add rows values to script
+
+  let insertRows = [];
+  rowsArray.forEach(r => {
+    r.unshift(workspaceName);
+    insertRows.push(`(null, "${r.join('","')}")`)
+  })
+  sql = sql + insertRows.join(',') + ';'
+
+  // Save file
+
+  fs.writeFileSync(
+    __dirname + '/../reports/' + stringToSlug(filename), sql
+  );
+}
+
+/**
+ * Convert to string to lowercase, and replace spaces with scores (-)
+ */
+function stringToSlug (str) {
+  str = str.replace(/^\s+|\s+$/g, ''); // trim
+  str = str.toLowerCase();
+
+  // remove accents, swap ñ for n, etc
+  var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+  var to   = "aaaaeeeeiiiioooouuuunc------";
+  for (var i=0, l=from.length ; i<l ; i++) {
+    str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+  }
+
+  str = str.replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+    .replace(/\s+/g, '-') // collapse whitespace and replace by -
+    .replace(/-+/g, '-'); // collapse dashes
+
+  return str;
 }

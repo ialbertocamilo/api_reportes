@@ -25,3 +25,13 @@ exports.getAdminSubworkpacesIds = async (adminId) => {
   return pluck(subworkspaces, 'subworkspace_id');
 }
 
+exports.loadWorkspace = async (workspaceId) => {
+
+  if (!workspaceId) return null;
+
+  const [workspaces] = await con.raw(`
+    select * from workspaces where id = ${workspaceId}
+  `);
+
+  return workspaces[0] || null;
+}

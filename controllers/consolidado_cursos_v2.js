@@ -27,7 +27,9 @@ const {
 } = require("../helper/CoursesTopicsHelper");
 
 
-const { pluck, logtime, pluckUnique, calculateUserSeniorityRange, setCustomIndexAtObject } = require("../helper/Helper");
+const { pluck, logtime, pluckUnique, calculateUserSeniorityRange, setCustomIndexAtObject,
+  generateSqlScript
+} = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -40,7 +42,7 @@ const {
   getUsersNullAndNotNull,
   getUserCriterionValues2,
 } = require("../helper/Usuarios");
-const { getSuboworkspacesIds } = require("../helper/Workspace");
+const { getSuboworkspacesIds, loadWorkspace } = require("../helper/Workspace");
 const { con } = require('../db')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
   loadUsersWithCourses, loadSummaryTopicsCount,
@@ -71,6 +73,8 @@ const headers = [
 async function generateSegmentationReport({
   modulos = [],
   workspaceId,
+  format,
+
   cursos,
   escuelas,
   areas,
@@ -174,7 +178,7 @@ async function generateSegmentationReport({
   const coursesTopics = await countCoursesActiveTopics(coursesIds)
   const summaryTopicsCount = await loadSummaryTopicsCount(coursesIds, allUsersIds)
 
-
+  let rowsToBeExported = [];
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -352,6 +356,11 @@ async function generateSegmentationReport({
 
       // añadir fila 
       worksheet.addRow(cellRow).commit();
+
+      if (format === 'sql')  {
+        rowsToBeExported.push(cellRow)
+      }
+
     }
     logtime(`FIN addRow`);
   }
@@ -359,6 +368,19 @@ async function generateSegmentationReport({
   logtime(`FIN Cursos`);
 
   if (worksheet._rowZero > 1) {
+
+    if (format === 'sql')  {
+      const workspace = await loadWorkspace(workspaceId)
+      const timestamp = Math.floor((new Date).getTime() / 1000)
+      generateSqlScript(
+        'notas_curso',
+        workspace.name,
+        headersEstaticos.concat(headers),
+        rowsToBeExported,
+        `consolidado-notas-${workspace.name}.sql`
+      )
+    }
+
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: "ConsolidadoCompatibleCursos" }));
     });

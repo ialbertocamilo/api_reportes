@@ -232,6 +232,7 @@ exports.loadUsersWithCourses = async (
 exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
 
   if (!usersIds.length) return []
+  if (!coursesIds.length) return []
 
   // Load user topic statuses
 
@@ -337,6 +338,9 @@ exports.calculateCourseAccomplishmentPercentage = (courseId, coursesTopics, user
 }
 
 exports.countCoursesActiveTopics = async (coursesIds) => {
+
+  if (!coursesIds.length) return []
+
   const query = `
       select 
           c.id course_id,
