@@ -6,6 +6,7 @@
  */
 const moment = require('moment/moment')
 const fs = require('fs')
+const { EOL } = require('os')
 exports.pluck = (collection, key) => {
   return collection.map(obj => obj[key])
 }
@@ -198,21 +199,21 @@ exports.generateSqlScript= (tableName, workspaceName, columns, rowsArray, filena
 
   // Generate SQL script
 
-  let sql = `insert into ${tableName} (${columns.join(',')}) values ` +  "\n";
+  let sql = `insert into ${tableName} (${columns.join(',')}) values ` +  EOL;
 
   // Add rows values to script
 
   let insertRows = [];
   rowsArray.forEach(r => {
     r.unshift(workspaceName);
-    insertRows.push(`(null, "${r.join('","')}")`)
+    insertRows.push(`(null, "${r.join('","')}")` + EOL)
   })
   sql = sql + insertRows.join(',') + ';'
 
   // Save file
 
   fs.writeFileSync(
-    __dirname + '/../reports/' + stringToSlug(filename), sql
+    __dirname + '/../../data/' + stringToSlug(filename) + '.sql', sql
   );
 }
 

@@ -385,7 +385,7 @@ async function generateSegmentationReport({
         workspace.name,
         headersEstaticos.concat(headers),
         rowsToBeExported,
-        `consolidado-notas-${workspace.name}.sql`
+        `consolidado-notas-${workspace.name}-${timestamp}`
       )
     }
 
