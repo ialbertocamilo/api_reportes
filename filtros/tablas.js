@@ -2,6 +2,7 @@ const { con } = require('../db')
 const { findUserByDocument, isSuper } = require('../helper/Usuarios')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds, getAdminSubworkpacesIds } = require('../helper/Workspace')
+const { getCampaignsBySubworspaceId } = require('../helper/Votaciones')
 const knex = require('../db').con
 module.exports = {
   async datosIniciales(workspaceId, adminId) {
