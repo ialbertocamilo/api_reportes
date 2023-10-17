@@ -1,5 +1,5 @@
 const { con } = require('../db')
-const { findUserByDocument } = require('../helper/Usuarios')
+const { findUserByDocument, isSuper } = require('../helper/Usuarios')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds, getAdminSubworkpacesIds } = require('../helper/Workspace')
 const knex = require('../db').con
