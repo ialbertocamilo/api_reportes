@@ -19,7 +19,7 @@ const CampaignVotation = require('../models/CampaignVotation');
 // Helpers
 const { helperPlusMonthsDateNow,
         helperGetMergeNumbers,
-        helperGetValueByKey } = require('./helper');
+        helperGetValueByKey } = require('./Helper');
 // Helpers
 
 // campañas
