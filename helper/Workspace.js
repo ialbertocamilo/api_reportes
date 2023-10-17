@@ -35,3 +35,11 @@ exports.loadWorkspace = async (workspaceId) => {
 
   return workspaces[0] || null;
 }
+
+exports.getCriterioFechaReconocimiento = async (workspaceId) => {
+  return await con('workspaces')
+    .select('criterio_id_fecha_inicio_reconocimiento')
+    .where('active', 1)
+    .where('id', workspaceId)
+    .first();
+}

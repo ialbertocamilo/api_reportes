@@ -1,5 +1,5 @@
 const { con } = require('../db')
-const { findUserByDocument, isSuper } = require('../helper/Usuarios')
+const { findUserByDocument } = require('../helper/Usuarios')
 const { pluck } = require('../helper/Helper')
 const { getSuboworkspacesIds, getAdminSubworkpacesIds } = require('../helper/Workspace')
 const knex = require('../db').con
@@ -26,20 +26,20 @@ module.exports = {
     let query
     if (await isSuper(adminId)) {
       query = `
-        select id, name, slug
-        from workspaces 
-        where 
-            parent_id = :workspaceId 
+          select id, name, slug
+          from workspaces
+          where
+              parent_id = :workspaceId
             and active = 1`
     } else {
       query = `
           select w.id, w.name, w.slug
           from workspaces w
                    join subworkspace_user su on su.subworkspace_id = w.id
-          where 
-                w.parent_id = :workspaceId
-                and su.user_id = :adminId
-                and w.active = 1`
+          where
+              w.parent_id = :workspaceId
+            and su.user_id = :adminId
+            and w.active = 1`
     }
 
     const [rows] = await con.raw(query, { workspaceId, adminId })
@@ -147,10 +147,10 @@ module.exports = {
    */
   async loadCourseTopics (coursesIds) {
     const [rows] = await con.raw(`
-      select
-        *
-      from topics
-      where course_id in (${coursesIds}) and deleted_at is null
+        select
+            *
+        from topics
+        where course_id in (${coursesIds}) and deleted_at is null
     `)
 
     return rows
@@ -201,16 +201,16 @@ module.exports = {
     }
 
     let query = `
-      select
-        s.*,
-        sw.subworkspace_id
-      from 
-          schools s 
-              inner join 
-              school_subworkspace sw on s.id = sw.school_id
-      where 
-         sw.subworkspace_id in (${subworkspacesIds.join()}) 
-         and s.active = 1
+        select
+            s.*,
+            sw.subworkspace_id
+        from
+            schools s
+                inner join
+            school_subworkspace sw on s.id = sw.school_id
+        where
+            sw.subworkspace_id in (${subworkspacesIds.join()})
+          and s.active = 1
     `
 
     if (grouped) {
@@ -625,5 +625,12 @@ module.exports = {
     ]
 
     return { workspaces, recommendations }
+  },
+
+  // === votaciones ===
+  async loadCampaignsSubworkspaceById(subworkspacesIds) {
+    return await getCampaignsBySubworspaceId(subworkspacesIds);
   }
+  // === votaciones ===
+
 }

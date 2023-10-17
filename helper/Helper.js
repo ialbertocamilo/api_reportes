@@ -178,10 +178,34 @@ exports.calculateUserSeniorityRange = (dateString) => {
 
   return seniorityValue
 }
+
+exports.helperPlusMonthsDateNow = (months) => {
+  const current = new Date();
+  const date = new Date( current.setMonth(current.getMonth() - months) );
+
+  let getYear = date.toLocaleString('default', { year: 'numeric' });
+  let getMonth = date.toLocaleString('default', { month: '2-digit' });
+  let getDay = date.toLocaleString('default', { day: '2-digit' });
+
+  return `${getYear}-${getMonth}-${getDay}`;
+}
+
+exports.helperGetMergeNumbers = (array1, array2) => {
+  for (let i = 0; i < array2.length; i++) {
+    if (array1.indexOf(array2[i]) === -1) array1.push(array2[i]);
+  }
+  return array1;
+}
+
+exports.helperGetValueByKey = (array, key) => {
+  return array.map((item) => item[key]);
+}
+
+
 exports.parseDateFromString = (datestring) =>{
   const date = new Date(datestring);
   const day = date.getDate();
-  const month = date.getMonth() + 1; 
+  const month = date.getMonth() + 1;
   const year= date.getFullYear();
 
   return `${day}/${month}/${year}`;
