@@ -13,10 +13,10 @@ exports.getWorkspaceCriteria = async (workspaceId, criteria_id=[]) => {
                 left join workspaces w on w.id = cw.workspace_id
         where 
             w.id = :workspaceId 
-            and (
-                    cw.available_in_reports = 1
-                    ${criteria_id.length > 0 ? ` or c.id in (${criteria_id.toString()}) ` : ''}
-            )
+            ${criteria_id.length > 0 
+                     ? `and c.id in (${criteria_id.toString()}) ` 
+                     : 'and cw.available_in_reports = 1'}
+            
             and w.active = 1 
             and c.active = 1
         group by c.id
@@ -68,7 +68,7 @@ exports.loadWorkspaceSegmentationCriteria = async (workspaceId) => {
   }
 }
 
-exports.getGenericHeadersNotasXCurso = async (workspaceId,criteria_id=[]) => {
+exports.getGenericHeadersNotasXCurso = async (workspaceId, criteria_id=[]) => {
   const headers = [
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)','EMAIL'

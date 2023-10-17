@@ -49,7 +49,9 @@ exports.loadCriterionValuesByUser = async (userId, criteriaIds = []) => {
 			  inner join criteria c on c.id = cv.criterion_id
 				left join criterion_workspace cw on c.id = cw.criterion_id
 	  where
-			(cw.available_in_reports = 1 ${criteriaIds.length ? `or c.id in (${criteriaIds.join(',')})` : ''})
+			 ${criteriaIds.length 
+				 ? `c.id in (${criteriaIds.join(',')})`
+				 : 'cw.available_in_reports = 1'}
 			and u.id = ${userId}
 
 		group by cv.criterion_id
