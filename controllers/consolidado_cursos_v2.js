@@ -110,7 +110,7 @@ async function generateSegmentationReport({
 
   // Generate Excel file header
   let defaultsCriteriaIds = (format === 'sql')
-    ? [1, 5, 13, 4, 40, 41]
+    ? [1, 2, 7, 28, 40, 41]
     : []
 
   let headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId, defaultsCriteriaIds)
