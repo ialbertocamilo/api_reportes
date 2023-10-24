@@ -50,7 +50,10 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
 
   // Generate rows for Excel file
   logtime('Start file generation')
+  let i = 0;
   for (const user of users) {
+    i = i+1;
+    console.log(`number user: ${i}`);
     const cellRow = []
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
     const createAt = moment(user.created_at).format('DD/MM/YYYY H:mm:ss')
