@@ -53,6 +53,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
   let i = 0;
   for (const user of users) {
     i = i+1;
+    
     console.log(`number user: ${i}`);
     const cellRow = []
     const lastLogin = moment(user.last_login).format('DD/MM/YYYY H:mm:ss')
