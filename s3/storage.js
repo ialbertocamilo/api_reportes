@@ -13,7 +13,7 @@ const uploadFile = async (filePath) => {
     const fileStream = fs.createReadStream(CARPETA_DESCARGA+'/'+fileName)
     console.log(CARPETA_DESCARGA+'/'+fileName)
     const keyFile = MARCA +'/reports/'+ fileName
-    console.log(keyFile)
+     console.log(keyFile)
     const compressedCommand = new PutObjectCommand({
       Bucket: AWS_BUCKET_NAME,
       Key: keyFile,
