@@ -9,6 +9,8 @@ class Taxonomie extends Model {
 
 Taxonomie.init({
     name: STRING,
+    description:STRING,
+    code:STRING,
     active: BOOLEAN
 },{
     sequelize,

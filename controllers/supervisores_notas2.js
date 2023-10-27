@@ -24,7 +24,7 @@ const { loadSupervisorSegmentUsersIds } = require('../helper/Segment')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
   loadUsersWithCourses, calculateSchoolAccomplishmentPercentage,
   countCoursesActiveTopics,
-  loadSummaryTopicsCount
+  loadSummaryTopicsCount, calculateCourseAccomplishmentPercentage
 } = require('../helper/Courses')
 const { loadCoursesSegmentedToUsersInSchool } = require('../helper/SegmentationHelper_v2')
 
@@ -34,7 +34,7 @@ const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
-  'AVANCE CURSO (%)',
+  'APROBACIÓN CURSO',
   'VISITAS',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
@@ -67,26 +67,21 @@ async function generateSegmentationReport ({
   CursosActivos = false, // posible filtro en estado de curso
   CursosInactivos = false // posible filtro en estado de curso
 }) {
-  const criteriaIds = workspaceId === 25
-    ? [1, 5, 13, 4, 40, 41]
-    : [1, 5, 13, 4]
 
   // Homecenters Peruanos -> id 11
   let isPromart = workspaceId === 11
   if (isPromart) {
-    criteriaIds.push(7) // Date_Start
-    criteriaIds.push(8) // seniority date
 
     let schoolProgressIndex = 2
-    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
-    headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
-    headers.unshift('RANGO DE ANTIGÜEDAD')
+    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
+    headers.splice(schoolProgressIndex, 0, 'APROBACIÓN ESCUELA');
+    headers.unshift('RANGO DE ANTIGÜEDAD');
+
+    headers.splice(7, 0, 'CUMPLIMIENTO CURSO');
   }
 
   // Generate Excel file header
-  const headersEstaticos = await getGenericHeadersNotasXCurso(
-    workspaceId, criteriaIds
-  )
+  const headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
 
   const modulos = await getSuboworkspacesIds(workspaceId)
@@ -129,7 +124,7 @@ async function generateSegmentationReport ({
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId, criteriaIds)
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
 
   let segmentedCoursesByUsers = []
@@ -274,7 +269,7 @@ async function generateSegmentationReport ({
       const taken = user.taken || 0
       const reviewed = user.reviewed || 0
       const completed = passed + taken + reviewed
-      const userTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
+      const userSummaryTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
 
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
       cellRow.push(course.school_name)
@@ -283,7 +278,7 @@ async function generateSegmentationReport ({
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
-        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
+        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userSummaryTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
 
       cellRow.push(course.course_name)
@@ -292,13 +287,22 @@ async function generateSegmentationReport ({
           ? user.advanced_percentage + '%'
           : user.compatible ? '100%' : '0%'
       )
-      cellRow.push(user.course_views || '-')
-      cellRow.push(
-        user.course_passed > 0
-          ? user.grade_average
-          : user.compatible_grade_average || '-'
-      )
 
+      if (isPromart) {
+        cellRow.push((calculateCourseAccomplishmentPercentage(course.course_id, coursesTopics, userSummaryTopicsCount) || 0) + '%')
+      }
+
+      let gradeAverage =  user.course_passed > 0
+        ? user.grade_average
+        : user.compatible_grade_average;
+
+      if (!gradeAverage) {
+        gradeAverage = user.grade_average
+      }
+
+      cellRow.push(user.course_views || '-')
+      cellRow.push(gradeAverage)
+      
       // estado para - 'RESULTADO DE TEMA'
       if (!user.course_status_name) {
         cellRow.push(course_status_name)

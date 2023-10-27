@@ -7,9 +7,10 @@ const moment = require('moment')
 moment.locale('es')
 const { con } = require('../db')
 const { findUserByDocument } = require('../helper/Usuarios')
-const { loadCoursesStatuses, getCourseStatusName, loadCompatiblesIds
+const { loadCoursesStatuses, getCourseStatusName, loadCompatiblesIds, 
+        getTopicCourseGrade, loadTopicQualificationTypes
 } = require('../helper/CoursesTopicsHelper')
-const { strippedString,uniqueElementsOfArray } = require('../helper/Helper')
+const { strippedString, uniqueElementsOfArray, setCustomIndexAtObject } = require('../helper/Helper')
 const { loadModuleCoursesIds,loaCoursesIdsBySegmentationDocument } = require('../helper/SegmentationHelper')
 const { loadSummaryCoursesByUsersAndCourses } = require('../helper/Summaries')
 
@@ -25,9 +26,11 @@ async function notasUsuario2 ({ document }) {
     process.send({ alert: 'Usuario no encontrado, verifica el documento' })
     process.exit()
   }
+  // load qualification types
+  let QualificationTypes = await loadTopicQualificationTypes();
+      QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
   // Get moduleId (criterion_value_id) from user's subworkspace
-
   const moduleId = await getModuleIdFromSubworkspace(user.subworkspace_id)
   const criterionValueDocument = await getCriterionValueId(user.document);
   // Get courses from module using segmentation
@@ -36,7 +39,7 @@ async function notasUsuario2 ({ document }) {
   for (let i = 0; i < coursesIds.length; i++) {
     const courseId = coursesIds[i]
     const summaryCourses = await loadSummaryCoursesByUsersAndCourses(
-      [user.id], [courseId]
+      [user.id], [courseId],false
     )
 
     // Course is "aprobado" so adds it to collection
@@ -97,7 +100,8 @@ async function notasUsuario2 ({ document }) {
        select st.*, 
               t.name as topic_name, 
               t.id as topic_id, 
-              t.type_evaluation_id
+              t.type_evaluation_id,
+              t.qualification_type_id
        from summary_topics st
                inner join topics t on st.topic_id = t.id
        where st.user_id = :userId and 
@@ -110,7 +114,13 @@ async function notasUsuario2 ({ document }) {
       const topicObj = {}
       // const evaluationType = getEvaluationTypeName(evaluationTypes, summaryTopic.type_evaluation_id)
       topicObj.tema = summaryTopic.topic_name
-      topicObj.nota = summaryTopic.grade ? parseFloat(summaryTopic.grade).toFixed(2) : '-'
+      
+      // === sistema calificacion ===
+      const qualification = QualificationTypes[summaryTopic.qualification_type_id];
+      topicObj.tipo_calificacion = qualification ? qualification.name : '-';
+      topicObj.nota = qualification ? getTopicCourseGrade(summaryTopic.grade, qualification.position) : '-';
+      // === sistema calificacion ===
+
       topicObj.puntaje = ''// summaryTopic.grade ? parseInt(summaryTopic.grade) : '-'
       topicObj.correctas = summaryTopic.correct_answers || '-'
       topicObj.incorrectas = summaryTopic.failed_answers || '-'
@@ -149,7 +159,13 @@ async function notasUsuario2 ({ document }) {
     }
 
     courseObj.curso = summaryCourse.course_name
-    courseObj.nota_prom = summaryCourse.grade_average ? summaryCourse.grade_average : '-'
+    
+    // === tipo calificacion ===
+    const qualification = QualificationTypes[summaryCourse.qualification_type_id];
+    courseObj.tipo_calificacion = qualification.name;
+    courseObj.nota_prom = getTopicCourseGrade(summaryCourse.grade_average, qualification.position);
+    // === tipo calificacion ===
+
     courseObj.visitas = summaryCourse.views
     courseObj.reinicios = summaryCourse.restarts ? summaryCourse.restarts : '-'
     courseObj.temas = topicsArray
@@ -243,10 +259,29 @@ async function getModuleIdFromSubworkspace (subworkspaceId) {
   return workspaces ? workspaces[0].criterion_value_id : null
 }
 async function getCriterionValueId (document) {
+
+  const criteria = await con("criteria").where("code", "document");
+
+  let documentCriterionId
+  if (criteria) {
+    if (criteria[0]) {
+      documentCriterionId = criteria[0].id
+    } else {
+      return null
+    }
+  } else {
+    return null
+  }
+
   const [criterionValue] = await con.raw(`
-    select id from criterion_values where criterion_id = 48 and  value_text = :document limit 1
+    select id 
+    from criterion_values 
+    where 
+        criterion_id = :documentCriterionId
+      and value_text = :document 
+        limit 1
   `,
-  { document }
+  { documentCriterionId, document }
   )
 
   return criterionValue ? criterionValue[0].id : null

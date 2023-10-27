@@ -120,6 +120,7 @@ exports.addActiveUsersCondition = (query, activeUsers, inactiveUsers, inValues =
  * @param userIds
  * @returns {Promise<*>}
  */
+
 exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
   logtime("method: loadUsersCriteriaValues");
   let query = `
@@ -127,7 +128,7 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
         cvu.user_id, 
         cv.criterion_id,
         c.name criterion_name,
-        group_concat(cv.value_text separator ', ') value_text,
+        group_concat(distinct cv.value_text separator ', ') value_text,
         if (c.code = 'cycle', 1, 0) is_cycle,
         cv.value_datetime,
         cv.value_date,
@@ -139,8 +140,9 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
             inner join criterion_value_user cvu on cvu.user_id = u.id
             inner join criterion_values cv on cv.id = cvu.criterion_value_id
             inner join criteria c on c.id = cv.criterion_id
+            inner join criterion_workspace cw on c.id = cw.criterion_id
     where
-      c.show_in_reports = 1
+        cw.available_in_reports = 1
     `;
 
   // When module ids array has been provided, add condition to filter them
@@ -161,7 +163,9 @@ exports.loadUsersCriteriaValues = async (modules, userIds = null) => {
 
   // Add sorting order
 
-  query += 'group by u.id,cv.criterion_id order by cv.id'
+  query += '' +
+    'group by u.id,cv.criterion_id ' +
+    'order by c.position'
   // logtime(query);
   const [rows] = await con.raw(query)
   return rows
@@ -241,12 +245,12 @@ exports.getUserCriterionValues = (
   return result;
 };
 
-exports.getUserCriterionValues2 = async (userId, criterionNames) => {
+exports.getUserCriterionValues2 = async (userId, criterionNames, criteriaIds = []) => {
   const result = [];
   const found = [];
 
   // const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
-  const userValues = await loadCriterionValuesByUser(userId);
+  const userValues = await loadCriterionValuesByUser(userId, criteriaIds);
 
   criterionNames.forEach((name) => {
     userValues.forEach((userCriterionValue) => {
@@ -391,4 +395,29 @@ exports.subworkspacesUsersids = async (subWorkspaceIds) => {
 `);
 
   return pluck(users, 'id');
+}
+
+/**
+ * Check whether user is super administrador or not
+ *
+ * @param adminId
+ * @returns {Promise<boolean>}
+ */
+exports.isSuper = async (adminId) => {
+
+  if (!adminId) return false
+
+  const [user] = await con.raw(`
+    select
+      *
+    from users u 
+        join assigned_roles ar on u.id = ar.entity_id
+    
+    where
+      u.id = ${adminId}
+      and ar.role_id = 1
+      and ar.entity_type = "App\\\\Models\\\\User"
+`);
+
+  return !!user.length
 }

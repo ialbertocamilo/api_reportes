@@ -177,6 +177,9 @@ function getReportFilePath (reportType) {
     case 'diplomas': file = 'diplomas2.js'; break
     case 'avance_curricula': file = 'avance_curricula.js'; break
     case 'empty_criteria': file = 'empty_criteria.js'; break
+    case 'votaciones': file = 'votaciones.js'; break
+    case 'benefit_report': file = 'benefit_report.js'; break
+    case 'user_benefit_report': file = 'user_benefit_report.js'; break
     case 'users_history': file = 'users_history.js'; break
   }
 

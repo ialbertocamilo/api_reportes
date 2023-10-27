@@ -388,6 +388,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
         st.grade topic_grade,
         st.attempts topic_attempts,
+        st.total_attempts topic_total_attempts,
         st.restarts topic_restarts,
         st.views topic_views,
         st.status_id topic_status_id,
@@ -688,6 +689,7 @@ exports.loadCoursesV3 = async (
       c.name as course_name,
       s.name as school_name,
       s.id as school_id,
+      c.qualification_type_id,
       c.active as course_active,
       tx.name as course_type
 
@@ -740,6 +742,7 @@ exports.loadCoursesV3 = async (
       c.name as course_name,
       s.name as school_name,
       s.id as school_id,
+      c.qualification_type_id,
       c.active as course_active,
       tx.name as course_type
 
@@ -810,9 +813,10 @@ exports.loadCoursesV2 = async (
         on sw.school_id = s.id
       inner join topics as t
           on t.course_id = c.id
-    
+        
     where  
-      sw.subworkspace_id in( ${subworkspacesIds.join()} )  
+      t.deleted_at is null  
+      and sw.subworkspace_id in( ${subworkspacesIds.join()} )
   `
   if(deleted_at) query += ` and c.deleted_at is null `; // mms para eliminado
 
@@ -852,36 +856,11 @@ async function loadCoursesSegmentedToUsersInSchool (schoolsIds, usersIds) {
 
   // School courses' segments
 
-  const segments = await con("segments_values as sv")
-    .select(
-      "sv.criterion_id",
-      "sv.segment_id",
-      "sv.criterion_value_id",
-      "sg.model_id as course_id",
-    )
-    .join("segments as sg", "sg.id", "sv.segment_id")
-    .join("criteria as c", "c.id", "sv.criterion_id")
-    .where("sg.model_type", "App\\Models\\Course")
-    .whereIn("sg.model_id", schoolsCoursesIds)
-    .where("sg.deleted_at", null)
-    .where("sv.deleted_at", null);
+  const segments = await loadSegments(
+    "App\\Models\\Course", schoolsCoursesIds
+  );
 
-  let criterionValuesIds = pluckUnique(segments, 'criterion_value_id').filter((e) => e !== null)
-  let criteriaIds = pluckUnique(segments, 'criterion_id').filter((e) => e !== null)
-
-  // Load users criterion values
-
-  const query = `
-    select cvu.user_id, cvu.criterion_value_id, cv.criterion_id
-    from 
-        criterion_value_user cvu
-        join criterion_values cv on cv.id = cvu.criterion_value_id
-    where
-        cvu.user_id in (${usersIds.join(',')}) 
-        and cvu.criterion_value_id in (${criterionValuesIds.join(',')})
-        and cv.criterion_id in (${criteriaIds.join(',')})
-  `
-  const [segmentsUsersCriterionValues] = await con.raw(query);
+  const segmentsUsersCriterionValues = await loadUsersSegmentsCriterionValues(segments, usersIds)
 
   // Get segmented courses of each user
 
@@ -963,3 +942,52 @@ function userMatchesSegments(userId, segments, userCriteriaValues) {
 
   return matchesSegmentsIds
 }
+exports.userMatchesSegments = userMatchesSegments;
+
+/**
+ * Load segments of any type
+ */
+async function loadSegments (modelType, modelIds) {
+
+  return await con("segments_values as sv")
+    .select(
+      "sv.criterion_id",
+      "sv.segment_id",
+      "sv.criterion_value_id",
+      "sg.model_id as course_id",
+    )
+    .join("segments as sg", "sg.id", "sv.segment_id")
+    .join("criteria as c", "c.id", "sv.criterion_id")
+    .where("sg.model_type", modelType)
+    .whereIn("sg.model_id", modelIds)
+    .where("sg.deleted_at", null)
+    .where("sv.deleted_at", null);
+}
+exports.loadSegments = loadSegments;
+
+/**
+ * Load users with their criterion values according segments
+ */
+async function loadUsersSegmentsCriterionValues(segments, usersIds) {
+
+  let criterionValuesIds = pluckUnique(
+    segments, 'criterion_value_id').filter((e) => e !== null)
+  let criteriaIds = pluckUnique(segments, 'criterion_id').filter((e) => e !== null)
+
+  // Load users criterion values
+
+  const query = `
+    select cvu.user_id, cvu.criterion_value_id, cv.criterion_id
+    from 
+        criterion_value_user cvu
+        join criterion_values cv on cv.id = cvu.criterion_value_id
+    where
+        cvu.user_id in (${usersIds.join(',')}) 
+        and cvu.criterion_value_id in (${criterionValuesIds.join(',')})
+        and cv.criterion_id in (${criteriaIds.join(',')})
+  `
+  const [segmentsUsersCriterionValues] = await con.raw(query);
+
+  return segmentsUsersCriterionValues;
+}
+exports.loadUsersSegmentsCriterionValues = loadUsersSegmentsCriterionValues;

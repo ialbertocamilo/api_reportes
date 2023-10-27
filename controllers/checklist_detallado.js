@@ -9,8 +9,10 @@ const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const { pluck, pluckUnique, logtime, formatDatetimeToString } = require('../helper/Helper')
 const {
-  getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition
+  getUserCriterionValues, loadUsersCriteriaValues, addActiveUsersCondition,
+  loadUsersBySubWorspaceIds
 } = require('../helper/Usuarios')
+const { loadSegments, loadUsersSegmentsCriterionValues, userMatchesSegments } = require('../helper/SegmentationHelper_v2')
 
 // Headers for Excel file
 
@@ -48,9 +50,11 @@ async function generateReport ({
   }
 
   // Load users from database and generate ids array
+  let checklistIds = Array.isArray(checklist) ? checklist : [checklist];
+  let userIdsSegmentedToChecklist = await loadUserIdsForChecklist (checklistIds, modulos)
 
   const users = await loadUsersCheckists(
-    modulos, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas
+    modulos, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas, userIdsSegmentedToChecklist
   )
   const usersIds = pluck(users, 'id')
 
@@ -133,9 +137,13 @@ async function generateReport ({
 }
 
 async function loadUsersCheckists (
-  modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas
+  modulos, checklistId, courseId, schoolId, activeUsers, inactiveUsers, start, end, areas, userIdsSegmentedToChecklist
 ) {
   let query = `SELECT
+ -- when user is segmented but does not have checklist answers
+ if(ca.checklist_id not in (
+     ${Array.isArray(checklistId) ? checklistId.join(',') : checklistId}
+   ), 1, 0) needs_override,
 	u.id,
 	u.name,
 	u.lastname,
@@ -144,9 +152,10 @@ async function loadUsersCheckists (
 	u.active,
 	c.name course_name,
 	checklists.title checklists_title,
+  checklists.id checklist_id,
 	tx.name as type_checklist,
   trainers.document as trainer_document,
-	ifnull(trainers.fullname, trainers.name) trainer_name,
+	CONCAT_WS(' ', trainers.name, trainers.lastname, trainers.surname) trainer_name,
 	ifnull(suc.completed, 0) as completed_checklists,
 	ifnull(suc.assigned , 0) as assigned_checklists,
 	ifnull(suc.advanced_percentage , 0) as progress,
@@ -161,11 +170,11 @@ inner join users u on
 	u.id = tu.user_id
 inner join users trainers on
 	trainers.id = tu.trainer_id
-inner join checklist_answers ca on
+left join checklist_answers ca on
 	ca.student_id = u.id
-inner join checklists on
+left join checklists on
 	ca.checklist_id = checklists.id
-inner join taxonomies tx on
+left join taxonomies tx on
 	tx.id = checklists.type_id
 left JOIN summary_user_checklist suc on
 	suc.user_id = u.id
@@ -214,11 +223,22 @@ left join courses c on
   //             left join checklist_answers_items cai on ca.id = cai.checklist_answer_id
   // `
   //a checklist could be associated with one or more courses
-  const staticCondition = ` where 
-          checklists.active = 1 and
-          u.subworkspace_id in (${modulos.join()}) and
-          ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
+  let staticCondition = ` where 
+         (
+           (
+             u.id in (${userIdsSegmentedToChecklist.join(',')})
+             and (
+                ca.checklist_id in (${Array.isArray(checklistId) ? checklistId.join(',') : checklistId})
+                or
+                ca.checklist_id is null
+             )
+           )
+           or (
+            u.id in (${userIdsSegmentedToChecklist.join(',')})
+           )
+         )  
           `
+
   // ca.school_id in (${schoolId}) and
   // cr.course_id in (${courseId}) and
 
@@ -256,7 +276,39 @@ left join courses c on
 
   // Execute query
   // logtime(query);
-  const [rows] = await con.raw(query, { })
+  let [rows] = await con.raw(query, { })
+
+  // Fill empty cells with checklist data
+
+  let checklists = await loadChecklistData(
+    Array.isArray(checklistId) ? checklistId : [checklistId]
+  )
+
+  // Set checklist data for users without ans
+
+  rows = rows.map(r => {
+
+    let checklist = checklists[0]
+
+    if (r.needs_override == 1 && checklist) {
+      r.checklists_title = checklist.checklist_title
+    }
+
+    if (r.needs_override == 1 && checklist) {
+      r.type_checklist = checklist.checklist_type
+    }
+
+    if (r.needs_override == 1 && checklist.course_name) {
+      r.course_name = checklist.course_name
+    }
+
+    if (r.needs_override == 1) {
+      r.qualification = 'Pendiente'
+    }
+
+    return r;
+  })
+
   return rows
 }
 
@@ -310,4 +362,53 @@ function filterUserActivities (activitiesHeaders, checklistActivities, userId) {
 function getChecklistTypeName (id, checklistTypesTaxonomies) {
   const type = checklistTypesTaxonomies.find(tx => tx.id === id)
   return type ? type.name : null
+}
+
+/**
+ * Load ids of users segmented to checklist
+ */
+async function loadUserIdsForChecklist (checklistIds, modulos) {
+
+  const segments = await loadSegments(
+    "App\\Models\\Checklist", checklistIds
+  );
+  const moduleUsers = await loadUsersBySubWorspaceIds(modulos);
+  const usersIds = pluck(moduleUsers, 'id');
+  const segmentsUsersCriterionValues = await loadUsersSegmentsCriterionValues(segments, usersIds)
+
+  // Check if module users match checklist segment
+
+  let checklistUsersIds = []
+  usersIds.forEach(userId => {
+
+    let matchesSegmentsIds = userMatchesSegments(userId, segments, segmentsUsersCriterionValues.filter(u => +u.user_id === +userId))
+
+    if (matchesSegmentsIds.length) {
+      checklistUsersIds.push(userId)
+    }
+  })
+
+  return checklistUsersIds
+}
+
+async function loadChecklistData(checklistsIds) {
+
+  const query = `
+    select
+        checkl.id checklist_id,
+        checkl.title checklist_title,
+        tx.name checklist_type,
+        c.name course_name  
+      
+    from checklists checkl
+      join taxonomies tx on tx.id = checkl.type_id
+      left join checklist_relationships cr on cr.checklist_id = checkl.id
+      left join courses c on c.id = cr.course_id  
+      
+    where
+        checkl.id in (${checklistsIds.join(',')})
+  `;
+
+  const [rows] = await con.raw(query, { })
+  return rows
 }

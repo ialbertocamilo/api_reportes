@@ -49,7 +49,8 @@ let headers = [
   'ESTADO TEMA',
   'NOTA TEMA',
   'REINICIOS TEMA',
-  'INTENTOS PRUEBA',
+  'INTENTOS',
+  'INTENTOS TOTALES',
   'EVALUABLE TEMA',
   'TIPO TEMA',
   'VISITAS TEMA',
@@ -135,6 +136,7 @@ async function exportarUsuariosDW({
     StackTopicsData = await loadTopicsByCoursesIds( 
                             pluck(courses, 'course_id'), true);
   }
+
   const StackUsersData = await loadUsersBySubWorspaceIds(modulos, true);
   let StackUserCriterios = [];
   // === precargar topics, usuarios y criterios ===
@@ -233,6 +235,8 @@ async function exportarUsuariosDW({
       const { id } = user;
       // console.log('user',user);
       const userStore = StackUsersData[id];
+      if (!userStore) continue;
+
       const lastLogin = moment(userStore.last_login).format('DD/MM/YYYY H:mm:ss')
       cellRow.push(userStore.name)
       cellRow.push(userStore.lastname)
@@ -273,6 +277,8 @@ async function exportarUsuariosDW({
       const { topic_id } = user;
       const topicStore = StackTopicsData[topic_id];
 
+      if (!topicStore) continue;
+
       cellRow.push(topicStore.topic_name) // topicStore
 
         // estado para - 'RESULTADO DE TEMA'
@@ -287,6 +293,7 @@ async function exportarUsuariosDW({
       cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
+      cellRow.push(user.topic_total_attempts || '-')
       cellRow.push(topicStore .topic_assessable ? 'Sí' : 'No') // topicStore
 
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore

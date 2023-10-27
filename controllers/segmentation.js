@@ -19,9 +19,11 @@ const headers = [
     'Documento','EMAIL',
     'ESCUELA',
     'CURSO',
+    'ESTADO DEL CURSO',
     'PROMEDIO',
     'AVANCE (%)',
-    'RESULTADO CURSO'
+    'RESULTADO CURSO',
+    'ULTIMA EVALUACIÓN'
 ]
 
 async function generateSegmentationReport ({
@@ -37,7 +39,7 @@ async function generateSegmentationReport ({
   const courses = await loadCourses({cursos:courses_s,escuelas,tipocurso:'include_free'},workspaceId); 
   const coursesStatuses = await loadCoursesStatuses();
   for (const course of courses) {
-    const users = await loadUsersSegmented(course.course_id,false)
+    const users = await loadUsersSegmented(course.course_id,true)
     for (const user of users) {
         const cellRow = []
         const user_status = (user.status_id) ? coursesStatuses.find(status=>status.id == user.status_id) : {name:'Pendiente'};
@@ -48,9 +50,11 @@ async function generateSegmentationReport ({
         cellRow.push(user.email)
         cellRow.push(course.school_name)
         cellRow.push(course.course_name)
+        cellRow.push(course.course_active ? 'Activo' : 'Inactivo')
         cellRow.push(user.grade_average || '-')
         cellRow.push(user.advanced_percentage ? user.advanced_percentage+'%' : '0%')
         cellRow.push(user_status.name)
+        cellRow.push(user.last_time_evaluated_at)
         worksheet.addRow(cellRow).commit()
     }
   }

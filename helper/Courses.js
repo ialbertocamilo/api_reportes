@@ -1,6 +1,6 @@
 const { con } = require('../db')
 const { pluck, pluckUnique } = require('./Helper')
-const { getCourseStatusId } = require('./CoursesTopicsHelper')
+const { getCourseStatusId, loadTopicsStatuses, getTopicStatusId } = require('./CoursesTopicsHelper')
 
 /**
  * Calculate school percentages for all users
@@ -98,12 +98,7 @@ exports.calculateSchoolProgressPercentage = (
 
       const segmentedCourseId = +ussc.course_id;
       const alreadyProcessed = coursedAdded.includes(segmentedCourseId);
-      let isInactive = false
-      inactiveCoursesIds.forEach(i => {
-        if(+i === segmentedCourseId) {
-          isInactive = true
-        }
-      })
+      let isInactive = !ussc.course_is_active;
 
       if (!alreadyProcessed && !isInactive) {
 
@@ -160,10 +155,12 @@ exports.calculateSchoolProgressPercentage = (
 const getSchoolsCoursesIds = async (schoolsIds) => {
 
   const query = `
-      select s.id school_id, cs.course_id
+      select s.id school_id, cs.course_id, c.active course_is_active
       from schools s
                join course_school cs on cs.school_id = s.id
+               join courses c on cs.course_id = c.id
       where cs.school_id in (${schoolsIds.join(',')})
+      group by s.id, c.id
   `
   const [schoolsCourses] = await con.raw(query)
 
@@ -195,6 +192,7 @@ exports.loadUsersWithCourses = async (
 
   `
   query += ` where 
+      sc.deleted_at is null and
       u.subworkspace_id in (${modulesIds.join()}) and
       sw.workspace_id = ${workspaceId} `
 
@@ -228,12 +226,21 @@ exports.loadUsersWithCourses = async (
 }
 
 /**
- * Calculate summary topics count for provided users
- * of a specific course
+ * Calculate summary topics count (aprobado and desaprobado)
+ * for provided users of a specific course
  */
 exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
 
   if (!usersIds.length) return []
+  if (!coursesIds.length) return []
+
+  // Load user topic statuses
+
+  const userTopicsStatuses = await loadTopicsStatuses()
+  const aprobadoId = getTopicStatusId(userTopicsStatuses, 'aprobado')
+  const desaprobadoId = getTopicStatusId(userTopicsStatuses, 'desaprobado')
+  const revisadoId = getTopicStatusId(userTopicsStatuses, 'revisado')
+  const realizadoId = getTopicStatusId(userTopicsStatuses, 'realizado')
 
   const query = `
       select
@@ -248,6 +255,7 @@ exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
           c.id in (${coursesIds.join(',')}) and
           t.active = 1 and
           st.user_id in (${usersIds.join(',')}) and
+          st.status_id in (${aprobadoId}, ${desaprobadoId}, ${revisadoId}, ${realizadoId}) and
           st.deleted_at is null
       group by c.id, st.user_id
   `
@@ -257,12 +265,12 @@ exports.loadSummaryTopicsCount = async (coursesIds, usersIds) => {
 }
 
 /**
- * Calculate percentage of total amount of topics viewed by the user
- * from segmented courses
+ * Calculate percentage of total amount of topics (aprobados, desaprobados)
+ * by the user from segmented courses
  */
-exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userTopicsCount, userSegmentedSchoolsCourses, schoolId) => {
+exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userSummaryTopicsCount, userSegmentedSchoolsCourses, schoolId) => {
 
-  if (!userTopicsCount || !coursesTopics) return 0
+  if (!userSummaryTopicsCount || !coursesTopics) return 0
   if (!userSegmentedSchoolsCourses) return 0
 
   // Count topics of all courses
@@ -280,7 +288,8 @@ exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userTopicsCoun
         let courseInfo = coursesTopics.find(ct => ct.course_id === segmentedCourseId)
         assignedTopicsCount += courseInfo ? courseInfo.topics_count : 0
 
-        let summaryTopicsInfo = userTopicsCount.find(utc => utc.course_id === segmentedCourseId)
+        let summaryTopicsInfo = userSummaryTopicsCount.find(utc => utc.course_id === segmentedCourseId)
+
         if (summaryTopicsInfo) {
           summaryTopicsCount += summaryTopicsInfo.summary_topics_count
         }
@@ -296,18 +305,52 @@ exports.calculateSchoolAccomplishmentPercentage = (coursesTopics, userTopicsCoun
     summaryTopicsCount = assignedTopicsCount
   }
 
-  return Math.round(summaryTopicsCount * 100 / assignedTopicsCount, 2);
+  return assignedTopicsCount
+    ? Math.round(summaryTopicsCount * 100 / assignedTopicsCount, 2)
+    : 0;
 }
 
+/**
+ * Calculate percentage of total amount of topics (aprobados, desaprobados)
+ * by the user from specific course
+ */
+exports.calculateCourseAccomplishmentPercentage = (courseId, coursesTopics, userSummaryTopicsCount) => {
+
+  if (!userSummaryTopicsCount || !coursesTopics) return 0
+
+  let summaryTopicsInfo = userSummaryTopicsCount.find(utc => utc.course_id === courseId)
+  let courseInfo = coursesTopics.find(ct => ct.course_id === courseId)
+  let assignedTopicsCount = courseInfo ? courseInfo.topics_count : 0
+
+  if (summaryTopicsInfo) {
+
+    let summaryTopicsCount = summaryTopicsInfo.summary_topics_count;
+    if (summaryTopicsCount > assignedTopicsCount) {
+      summaryTopicsCount = assignedTopicsCount
+    }
+
+    return assignedTopicsCount
+      ? Math.round(summaryTopicsCount * 100 / assignedTopicsCount, 2)
+      : 0
+  } else {
+    return 0
+  }
+}
 
 exports.countCoursesActiveTopics = async (coursesIds) => {
+
+  if (!coursesIds.length) return []
+
   const query = `
       select 
           c.id course_id,
           count(*) topics_count
       from courses c
         inner join topics t on t.course_id = c.id
-      where t.active = 1 and c.id in (${coursesIds.join(',')})
+      where 
+        t.active = 1 
+        and t.deleted_at is null
+        and c.id in (${coursesIds.join(',')})
       group by c.id
   `
 

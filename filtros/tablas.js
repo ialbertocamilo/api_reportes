@@ -1,11 +1,12 @@
 const { con } = require('../db')
-const { findUserByDocument } = require('../helper/Usuarios')
+const { findUserByDocument, isSuper } = require('../helper/Usuarios')
 const { pluck } = require('../helper/Helper')
-const { getSuboworkspacesIds } = require('../helper/Workspace')
+const { getSuboworkspacesIds, getAdminSubworkpacesIds } = require('../helper/Workspace')
+const { getCampaignsBySubworspaceId } = require('../helper/Votaciones')
 const knex = require('../db').con
 module.exports = {
-  async datosIniciales(workspaceId) {
-    const modules = await this.cargarModulos(workspaceId)
+  async datosIniciales(workspaceId, adminId) {
+    const modules = await this.cargarModulos(workspaceId, adminId)
     const admins = await this.cargarAdmins(workspaceId)
     const vademecums = await this.cargarVademecums(workspaceId)
 
@@ -17,21 +18,32 @@ module.exports = {
   },
 
   /**
-   * Load subworkspaces from workspace
+   * Load subworkspaces for especific admin
    *
-   * @param workspaceId
    * @returns {Promise<*>}
    */
-  async cargarModulos(workspaceId) {
-    const [rows] = await con.raw(`
-        select id, name, slug
-        from workspaces 
-        where 
-            parent_id = :workspaceId and active = 1
-    `,
-      { workspaceId }
-    )
+  async cargarModulos(workspaceId, adminId) {
 
+    let query
+    if (await isSuper(adminId)) {
+      query = `
+          select id, name, slug
+          from workspaces
+          where
+              parent_id = :workspaceId
+            and active = 1`
+    } else {
+      query = `
+          select w.id, w.name, w.slug
+          from workspaces w
+                   join subworkspace_user su on su.subworkspace_id = w.id
+          where
+              w.parent_id = :workspaceId
+            and su.user_id = :adminId
+            and w.active = 1`
+    }
+
+    const [rows] = await con.raw(query, { workspaceId, adminId })
     return rows
   },
 
@@ -84,22 +96,28 @@ module.exports = {
   /**
    * Load workspace's courses
    * @param {string} schoolIds separated by commas
+   * @param includeInactive include inactive courses
    * @returns {Promise<*>}
    */
-  async loadSchoolCourses (schoolIds) {
+  async loadSchoolCourses (schoolIds, includeInactive = false) {
     if (!schoolIds) {
       return []
     }
 
+    let columns = includeInactive
+      ? `distinct c.id, if(c.active = 1, c.name, concat(c.name, ' [inactivo]')) name`
+      : `distinct c.id, c.*`;
+
     const [rows] = await con.raw(`
       select
-        c.*
+        ${columns}
       from courses c 
           inner join course_school cs on c.id = cs.course_id
       where 
-          cs.school_id in (${schoolIds}) and 
-          c.active = 1 and 
-          c.deleted_at is null
+          cs.school_id in (${schoolIds})
+          ${includeInactive ? '' : ' and c.active = 1'}
+          and c.deleted_at is null
+      order by c.active desc, name asc
     `)
 
     return rows
@@ -130,10 +148,10 @@ module.exports = {
    */
   async loadCourseTopics (coursesIds) {
     const [rows] = await con.raw(`
-      select
-        *
-      from topics
-      where course_id in (${coursesIds})
+        select
+            *
+        from topics
+        where course_id in (${coursesIds}) and deleted_at is null
     `)
 
     return rows
@@ -154,29 +172,46 @@ module.exports = {
     return rows
   },
   /**
-   * Load subworkspace's courses
-   * @param workspaceId
-   * @param grouped
+   * Load subworkspace's schools
+   *
    * @returns {Promise<*>}
    */
-  async loadsubworkspaceSchools (workspaceId, grouped) {
+  async loadsubworkspaceSchools (workspaceId, grouped, adminId) {
 
     if (typeof grouped === 'undefined') {
       grouped = true
     }
 
-    const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+    let subworkspacesIds
+    if (await isSuper(adminId)) {
+      subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+    } else {
+      subworkspacesIds = await getAdminSubworkpacesIds(adminId)
+    }
+
+    // subworkspacesIds is empty whe admin has no subworkspaces assigned
+
+    if (!subworkspacesIds.length) {
+      console.log(`Admin ${adminId} has no subworkspaces assigned in subworkspace_user`)
+
+      // todo: this line should be removed when adminId is added
+      // to endpoint in users app, and an empty array should be returned instead
+
+      subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+      // return []
+    }
+
     let query = `
-      select
-        s.*,
-        sw.subworkspace_id
-      from 
-          schools s 
-              inner join 
-              school_subworkspace sw on s.id = sw.school_id
-      where 
-         sw.subworkspace_id in (${subworkspacesIds.join()}) 
-         and s.active = 1
+        select
+            s.*,
+            sw.subworkspace_id
+        from
+            schools s
+                inner join
+            school_subworkspace sw on s.id = sw.school_id
+        where
+            sw.subworkspace_id in (${subworkspacesIds.join()})
+          and s.active = 1
     `
 
     if (grouped) {
@@ -243,10 +278,15 @@ module.exports = {
 
     return rows;
   },
-  async loadSchoolsStatesBySubworkspaceId (data) {
+  async loadSchoolsStatesBySubworkspaceId (data, adminId) {
     const { workspaceId, active, inactive } = data
 
-    const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+    let subworkspacesIds
+    if (await isSuper(adminId)) {
+      subworkspacesIds = await getSuboworkspacesIds(workspaceId)
+    } else {
+      subworkspacesIds = await getAdminSubworkpacesIds(adminId)
+    }
 
     const SqlState = (active && inactive)
       ? ''
@@ -586,5 +626,12 @@ module.exports = {
     ]
 
     return { workspaces, recommendations }
+  },
+
+  // === votaciones ===
+  async loadCampaignsSubworkspaceById(subworkspacesIds) {
+    return await getCampaignsBySubworspaceId(subworkspacesIds);
   }
+  // === votaciones ===
+
 }

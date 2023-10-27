@@ -6,14 +6,26 @@ router.get('/', async (req, res) => {
   res.send('Bienvenido a la api de filtros')
 })
 
-router.get('/datosiniciales/:workspaceId', async (req, res) => {
-  const datos = await tablas.datosIniciales(req.params.workspaceId)
+router.get('/datosiniciales/:workspaceId/:adminId', async (req, res) => {
+  const datos = await tablas.datosIniciales(
+    req.params.workspaceId, req.params.adminId
+  )
   res.json(datos)
 })
 
 router.get('/courses/:schoolIds', async (req, res) => {
 
-  const datos = await tablas.loadSchoolCourses(req.params.schoolIds)
+  const datos = await tablas.loadSchoolCourses(
+    req.params.schoolIds, false
+  )
+  res.json(datos)
+})
+
+router.get('/courses/:schoolIds/all', async (req, res) => {
+
+  const datos = await tablas.loadSchoolCourses(
+    req.params.schoolIds, true
+  )
   res.json(datos)
 })
 
@@ -34,7 +46,7 @@ router.get('/topics/:coursesIds', async (req, res) => {
   res.json(datos)
 })
 
-router.get('/schools/:workspaceId', async (req, res) => {
+router.get('/schools/:workspaceId/:adminId?', async (req, res) => {
   let grouped
   // default value for grouped is true
   if (typeof req.query.grouped === 'undefined') {
@@ -43,7 +55,7 @@ router.get('/schools/:workspaceId', async (req, res) => {
     grouped = req.query.grouped === '1'
   }
 
-  const datos = await tablas.loadsubworkspaceSchools(req.params.workspaceId, grouped)
+  const datos = await tablas.loadsubworkspaceSchools(req.params.workspaceId, grouped, req.params.adminId)
   res.json(datos)
 })
 
@@ -75,9 +87,9 @@ router.get('/cargar_ciclos', async (req, res) => {
 
 
 
-router.post('/schools/states', async (req, res) => {
+router.post('/schools/states/:adminId', async (req, res) => {
   const { body } = req
-  const datos = await tablas.loadSchoolsStatesBySubworkspaceId(body)
+  const datos = await tablas.loadSchoolsStatesBySubworkspaceId(body, req.params.adminId)
   return res.json(datos)
 })
 
@@ -166,6 +178,10 @@ router.post(`/criterion-values/:criterionCode`, async (req, res) => {
   res.json(datos)
 });
 
-
+router.get(`/sub-workspace/:subworkspacesIds/campaigns`, async (req, res) => {
+  const { subworkspacesIds } = req.params;
+  const datos = await tablas.loadCampaignsSubworkspaceById(subworkspacesIds)
+  res.json(datos)
+});
 
 module.exports = router

@@ -21,11 +21,15 @@ const {
   loadCoursesStatuses,
   loadCompatiblesId,
   getCourseStatusName,
-  getCourseStatusId, calculateTopicsReviewedPercentage
+  getCourseStatusId, calculateTopicsReviewedPercentage,
+  loadTopicQualificationTypes,
+  getTopicCourseGrade
 } = require("../helper/CoursesTopicsHelper");
 
 
-const { pluck, logtime, pluckUnique, calculateUserSeniorityRange } = require("../helper/Helper");
+const { pluck, logtime, pluckUnique, calculateUserSeniorityRange, setCustomIndexAtObject,
+  generateSqlScript
+} = require("../helper/Helper");
 const { loadSummaryCoursesByUsersAndCourses } = require("../helper/Summaries");
 const {
   getGenericHeadersNotasXCurso,
@@ -38,11 +42,12 @@ const {
   getUsersNullAndNotNull,
   getUserCriterionValues2,
 } = require("../helper/Usuarios");
-const { getSuboworkspacesIds } = require("../helper/Workspace");
+const { getSuboworkspacesIds, loadWorkspace } = require("../helper/Workspace");
 const { con } = require('../db')
 const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
   loadUsersWithCourses, loadSummaryTopicsCount,
-  calculateSchoolAccomplishmentPercentage, countCoursesActiveTopics
+  calculateSchoolAccomplishmentPercentage, countCoursesActiveTopics,
+  calculateCourseAccomplishmentPercentage
 } = require('../helper/Courses')
 
 // Headers for Excel file
@@ -51,8 +56,9 @@ const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
-  'AVANCE CURSO (%)',
+  'APROBACIÓN CURSO',
   'VISITAS',
+  'SISTEMA DE CALIFICACIÓN',
   'NOTA PROMEDIO',
   'RESULTADO CURSO', // convalidado
   'ESTADO CURSO',
@@ -67,6 +73,8 @@ const headers = [
 async function generateSegmentationReport({
   modulos = [],
   workspaceId,
+  format,
+
   cursos,
   escuelas,
   areas,
@@ -87,35 +95,31 @@ async function generateSegmentationReport({
   completed = true
 }) {
 
-  // Default criteria to be shown on report
 
-  let defaultsCriteriaIds = [1, 5, 13, 4, 40, 41];
 
   // Homecenters Peruanos -> id 11
-  let isPromart = workspaceId === 11
+  let isPromart = (workspaceId === 11 && format !== "sql")
   if (isPromart) {
-    defaultsCriteriaIds.push(7) // Date_Start
-    defaultsCriteriaIds.push(8) // seniority date
-
     let schoolProgressIndex = 2
-    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA (%)');
-    headers.splice(schoolProgressIndex, 0, 'AVANCE ESCUELA (%)');
+    headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
+    headers.splice(schoolProgressIndex, 0, 'APROBACIÓN ESCUELA');
     headers.unshift('RANGO DE ANTIGÜEDAD')
+
+    headers.splice(7, 0, 'CUMPLIMIENTO CURSO');
   }
 
   // Generate Excel file header
-  const headersEstaticos = await getGenericHeadersNotasXCurso(
-    workspaceId,
-    defaultsCriteriaIds
-  );
+  let defaultsCriteriaIds = (format === 'sql')
+    ? [1, 2, 7, 28, 40, 41]
+    : []
+
+  let headersEstaticos = await getGenericHeadersNotasXCurso(workspaceId, defaultsCriteriaIds)
+
   await createHeaders(headersEstaticos.concat(headers));
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(
-    workspaceId,
-    defaultsCriteriaIds
-  );
+  const workspaceCriteria = await getWorkspaceCriteria(workspaceId, defaultsCriteriaIds);
   const workspaceCriteriaNames = pluck(workspaceCriteria, "name");
   // console.log('workpace_criteria_data: ',{ workspaceCriteria });
 
@@ -130,6 +134,10 @@ async function generateSegmentationReport({
                                       CursosActivos, CursosInactivos }, 
                                       modulos);
   const coursesStatuses = await loadCoursesStatuses();
+
+  // load qualification types
+  let QualificationTypes = await loadTopicQualificationTypes();
+      QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
   // console.log('courses_count', courses.length)
 
@@ -177,7 +185,7 @@ async function generateSegmentationReport({
   const coursesTopics = await countCoursesActiveTopics(coursesIds)
   const summaryTopicsCount = await loadSummaryTopicsCount(coursesIds, allUsersIds)
 
-
+  let rowsToBeExported = [];
   for (const course of courses) {
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
@@ -197,8 +205,6 @@ async function generateSegmentationReport({
       completed
     );
     logtime(`-- end: user segmentation --`);
-
-
 
 
     // filtro para usuarios nulos y no nulos
@@ -266,6 +272,8 @@ async function generateSegmentationReport({
       // encontrar usuario por 'id'
       const { id } = user;
       const userStore = StackUsersData[id];
+      if (!userStore) continue;
+
       const lastLogin = moment(userStore.last_login).format("DD/MM/YYYY H:mm:ss");
       cellRow.push(userStore.name);
       cellRow.push(userStore.lastname);
@@ -281,7 +289,8 @@ async function generateSegmentationReport({
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
       } else {
-        const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
+        const userValues =
+          await getUserCriterionValues2(user.id, workspaceCriteriaNames, defaultsCriteriaIds);
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
         StackUserCriterios[id] = userValues; 
@@ -306,7 +315,7 @@ async function generateSegmentationReport({
       const taken = user.taken || 0;
       const reviewed = user.reviewed || 0;
       const completed = passed + taken + reviewed;
-      const userTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
+      const userSummaryTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
@@ -316,15 +325,23 @@ async function generateSegmentationReport({
           usersCoursesProgress, user.id, course.school_id, segmentedCoursesByUsers[user.id]
         )
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
-        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
+        cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userSummaryTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
 
       cellRow.push(course.course_name);
+      const qualification = QualificationTypes[course.qualification_type_id];
+      
       cellRow.push(
         user.advanced_percentage ? user.advanced_percentage + "%" : "0%"
       );
+
+      if (isPromart) {
+        cellRow.push((calculateCourseAccomplishmentPercentage(course.course_id, coursesTopics, userSummaryTopicsCount) || 0) + '%')
+      }
+
       cellRow.push(user.course_views || "-");
-      cellRow.push(user.grade_average);
+      cellRow.push(qualification.name); // tipo calificacion
+      cellRow.push(getTopicCourseGrade(user.grade_average, qualification.position)); //promedio
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {
@@ -347,6 +364,11 @@ async function generateSegmentationReport({
 
       // añadir fila 
       worksheet.addRow(cellRow).commit();
+
+      if (format === 'sql')  {
+        rowsToBeExported.push(cellRow)
+      }
+
     }
     logtime(`FIN addRow`);
   }
@@ -354,6 +376,19 @@ async function generateSegmentationReport({
   logtime(`FIN Cursos`);
 
   if (worksheet._rowZero > 1) {
+
+    if (format === 'sql')  {
+      const workspace = await loadWorkspace(workspaceId)
+      const timestamp = Math.floor((new Date).getTime() / 1000)
+      generateSqlScript(
+        'notas_curso',
+        workspace.name,
+        headersEstaticos.concat(headers),
+        rowsToBeExported,
+        `consolidado-notas-${workspace.name}-${timestamp}`
+      )
+    }
+
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: "ConsolidadoCompatibleCursos" }));
     });

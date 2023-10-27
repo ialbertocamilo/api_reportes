@@ -1,7 +1,7 @@
 const { con } = require('../db')
 const { logtime, pluck } = require('./Helper')
 
-exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
+exports.getWorkspaceCriteria = async (workspaceId, criteria_id=[]) => {
   logtime('method: getWorkspaceCriteria')
 
   let query = `
@@ -9,15 +9,17 @@ exports.getWorkspaceCriteria = async (workspaceId,criteria_id=[]) => {
             c.*
         from 
             criteria c 
-                inner join criterion_workspace cw on c.id = cw.criterion_id
-                inner join workspaces w on w.id = cw.workspace_id
+                left join criterion_workspace cw on c.id = cw.criterion_id
+                left join workspaces w on w.id = cw.workspace_id
         where 
-            w.id = :workspaceId and 
-            ${criteria_id.length > 0 ? ` c.id in (${criteria_id.toString()}) and ` : ''}
-            c.show_in_reports = 1 and
-            w.active = 1 and
-            c.active = 1
+             
+            ${criteria_id.length > 0 
+                     ? `c.id in (${criteria_id.toString()}) ` 
+                     : 'w.id = :workspaceId and cw.available_in_reports = 1'}
+            
+            and c.active = 1
         group by c.id
+        order by c.position
     `
   // logtime(query)
 
@@ -65,7 +67,7 @@ exports.loadWorkspaceSegmentationCriteria = async (workspaceId) => {
   }
 }
 
-exports.getGenericHeadersNotasXCurso = async (workspaceId,criteria_id=[]) => {
+exports.getGenericHeadersNotasXCurso = async (workspaceId, criteria_id=[]) => {
   const headers = [
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)','EMAIL'
@@ -82,4 +84,48 @@ exports.getGenericHeaders = async (workspaceId,criteria_id=[]) => {
   const workspaceCriteria = await exports.getWorkspaceCriteria(workspaceId,criteria_id)
   workspaceCriteria.forEach(el => headers.push(el.name))
   return headers
+}
+
+exports.getGenericHeadersByCriterioCodes = async (workspaceId, codes = '') => {
+  const headers = [
+    'Nombre', 'Apellido Paterno', 'Apellido Materno',
+    'Documento', 'Estado (Usuario)'
+  ];
+  const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId, codes);
+  workspaceCriteria.forEach(el => headers.push(el.name));
+  return headers;
+}
+
+
+exports.getWorkspaceCriteriaByCodes = async (workspaceId, codes = '') => {
+  logtime('method: getWorkspaceCriteriaByCodes');
+
+  let query = `
+        select 
+            c.*
+        from 
+            criteria c 
+                inner join criterion_workspace cw on c.id = cw.criterion_id
+                inner join workspaces w on w.id = cw.workspace_id
+        where 
+            w.id = :workspaceId and 
+            ${codes.length > 0 ? ` c.code in (${codes}) and ` : ''}
+            c.show_in_reports = 1 and
+            w.active = 1 and
+            c.active = 1
+        group by c.id
+    `
+  // logtime(query)
+
+  const [rows] = await con.raw(query, { workspaceId })
+
+  return rows
+}
+
+
+exports.getCriterioValuesByCriterioId = async (criterioId) => {
+
+  let query = `select cv.* from criterion_values cv where cv.criterion_id = :criterioId`;
+  const [rows] = await con.raw(query, { criterioId })
+  return rows
 }

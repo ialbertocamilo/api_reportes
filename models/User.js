@@ -4,6 +4,7 @@ const sequelize = require('../sequelize.js');
 /* models */
 const Workspace = require('./Workspace');
 const CriterionValueUser = require('./CriterionValueUser');
+const CriterionValue = require('./CriterionValue');
 
 class User extends Model {
 }
@@ -14,7 +15,8 @@ User.init({
     lastname: STRING,
     surname: STRING,
     active: BOOLEAN,
-    document: STRING
+    document: STRING,
+    email: STRING
 },{
     sequelize,
     modelName: 'users',
@@ -25,5 +27,8 @@ User.init({
 User.belongsTo(Workspace, {
     foreignKey: 'subworkspace_id'
 });
+
+User.belongsToMany(CriterionValue, { through: CriterionValueUser, foreignKey: 'user_id' } );
+CriterionValue.belongsToMany(User, { through: CriterionValueUser, foreignKey: 'criterion_value_id' } );
 
 module.exports = User;

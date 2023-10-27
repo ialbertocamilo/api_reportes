@@ -85,7 +85,9 @@ exports.loadUsersSegmented = async (course_id,only_active_users=true) => {
       }
     });
     const [rows] =
-      await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at from users
+      await con.raw(`select users.id , users.name,users.lastname,users.surname,users.email, users.document ,sc.grade_average,sc.advanced_percentage,sc.status_id,sc.created_at as sc_created_at,
+       sc.last_time_evaluated_at        
+        from users
         LEFT OUTER join summary_courses sc on sc.user_id = users.id and sc.course_id = ${course_id}
         ${join_criterions_values_user} 
         ${only_active_users ? ' where users.active=1 and ' : ' where '} 
@@ -912,6 +914,9 @@ exports.loadCoursesV2 = async (
  * @returns {Promise<array>}
  */
 exports.loadModuleCoursesIds = async (moduleId) => {
+
+  const moduleCriterion = await con("criteria").where("code", "module");
+
   const query = `
       select distinct model_id as course_id
 
@@ -922,11 +927,14 @@ exports.loadModuleCoursesIds = async (moduleId) => {
         and id in (
             select distinct segment_id
             from segments_values sv
-            where criterion_id = 1 -- module criterion
+            where criterion_id = :moduleCriteriaId
                 and criterion_value_id = :moduleId -- module
       )
   `
-  const [rows] = await con.raw(query, { moduleId })
+  const [rows] = await con.raw(query, {
+    moduleCriteriaId: moduleCriterion[0].id,
+    moduleId
+  })
 
   return pluck(rows, 'course_id')
 }

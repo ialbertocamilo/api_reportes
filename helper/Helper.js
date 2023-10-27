@@ -5,6 +5,8 @@
  * @returns {*}
  */
 const moment = require('moment/moment')
+const fs = require('fs')
+const { EOL } = require('os')
 exports.pluck = (collection, key) => {
   return collection.map(obj => obj[key])
 }
@@ -175,4 +177,87 @@ exports.calculateUserSeniorityRange = (dateString) => {
   }
 
   return seniorityValue
+}
+
+exports.helperPlusMonthsDateNow = (months) => {
+  const current = new Date();
+  const date = new Date( current.setMonth(current.getMonth() - months) );
+
+  let getYear = date.toLocaleString('default', { year: 'numeric' });
+  let getMonth = date.toLocaleString('default', { month: '2-digit' });
+  let getDay = date.toLocaleString('default', { day: '2-digit' });
+
+  return `${getYear}-${getMonth}-${getDay}`;
+}
+
+exports.helperGetMergeNumbers = (array1, array2) => {
+  for (let i = 0; i < array2.length; i++) {
+    if (array1.indexOf(array2[i]) === -1) array1.push(array2[i]);
+  }
+  return array1;
+}
+
+exports.helperGetValueByKey = (array, key) => {
+  return array.map((item) => item[key]);
+}
+
+
+exports.parseDateFromString = (datestring) =>{
+  const date = new Date(datestring);
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year= date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+exports.generateSqlScript= (tableName, workspaceName, columns, rowsArray, filename) => {
+
+  // Convert columns to slugs and adds id and workspace columns
+
+  columns.unshift('Workspace');
+  columns.unshift('id');
+  columns = columns.map(c => {
+    return stringToSlug(c).replace(/-/g, '_')
+  })
+
+  // Generate SQL script
+
+  let sql = `insert into ${tableName} (${columns.join(',')}) values ` +  EOL;
+
+  // Add rows values to script
+
+  let insertRows = [];
+  rowsArray.forEach(r => {
+    r.unshift(workspaceName);
+    insertRows.push(`(null, "${r.join('","')}")` + EOL)
+  })
+  sql = sql + insertRows.join(',') + ';'
+
+  // Save file
+
+  fs.writeFileSync(
+    __dirname + '/../../data/' + stringToSlug(filename) + '.sql', sql
+  );
+}
+
+/**
+ * Convert to string to lowercase, and replace spaces with scores (-)
+ */
+function stringToSlug (str) {
+  str = str.replace(/^\s+|\s+$/g, ''); // trim
+  str = str.toLowerCase();
+
+  // remove accents, swap ñ for n, etc
+  var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+  var to   = "aaaaeeeeiiiioooouuuunc------";
+  for (var i=0, l=from.length ; i<l ; i++) {
+    str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+  }
+
+  str = str.replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+    .replace(/\s+/g, '-') // collapse whitespace and replace by -
+    .replace(/-+/g, '-'); // collapse dashes
+
+  return str;
 }

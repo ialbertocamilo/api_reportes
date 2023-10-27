@@ -43,6 +43,7 @@ let headers = [
   'NOTA TEMA',
   'REINICIOS TEMA',
   'INTENTOS PRUEBA',
+  'INTENTOS TOTALES',
   'EVALUABLE TEMA',
   'TIPO TEMA',
   'VISITAS TEMA',
@@ -270,7 +271,9 @@ async function exportarUsuariosDW({
       const { topic_id } = user;
       const topicStore = StackTopicsData[topic_id];
 
-      cellRow.push(topicStore.topic_name) // topicStore
+
+
+      cellRow.push(topicStore ? topicStore.topic_name : '') // topicStore
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.topic_status_name) {
@@ -279,14 +282,23 @@ async function exportarUsuariosDW({
         cellRow.push(user.topic_status_name)
       }
 
-      cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
+      cellRow.push(
+        topicStore
+          ? (topicStore.topic_active === 1 ? 'ACTIVO' : 'INACTIVO')
+          : ''
+      ) // topicStore
 
       cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
-      cellRow.push(topicStore .topic_assessable ? 'Sí' : 'No') // topicStore
+      cellRow.push(user.topic_total_attempts || '-')
+      cellRow.push(topicStore ? (topicStore.topic_assessable ? 'Sí' : 'No') : '') // topicStore
 
-      cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
+      cellRow.push(
+        topicStore
+          ? getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)
+          : ''
+      ) // topicStore
 
       cellRow.push(user.topic_views || '-')
       cellRow.push(user.minimum_grade || '-')
@@ -295,8 +307,11 @@ async function exportarUsuariosDW({
 
       cellRow.push(user.compatible || `-`);
 
-      // añadir fila
-      worksheet.addRow(cellRow).commit()
+      // add row only when it has content
+
+      if (topicStore) {
+        worksheet.addRow(cellRow).commit()
+      }
     }
   }
 

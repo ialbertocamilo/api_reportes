@@ -3,7 +3,7 @@ const { logtime } = require("./Helper");
 
 exports.loadSummaryCoursesByUsersAndCourses = async (
   users_id, 
-  courses_id) => {
+  courses_id,only_approved = true) => {
 
   courses_id = courses_id.filter((val) => val != null);
   users_id = users_id.filter((val) => val != null);
@@ -14,6 +14,7 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
         sc.user_id,
         cs.course_id,
         c.name course_name,
+        c.qualification_type_id,
         sc.grade_average, 
         sc.advanced_percentage,
         sc.assigned,
@@ -35,9 +36,10 @@ exports.loadSummaryCoursesByUsersAndCourses = async (
         left outer join taxonomies tx 
           on tx.id = sc.status_id
 
-        where 
+        where
+         sc.deleted_at is null and
           c.active = 1 and s.active = 1
-          and sc.status_id = 4568 -- aprobados
+          ${only_approved  ? 'and sc.status_id = 4568 ' : ''}
           and sc.course_id in (${courses_id.join()})
           and sc.user_id in (${users_id.join()})
       `;
@@ -74,7 +76,8 @@ exports.loadSummaryCoursesByUsersAndCoursesTopics = async (
         join summary_courses sc 
           on sc.course_id = c.id and cs.course_id = c.id 
 
-        where 
+        where
+         sc.deleted_at is null and
           c.active = 1 and s.active = 1
           and sc.status_id = 4568
           and sc.course_id in (${courses_id.join()})
