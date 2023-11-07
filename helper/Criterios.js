@@ -110,7 +110,7 @@ exports.getWorkspaceCriteriaByCodes = async (workspaceId, codes = '') => {
         where 
             w.id = :workspaceId and 
             ${codes.length > 0 ? ` c.code in (${codes}) and ` : ''}
-            c.show_in_reports = 1 and
+            cw.available_in_reports = 1 and
             w.active = 1 and
             c.active = 1
         group by c.id
