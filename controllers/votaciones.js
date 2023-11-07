@@ -68,6 +68,7 @@ async function exportarVotacionesDW({ workspaceId, campaigns, CampaignsActivos, 
 
   // === criterios by workspaceid ===
   const workspaceCriteriaCodes = await getWorkspaceCriteriaByCodes(workspaceId);
+  
   // const criteriaHeaders = JSON.parse(JSON.stringify(workspaceCriteriaCodes));
   // const criteriaHeaders = JSON.parse(JSON.stringify(workspaceCriteriaCodes)).slice().sort((a,b)=>{
   //   const indexA = workspaceCriteriaCodes.indexOf(a.code);
