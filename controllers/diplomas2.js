@@ -9,8 +9,14 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
 const { response } = require('../response');
 const sequelize = require('../sequelize.js');
 const { Op } = require('sequelize');
-
 /* helpers */
+const {
+  getGenericHeadersByCriterioCodes,
+  getWorkspaceCriteriaByCodes
+} = require('../helper/Criterios');
+const {
+  getUserCriterionValues2,
+} = require('../helper/Usuarios');
 const { logtime, pluck } = require('../helper/Helper');
 const { getSchoolStatesWorkspace,
   getSchoolCoursesStates,
@@ -23,12 +29,26 @@ const { loadCompatiblesIds, loadCompatiblesId } = require('../helper/CoursesTopi
 const { con } = require('../db')
 const { getUsers } = require('../helper/Usuarios')
 
-const defaultHeaders = [
+let defaultHeaders = [
   'Módulo', // modulo user
   'Apellidos y Nombres',
   'Dni',
   'Estado (usuario)', // active user
 
+  // 'Escuela', // school
+  // 'Estado (escuela)', // school estado active
+
+  // 'Tipo de curso', // tipo de curso
+  // 'Curso',
+  // 'Estado (curso)',
+
+  // 'Fecha en la que obtuvo el diploma', // issue DD/MM/YYYY
+  // 'Fecha de aceptación del usuario', // accepted DD/MM/YYYY
+  // 'Link ver diploma',
+  // 'Link descarga diploma',
+  // 'Curso compatible'
+];
+const headersReport = [
   'Escuela', // school
   'Estado (escuela)', // school estado active
 
@@ -41,8 +61,7 @@ const defaultHeaders = [
   'Link ver diploma',
   'Link descarga diploma',
   'Curso compatible'
-];
-
+]
 async function exportarDiplomas({ data, states }) {
 
   const { estados_usuario,
@@ -52,7 +71,16 @@ async function exportarDiplomas({ data, states }) {
   let { workspaceId, modules, date,
     course: course_ids,
     school: school_ids } = data;
-
+    // set criterion user values header
+  let cirterionHeaders = await getWorkspaceCriteriaByCodes(workspaceId);
+  cirterionHeaders.forEach(criterion => {
+    if(criterion.code != 'module'){
+      defaultHeaders.push(criterion.name);
+    }
+  });
+  defaultHeaders = defaultHeaders.concat(headersReport);
+  const workspaceCriteriaCodes = await getWorkspaceCriteriaByCodes(workspaceId);
+  const workspaceCriteriaNames = pluck(workspaceCriteriaCodes.filter(c=>c.code != 'module'), 'name');
   // === schools and courses ===
   const stackSchools = !(school_ids.length)
     ? await getSchoolStatesWorkspace(workspaceId, estados_escuela)
@@ -92,6 +120,7 @@ async function exportarDiplomas({ data, states }) {
   const transformDate = (datetime) => {
     return datetime ? moment(datetime).format('DD/MM/YYYY') : '-'
   }
+  let StackUserCriterios = {};
 
   for (const summary of summariesWithCompatibleDiplomas) {
     const cellRow = []
@@ -120,7 +149,14 @@ async function exportarDiplomas({ data, states }) {
     cellRow.push(summary.user_fullname)
     cellRow.push(summary.user_document)
     cellRow.push(summary.user_active ? 'Activo' : 'Inactivo')
-
+    if(StackUserCriterios[summary.user_id]) {
+      const StoreUserValues = StackUserCriterios[summary.user_id];
+      StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+    } else {
+      const userValues = await getUserCriterionValues2(summary.user_id, workspaceCriteriaNames);
+      userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+      StackUserCriterios[summary.user_id] = userValues; 
+    }
     cellRow.push(summary.school_name)
     cellRow.push(summary.school_active ? 'Activo' : 'Inactivo')
 
