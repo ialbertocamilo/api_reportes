@@ -120,15 +120,15 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
 
   let message = `No se encontraron resultados para tu reporte "${reportName}".`
   let success = false
+  let nombreArchivo = ''
   if (rutaDescarga) {
     message = `Tu reporte "${reportName}" se encuentra listo.`
     success = true
     const partes = rutaDescarga.split('/');
-    const nombreArchivo = partes[partes.length - 1];
-    const urlS3 = await downloadFile(nombreArchivo)
-    console.log(urlS3,'urlDownload')
+    nombreArchivo = partes[partes.length - 1];    
   }
-
+  const urlS3 = await downloadFile(nombreArchivo)
+  console.log(urlS3,'urlDownload')
   console.log('Notify user: report-finished')
   io.sockets.emit('report-finished', {
     adminId: body.adminId,
