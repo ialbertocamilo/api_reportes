@@ -15,7 +15,9 @@ const { logtime } = require('../helper/Helper');
 const { getSchoolStatesWorkspace, 
         getSchoolCoursesStates, 
         BuildQueryAtDate } = require('../helper/Diplomas');
-
+const {
+        getUserCriterionValues2,
+    } = require('../helper/Usuarios');
 /* models */
 const SummaryCourse = require('../models/SummaryCourse');
 const User = require('../models/User');
@@ -25,12 +27,25 @@ const CourseSchool = require('../models/CourseSchool');
 const School = require('../models/School');
 const Taxonomie = require('../models/Taxonomie');
 
-const defaultHeaders = [
+let defaultHeaders = [
     'Módulo', //modulo user
     'Apellidos y Nombres',
     'Dni',
     'Estado (usuario)', //active user
 
+    // 'Escuela', // school 
+    // 'Estado (escuela)',// school estado active
+    
+    // 'Tipo de curso', // tipo de curso
+    // 'Curso',
+    // 'Estado (curso)',
+    
+    // 'Fecha en la que obtuvo el diploma', // issue DD/MM/YYYY
+    // 'Fecha de aceptación del usuario', // accepted DD/MM/YYYY
+    // 'Link ver diploma',
+    // 'Link descarga diploma'
+];
+const headersReport = [
     'Escuela', // school 
     'Estado (escuela)',// school estado active
     
@@ -42,8 +57,7 @@ const defaultHeaders = [
     'Fecha de aceptación del usuario', // accepted DD/MM/YYYY
     'Link ver diploma',
     'Link descarga diploma'
-];
-
+]
 async function exportarDiplomas({ data, states }) {
     
     const { estados_usuario, 
@@ -53,7 +67,10 @@ async function exportarDiplomas({ data, states }) {
     const { workspaceId, modules, date, 
             course: course_ids,
             school: school_ids } = data;
-
+    // set criterion user values header
+    let headersEstaticos = await getGenericHeadersByCriterioCodes(workspaceId);
+            headersEstaticos.concat(headersReport)
+            defaultHeaders.concat(headersEstaticos)
     // === schools and courses ===
     const stackSchools = !(school_ids.length) ? await getSchoolStatesWorkspace(workspaceId, estados_escuela) : 
                                                 school_ids;
@@ -129,6 +146,7 @@ async function exportarDiplomas({ data, states }) {
     };
     const transformActive = (state) => state ? 'Activo' : 'Inactivo' ;
     //Custom filters
+    let StackUserCriterios = {};
 
     for (const summarie of summaries) {
         
@@ -145,7 +163,15 @@ async function exportarDiplomas({ data, states }) {
         cellRow.push(fullName); // apellidos y nombres
         cellRow.push(user.document); // dni
         cellRow.push(userActive); // estado - user
-
+        if(StackUserCriterios[id]) {
+            const StoreUserValues = StackUserCriterios[id];
+            StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+          } else {
+            const userValues =
+              await getUserCriterionValues2(user.id, workspaceCriteriaNames, defaultsCriteriaIds);
+                userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
+                StackUserCriterios[id] = userValues; 
+          }
         const { school } = course.course_school;
         const schoolActive = transformActive(school.active);
         cellRow.push(school.name); // escuela

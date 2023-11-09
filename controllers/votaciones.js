@@ -7,7 +7,6 @@ require('../error')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { con } = require('../db')
 const { response } = require('../response')
-
 const {
   //constants
   MODALITIES_GROUPS,
@@ -39,8 +38,6 @@ const moment = require('moment')
 
 const Headers = [
   // campaña
-  'FECHA DE INGRESO',
-
   'NOMBRE DE LA CAMPAÑA',
   'CRITERIO',
   'VALOR DE ASOCIACION',
@@ -62,15 +59,24 @@ async function exportarVotacionesDW({ workspaceId, campaigns, CampaignsActivos, 
   const { etapas: campaign_all_etapas } = MODALITIES_GROUPS[0];
 
   // === headers ===
-  let [ headerIdCriterioFecha ] = await getWorkspaceCriteria(workspaceId, [ criterio_id_fecha_inicio_reconocimiento ]);
-  let headersEstaticos = await getGenericHeadersByCriterioCodes(workspaceId," 'module', 'gender', 'position_name', 'date_start', 'seniority_date', 'birthday_date' ");
-      headersEstaticos.push(headerIdCriterioFecha.name);
-
+  // let [ headerIdCriterioFecha ] = await getWorkspaceCriteria(workspaceId, [ criterio_id_fecha_inicio_reconocimiento ]);
+  let headersEstaticos = await getGenericHeadersByCriterioCodes(workspaceId);
+  // const criteriaHeaders = JSON.parse(JSON.stringify(headersEstaticos));
+  // headersEstaticos.push(headerIdCriterioFecha.name);
   await createHeaders(headersEstaticos.concat(Headers));
   // === headers ===
 
   // === criterios by workspaceid ===
-  const workspaceCriteriaCodes = await getWorkspaceCriteriaByCodes(workspaceId, ` 'module', 'gender', 'position_name', 'date_start', 'seniority_date', 'birthday_date', '${headerIdCriterioFecha.code}' `);
+  const workspaceCriteriaCodes = await getWorkspaceCriteriaByCodes(workspaceId);
+  
+  // const criteriaHeaders = JSON.parse(JSON.stringify(workspaceCriteriaCodes));
+  // const criteriaHeaders = JSON.parse(JSON.stringify(workspaceCriteriaCodes)).slice().sort((a,b)=>{
+  //   const indexA = workspaceCriteriaCodes.indexOf(a.code);
+  //   const indexB = workspaceCriteriaCodes.indexOf(b.code);
+  //   if (indexA === -1) return 1;
+  //   if (indexB === -1) return -1;
+  //   return indexA - indexB;
+  // });
   const workspaceCriteriaNames = pluck(workspaceCriteriaCodes, 'name');
   // === criterios by workspaceid ===
 
@@ -139,11 +145,16 @@ async function exportarVotacionesDW({ workspaceId, campaigns, CampaignsActivos, 
       if(StackUserCriterios[id]) {
         const StoreUserValues = StackUserCriterios[id];
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
-
+        workspaceCriteriaCodes.forEach(header => {
+          const userCriterio = StoreUserValues.find( ({ criterion_name }) => criterion_name.toUpperCase() == header.name.toUpperCase())
+          cellRow.push(userCriterio ? userCriterio.criterion_value : '-');
+        });
       } else {
         const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames.concat(campaign_criterio));
-        userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
-
+        workspaceCriteriaCodes.forEach(header => {
+          const userCriterio = userValues.find( ({ criterion_name }) => criterion_name.toUpperCase() == header.name.toUpperCase())
+          cellRow.push(userCriterio ? userCriterio.criterion_value : '-');
+        });
         StackUserCriterios[id] = userValues; 
       }
       // logtime('end: user-criterio', user.id);
@@ -151,8 +162,8 @@ async function exportarVotacionesDW({ workspaceId, campaigns, CampaignsActivos, 
 
 
       // === campaña ===
-      const findCriterioFechaValue = StackUserCriterios[id].find( ({ criterion_name }) => criterion_name == headerIdCriterioFecha.name);
-      cellRow.push(findCriterioFechaValue.criterion_value);
+      // const findCriterioFechaValue = StackUserCriterios[id].find( ({ criterion_name }) => criterion_name == headerIdCriterioFecha.name);
+      // cellRow.push(findCriterioFechaValue ? findCriterioFechaValue.criterion_value : '-');
 
       cellRow.push(campaign.title);
       cellRow.push(campaign_criterio);
