@@ -169,7 +169,7 @@ function getReportFilePath (reportType) {
     case 'temas_no_evaluables': file = 'temas_no_evaluables_v2.js'; break
     case 'user_uploads': file = 'user_uploads.js'; break
     case 'checklist_general': file = 'checklist_general.js'; break
-    case 'checklist_detallado': file = 'checklist_detallado.js'; break
+    case 'checklist_detallado': file = 'checklist_detallado_v2.js'; break
     case 'videoteca': file = 'videoteca.js'; break
     case 'vademecum': file = 'vademecum.js'; break
     case 'diplomas': file = 'diplomas2.js'; break
