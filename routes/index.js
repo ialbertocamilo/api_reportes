@@ -218,7 +218,7 @@ module.exports = {
     })
   },
   checklist_detallado({ body }, res) {
-    const children = fork('./controllers/checklist_detallado.js')
+    const children = fork('./controllers/checklist_detallado_v2.js')
     children.send(body)
     children.on('message', (data) => {
       res.send(data)

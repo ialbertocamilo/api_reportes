@@ -1,7 +1,7 @@
 const { con } = require('../db')
 const { logtime, pluck } = require('./Helper')
 
-exports.getWorkspaceCriteria = async (workspaceId, criteria_id=[]) => {
+exports.getWorkspaceCriteria = async (workspaceId, criteria_id=[],hideModule) => {
   logtime('method: getWorkspaceCriteria')
 
   let query = `
@@ -18,6 +18,7 @@ exports.getWorkspaceCriteria = async (workspaceId, criteria_id=[]) => {
                      : 'w.id = :workspaceId and cw.available_in_reports = 1'}
             
             and c.active = 1
+            ${hideModule ? 'and c.code <> "module"' : ''}
         group by c.id
         order by c.position
     `
@@ -85,7 +86,15 @@ exports.getGenericHeaders = async (workspaceId,criteria_id=[]) => {
   workspaceCriteria.forEach(el => headers.push(el.name))
   return headers
 }
-
+exports.getGenericHeadersV2 = async ({workspaceId,headersDefault=[]})=>{
+  let headers = [
+    'Módulo','Nombre', 'Apellido Paterno', 'Apellido Materno',
+    'Documento', 'Estado (Usuario)'
+  ]
+  const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId);
+  workspaceCriteria.filter(c=> c.code != 'module').forEach(el => (el.name) && headers.push(el.name));
+  return [headers.concat(headersDefault),workspaceCriteria];
+}
 exports.getGenericHeadersByCriterioCodes = async (workspaceId, codes = '') => {
   const headers = [
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
