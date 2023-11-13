@@ -13,5 +13,6 @@ const sequelize = new Sequelize(config.DATABASE, config.USER, config.PASSWORD, {
     write: { host: config.HOST_WRITE, username: config.USER,  password:config.PASSWORD }
   },
 })
-console.log('Conectado a la base de datos', sequelize)
+
+
 module.exports = sequelize
