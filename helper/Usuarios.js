@@ -373,6 +373,7 @@ exports.loadUsersBySubWorspaceIds = async (
 
   ` 
     select
+      u.subworkspace_id,
       u.id, u.name,
       u.lastname, u.surname, u.email,
       u.document, u.active, u.last_login
