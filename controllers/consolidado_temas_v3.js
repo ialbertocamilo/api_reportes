@@ -297,7 +297,7 @@ async function exportarUsuariosDW({
         }
 
       cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
-      cellRow.push(qualification.name)
+      cellRow.push(qualification ? qualification.name : 'No evaluable')
       cellRow.push(getTopicCourseGrade(user.topic_grade, qualification.position))
       // cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
