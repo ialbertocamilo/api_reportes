@@ -17,6 +17,7 @@ module.exports = {
   DB_PORT: process.env.DB_PORT || 3306,
   DATABASE: process.env.DB_NAME,
   HOST: process.env.DB_HOST,
+  HOST_WRITE: process.env.DB_HOST_WRITE,
   USER: process.env.DB_USER,
   PASSWORD: process.env.DB_PASS,
 
