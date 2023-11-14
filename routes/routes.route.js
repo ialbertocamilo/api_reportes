@@ -26,7 +26,7 @@ module.exports = function (io) {
   router.post('/notas_usuario', handler.notasUsuario2)
   router.post('/historial_usuario', handler.historialUsuario)
   router.post('/poll-questions', handler.poolQuestions)
-
+  router.post('/evaluations_data', handler.evaluationsData)
   //  Reports with queues and push notifications
   // ========================================
 
