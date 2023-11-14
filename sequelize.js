@@ -11,7 +11,9 @@ const sequelize = new Sequelize(config.DATABASE, config.USER, config.PASSWORD, {
       { host: config.HOST, username: config.USER,  password:config.PASSWORD}      
     ],
     write: { host: config.HOST_WRITE, username: config.USER,  password:config.PASSWORD }
+    
   },
+
 })
 
 module.exports = sequelize
