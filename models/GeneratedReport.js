@@ -2,7 +2,6 @@ const { Model, DataTypes: { INTEGER, STRING, BOOLEAN, BIGINT, DATE } } = require
 const sequelize = require('../sequelize.js')
 const Workspace = require('./Workspace')
 const User = require('./Usuario')
-
 class GeneratedReport extends Model {
 
 }
