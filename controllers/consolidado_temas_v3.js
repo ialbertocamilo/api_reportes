@@ -314,7 +314,8 @@ async function exportarUsuariosDW({
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
       cellRow.push(user.topic_views || '-')
-      cellRow.push(user.minimum_grade || '-')
+      // cellRow.push(user.minimum_grade || '-')
+      cellRow.push(qualification ? getTopicCourseGrade(user.minimum_grade, qualification.position) : '-') // minimum_grade
       cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY') : '-')
       cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('H:mm:ss') : '-')
 
