@@ -13,6 +13,7 @@ const AWS_ENDPOINT = process.env.AWS_ENDPOINT
 const MARCA = process.env.MARCA
 
 module.exports = {
+  
   PORT: process.env.PORT || 3000,
   DB_PORT: process.env.DB_PORT || 3306,
   DATABASE: process.env.DB_NAME,
