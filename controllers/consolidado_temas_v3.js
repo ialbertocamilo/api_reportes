@@ -7,7 +7,7 @@ require('../error')
 const _ = require('lodash')
 const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
-const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
+const { getGenericHeadersV2, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
 const { pluck, logtime, groupArrayOfObjects,setCustomIndexAtObject  } = require('../helper/Helper')
@@ -39,7 +39,7 @@ const { loadSummaryCoursesByUsersAndCoursesTopics } = require('../helper/Summari
 
 moment.locale('es')
 
-let headers = [
+let headersDefault = [
   'ULTIMA SESIÓN',
   'ESCUELA',
   'CURSO',
@@ -58,7 +58,8 @@ let headers = [
   'TIPO TEMA',
   'VISITAS TEMA',
   'PJE. MINIMO APROBATORIO',
-  'ULTIMA EVALUACIÓN',
+  'ULTIMA EVALUACIÓN (FECHA)',
+  'ULTIMA EVALUACIÓN (HORA)',
   'CURSO COMPATIBLE' // nombre del curso
 ]
 
@@ -84,8 +85,8 @@ async function exportarUsuariosDW({
 }) {
   // Generate Excel file header
 
-  const headersEstaticos = await getGenericHeaders(workspaceId)
-  await createHeaders(headersEstaticos.concat(headers))
+  const [headersEstaticos,workspaceCriteria] = await getGenericHeadersV2({workspaceId,headersDefault})
+  await createHeaders(headersEstaticos)
 
   if (validador) {
     headers = headers.concat([
@@ -96,8 +97,10 @@ async function exportarUsuariosDW({
 
   // Load workspace criteria
 
-  const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
-  const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+  // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
+  // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
+  const workspaceCriteriaNames = pluck(workspaceCriteria.filter(c=>c.code != 'module'), 'name');
+  const subworkspaces = await getSuboworkspacesIds(workspaceId,'all')
 
   // When no modules are provided, get its ids using its parent id
 
@@ -245,6 +248,9 @@ async function exportarUsuariosDW({
       if (!userStore) continue;
 
       const lastLogin = moment(userStore.last_login).format('DD/MM/YYYY H:mm:ss')
+      const subworkspace= subworkspaces.find(s => s.id == userStore.subworkspace_id);
+      // Add default values
+      cellRow.push(subworkspace.name || '-')
       cellRow.push(userStore.name)
       cellRow.push(userStore.lastname)
       cellRow.push(userStore.surname)
@@ -297,8 +303,8 @@ async function exportarUsuariosDW({
         }
 
       cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
-      cellRow.push(qualification.name)
-      cellRow.push(getTopicCourseGrade(user.topic_grade, qualification.position))
+      cellRow.push(qualification ? qualification.name : '-')
+      cellRow.push(qualification ? getTopicCourseGrade(user.topic_grade, qualification.position) : '-')
       // cellRow.push(user.topic_grade || '-')
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
@@ -308,8 +314,10 @@ async function exportarUsuariosDW({
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
       cellRow.push(user.topic_views || '-')
-      cellRow.push(user.minimum_grade || '-')
-      cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY H:mm:ss') : '-')
+      // cellRow.push(user.minimum_grade || '-')
+      cellRow.push(qualification ? getTopicCourseGrade(user.minimum_grade, qualification.position) : '-') // minimum_grade
+      cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY') : '-')
+      cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('H:mm:ss') : '-')
 
       cellRow.push(user.compatible || `-`);
       

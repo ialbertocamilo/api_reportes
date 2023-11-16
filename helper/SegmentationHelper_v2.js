@@ -367,7 +367,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
     // === filtro para fecha ===
 
     // === filtro para topics ===
-    let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ``;
+    let where_in_topics = (temas.length) ? ` and t.id in(${temas.join()}) `: ` and t.deleted_at is null `;
     let where_active_topics = '';
     if(activeTopics && !inactiveTopics) where_active_topics += `and t.active = 1`;
     if(!activeTopics && inactiveTopics) where_active_topics += `and t.active = 0`;

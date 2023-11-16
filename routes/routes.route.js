@@ -27,7 +27,7 @@ module.exports = function (io) {
   router.post('/notas_usuario', handler.notasUsuario2)
   router.post('/historial_usuario', handler.historialUsuario)
   router.post('/poll-questions', handler.poolQuestions)
-
+  router.post('/evaluations_data', handler.evaluationsData)
   //  Reports with queues and push notifications
   // ========================================
 
@@ -172,7 +172,7 @@ function getReportFilePath (reportType) {
     case 'temas_no_evaluables': file = 'temas_no_evaluables_v2.js'; break
     case 'user_uploads': file = 'user_uploads.js'; break
     case 'checklist_general': file = 'checklist_general.js'; break
-    case 'checklist_detallado': file = 'checklist_detallado.js'; break
+    case 'checklist_detallado': file = 'checklist_detallado_v2.js'; break
     case 'videoteca': file = 'videoteca.js'; break
     case 'vademecum': file = 'vademecum.js'; break
     case 'diplomas': file = 'diplomas2.js'; break
