@@ -66,7 +66,8 @@ const headers = [
   'REINICIOS CURSOS',
   'TEMAS ASIGNADOS',
   'TEMAS COMPLETADOS',
-  'ULTIMA EVALUACIÓN',
+  'ULTIMA EVALUACIÓN (FECHA)',
+  'ULTIMA EVALUACIÓN (HORA)',
   'CURSO COMPATIBLE' // nombre del curso
 ];
 
@@ -355,11 +356,18 @@ async function generateSegmentationReport({
       cellRow.push(user.course_restarts || "-");
       cellRow.push(user.assigned || '-');
       cellRow.push(Math.round(completed) || 0);
+      
       cellRow.push(
         user.last_time_evaluated_at
-          ? moment(user.last_time_evaluated_at).format("DD/MM/YYYY H:mm:ss")
+          ? moment(user.last_time_evaluated_at).format("DD/MM/YYYY ")
           : "-"
       );
+      cellRow.push(
+        user.last_time_evaluated_at
+          ? moment(user.last_time_evaluated_at).format("H:mm:ss")
+          : "-"
+      );
+
       cellRow.push(user.compatible || `-`);
 
       // añadir fila 
