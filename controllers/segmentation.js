@@ -9,12 +9,14 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs')
 const { response } = require('../response')
 const {  loadUsersSegmented, loadCourses } = require('../helper/SegmentationHelper')
 const {  loadCoursesStatuses } = require('../helper/CoursesTopicsHelper')
+const { getSuboworkspacesIds } = require('../helper/Workspace')
 
 const { con } = require('../db')
 
 // Headers for Excel file
 
 const headers = [
+    'Módulo',
     'Nombre','Apellido Paterno', 'Apellido Materno',
     'Documento','EMAIL',
     'ESCUELA',
@@ -38,11 +40,16 @@ async function generateSegmentationReport ({
   
   const courses = await loadCourses({cursos:courses_s,escuelas,tipocurso:'include_free'},workspaceId); 
   const coursesStatuses = await loadCoursesStatuses();
+  const subworkspaces = await getSuboworkspacesIds(workspaceId,'all')
+
   for (const course of courses) {
     const users = await loadUsersSegmented(course.course_id,true)
     for (const user of users) {
         const cellRow = []
         const user_status = (user.status_id) ? coursesStatuses.find(status=>status.id == user.status_id) : {name:'Pendiente'};
+        const subworkspace= subworkspaces.find(s => s.id == user.subworkspace_id);
+        // Add default values
+        cellRow.push(subworkspace ? subworkspace.name : '-')
         cellRow.push(user.name)
         cellRow.push(user.lastname)
         cellRow.push(user.surname)
