@@ -8,6 +8,7 @@ const sequelize = new Sequelize(config.DATABASE, config.USER, config.PASSWORD, {
   logging: false,
   timezone: '-05:00',
   replication: {
+    
     read: [
       { host: config.HOST, username: config.USER,  password:config.PASSWORD}      
     ],
