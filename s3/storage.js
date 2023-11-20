@@ -8,7 +8,7 @@ const { client } = require('../helper/s3-helpers.js')
 
 const uploadFile = async (filePath) => {
   try {
-
+    if(filePath === undefined) return
     const fileName = path.basename(filePath);
     const fileStream = fs.createReadStream(CARPETA_DESCARGA+'/'+fileName)
     console.log(CARPETA_DESCARGA+'/'+fileName)
@@ -30,6 +30,7 @@ const uploadFile = async (filePath) => {
 
 function downloadFile(filePath) {
   try{
+    if(!filePath ) return
     const expiresIn = 60 * 5
   
     const command = new GetObjectCommand({
