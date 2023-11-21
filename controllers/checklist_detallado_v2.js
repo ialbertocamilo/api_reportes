@@ -56,7 +56,7 @@ process.on('message', requestData => {
     for (const checklistId of checklistIds) {
         let userIdsSegmentedToChecklist = await loadUserIdsForChecklist ([checklistId], subworkspaces_id)
         const users = await loadUsersCheckists(
-            subworkspaces_id, checklist, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas, userIdsSegmentedToChecklist
+            subworkspaces_id, checklistId, curso, escuela, UsuariosActivos, UsuariosInactivos, start, end, areas, userIdsSegmentedToChecklist
         )
         // const usersIds = pluck(users, 'id')
         // const usersCriterionValues = await loadUsersCriteriaValues(subworkspaces_id, usersIds,false)
@@ -203,7 +203,7 @@ process.on('message', requestData => {
     // Add group sentence
   
     query += ' group by u.id ,cai.checklist_item_id'
-  
+    console.log(query);
     // Execute query
     // logtime(query);
     let [rows] = await con.raw(query, { })
