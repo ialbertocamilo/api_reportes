@@ -6,7 +6,6 @@ class GeneratedReport extends Model {
 
 }
 
-
 GeneratedReport.init({
   id: {
     type: INTEGER,
