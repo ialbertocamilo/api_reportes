@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+const axios = require('axios')
 
 const queue = require('express-queue')
 const cors = require('cors')
@@ -11,9 +12,8 @@ require('./cron')
 const handler = require('./routes')
 const { restartQueueExecution } = require('./helper/Queue')
 const moment = require('moment-timezone')
-
+const { downloadFile } = require('./s3/storage')
 // Server config
-
 // app.use(queue({ activeLimit: 10, queuedLimit: -1 }))
 app.use(cors())
 app.use(express.json())
@@ -74,7 +74,20 @@ app.post('/reports/queue/started/:workspaceId', async (req, res) => {
   const protocol = process.env.IS_LOCALHOST == 1 ? 'http' : 'https'
   res.json({ started: await restartQueueExecution(io, req.body.adminId, req.params.workspaceId, protocol + '://' + req.headers.host) })
 })
-app.get('/reports/:filename', (req, res) => {
-  const file = CARPETA_DESCARGA + `/${req.params.filename}`
-  res.download(file)
+
+app.get('/reports/:filename', async (req, res) => {  
+  const urlArchivoAmazon = await downloadFile(req.params.filename)
+  try {
+      const response = await axios({
+        method: 'GET',
+        url: urlArchivoAmazon,
+        responseType: 'stream',
+      });
+
+      res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+      response.data.pipe(res);
+    } catch (error) {
+      console.error('Error en la solicitud:', error.message);
+      res.status(500).send('Error al descargar el archivo.');
+    }
 })

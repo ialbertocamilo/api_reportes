@@ -10,4 +10,5 @@ exports.con = require('knex')({
     password: config.PASSWORD,
     database: config.DATABASE
   }
+  
 })

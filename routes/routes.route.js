@@ -10,6 +10,7 @@ const {
 } = require('../helper/Queue')
 const { fork } = require('child_process')
 const { reportErrorInSlackError } = require('../helper/Slack')
+const { uploadFile,downloadFile } = require('../s3/storage')
 
 module.exports = function (io) {
   router.get('/', async (req, res) => {
@@ -96,7 +97,6 @@ module.exports = function (io) {
 const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed) => {
 
   const rutaDescarga = result ? result.ruta_descarga : ''
-
   await markReportAsReady(
     reportType,
     rutaDescarga || '',
@@ -114,25 +114,29 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
       File: ${getReportFilePath(reportType)}
     `)
   }
+  uploadFile(rutaDescarga)  
 
   // Broadcast event to frontend
 
   let message = `No se encontraron resultados para tu reporte "${reportName}".`
   let success = false
+  let nombreArchivo = ''
   if (rutaDescarga) {
     message = `Tu reporte "${reportName}" se encuentra listo.`
     success = true
+    const partes = rutaDescarga.split('/');
+    nombreArchivo = partes[partes.length - 1];    
   }
-
+  const urlS3 = await downloadFile(nombreArchivo)
+  console.log(urlS3,'urlDownload')
   console.log('Notify user: report-finished')
   io.sockets.emit('report-finished', {
     adminId: body.adminId,
     success,
     message,
     name: reportName,
-    url: rutaDescarga || null
+    url: urlS3 || null
   })
-
   // Start the next report
 
   const nextReport = await findNextPendingReport(body.workspaceId)
@@ -145,7 +149,6 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
 
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
-
   children.kill()
 }
 
