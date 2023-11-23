@@ -12,7 +12,7 @@ require('./cron')
 const handler = require('./routes')
 const { restartQueueExecution } = require('./helper/Queue')
 const moment = require('moment-timezone')
-const { downloadFile } = require('./s3/storage')
+const { downloadFile,donwloadFileApp } = require('./s3/storage')
 // Server config
 // app.use(queue({ activeLimit: 10, queuedLimit: -1 }))
 app.use(cors())
@@ -76,6 +76,8 @@ app.post('/reports/queue/started/:workspaceId', async (req, res) => {
 })
 
 app.get('/reports/:filename', async (req, res) => {  
+  const file = CARPETA_DESCARGA + `/${req.params.filename}`
+  res.download(file)
   const urlArchivoAmazon = await downloadFile(req.params.filename)
   try {
       const response = await axios({
@@ -83,11 +85,10 @@ app.get('/reports/:filename', async (req, res) => {
         url: urlArchivoAmazon,
         responseType: 'stream',
       });
-
       res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
       response.data.pipe(res);
     } catch (error) {
-      console.error('Error en la solicitud:', error.message);
-      res.status(500).send('Error al descargar el archivo.');
+      console.log('Descarga desde app');
+      // res.status(500).send('Error al descargar el archivo.');
     }
 })
