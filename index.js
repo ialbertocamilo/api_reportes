@@ -76,17 +76,17 @@ app.post('/reports/queue/started/:workspaceId', async (req, res) => {
 })
 
 app.get('/reports/:filename', async (req, res) => {  
+  const file = CARPETA_DESCARGA + `/${req.params.filename}`
+  res.download(file)
   const urlArchivoAmazon = await downloadFile(req.params.filename)
   try {
-      // const response = await axios({
-      //   method: 'GET',
-      //   url: urlArchivoAmazon,
-      //   responseType: 'stream',
-      // });
-      donwloadFileApp(urlArchivoAmazon,req.params.filename)
-
-      // res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
-      // response.data.pipe(res);
+      const response = await axios({
+        method: 'GET',
+        url: urlArchivoAmazon,
+        responseType: 'stream',
+      });
+      res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+      response.data.pipe(res);
     } catch (error) {
       console.error('Error en la solicitud:', error.message);
       res.status(500).send('Error al descargar el archivo.');
