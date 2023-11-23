@@ -12,7 +12,7 @@ require('./cron')
 const handler = require('./routes')
 const { restartQueueExecution } = require('./helper/Queue')
 const moment = require('moment-timezone')
-const { downloadFile,donwloadFileApp } = require('./s3/storage')
+const { downloadFile } = require('./s3/storage')
 // Server config
 // app.use(queue({ activeLimit: 10, queuedLimit: -1 }))
 app.use(cors())
