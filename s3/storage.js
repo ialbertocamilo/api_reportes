@@ -69,4 +69,3 @@ function donwloadFileApp(url,name) {
   }
 }
 module.exports = { uploadFile, downloadFile,donwloadFileApp }
-storage.js  
