@@ -12,7 +12,7 @@ require('./cron')
 const handler = require('./routes')
 const { restartQueueExecution } = require('./helper/Queue')
 const moment = require('moment-timezone')
-const { downloadFile } = require('./s3/storage')
+const { downloadFile,donwloadFileApp } = require('./s3/storage')
 // Server config
 // app.use(queue({ activeLimit: 10, queuedLimit: -1 }))
 app.use(cors())
@@ -78,14 +78,15 @@ app.post('/reports/queue/started/:workspaceId', async (req, res) => {
 app.get('/reports/:filename', async (req, res) => {  
   const urlArchivoAmazon = await downloadFile(req.params.filename)
   try {
-      const response = await axios({
-        method: 'GET',
-        url: urlArchivoAmazon,
-        responseType: 'stream',
-      });
+      // const response = await axios({
+      //   method: 'GET',
+      //   url: urlArchivoAmazon,
+      //   responseType: 'stream',
+      // });
+      donwloadFileApp(urlArchivoAmazon,req.params.filename)
 
-      res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
-      response.data.pipe(res);
+      // res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+      // response.data.pipe(res);
     } catch (error) {
       console.error('Error en la solicitud:', error.message);
       res.status(500).send('Error al descargar el archivo.');
