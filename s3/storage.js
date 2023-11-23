@@ -5,6 +5,7 @@ const { PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
 const { CARPETA_DESCARGA } = require("../config");
 const { client } = require('../helper/s3-helpers.js')
+const FileSaver = require("file-saver");
 
 const uploadFile = async (filePath) => {
   try {
