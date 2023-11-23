@@ -27,7 +27,6 @@ const uploadFile = async (filePath) => {
   }
 }
 
-
 function downloadFile(filePath) {
   try{
     if(!filePath ) return
