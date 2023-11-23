@@ -88,7 +88,7 @@ app.get('/reports/:filename', async (req, res) => {
       res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
       response.data.pipe(res);
     } catch (error) {
-      console.error('Error en la solicitud:', error.message);
-      res.status(500).send('Error al descargar el archivo.');
+      console.log('Descarga desde app');
+      // res.status(500).send('Error al descargar el archivo.');
     }
 })
