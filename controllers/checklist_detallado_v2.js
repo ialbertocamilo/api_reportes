@@ -177,7 +177,7 @@ process.on('message', requestData => {
       c.id = cr.course_id
   `;
     //a checklist could be associated with one or more courses
-    let staticCondition = ` where u.id in (${userIdsSegmentedToChecklist.toString()}) and cli.deleted_at is null  `
+    let staticCondition = ` where u.id in (${userIdsSegmentedToChecklist.toString()}) and cli.deleted_at is null and tu.active=1 `
     // ca.school_id in (${schoolId}) and
     // cr.course_id in (${courseId}) and
     if (areas.length > 0) {
@@ -203,7 +203,6 @@ process.on('message', requestData => {
     // Add group sentence
   
     query += ' group by u.id ,cai.checklist_item_id'
-    console.log(query);
     // Execute query
     // logtime(query);
     let [rows] = await con.raw(query, { })

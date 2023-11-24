@@ -33,6 +33,15 @@ module.exports = {
       children.kill()
     })
   },
+  notasUsuario3({ body }, res) {
+    const children = fork('./controllers/notas_usuario3.js')
+    children.send(body)
+
+    children.on('message', datos => {
+      res.send(datos)
+      children.kill()
+    })
+  },
   // * Historial usuario
   historialUsuario ({ body }, res) {
     const children = fork('./controllers/historial_usuario.js')
