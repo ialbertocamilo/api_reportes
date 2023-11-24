@@ -90,7 +90,6 @@ exports.markReportAsReady = async (
       is_ready: false
     }
   })
-
   if (reports[0]) {
     reports[0].is_ready = 1
     reports[0].is_processing = 0

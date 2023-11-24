@@ -4,6 +4,7 @@ const cron = require("node-cron");
 const { CARPETA_DESCARGA } = require("./config");
 // Cron schedule = sec | min | hour | day | month | dayofweek
 
+
 cron.schedule("0 0 3 * * *", () => {
   borrarArchivos(CARPETA_DESCARGA);
 });
