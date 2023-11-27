@@ -29,6 +29,8 @@ module.exports = function (io) {
   router.post('/historial_usuario', handler.historialUsuario)
   router.post('/poll-questions', handler.poolQuestions)
   router.post('/evaluations_data', handler.evaluationsData)
+  router.post('/evaluations_detail_data', handler.evaluationsDetailData)
+
   //  Reports with queues and push notifications
   // ========================================
 
@@ -183,6 +185,8 @@ function getReportFilePath (reportType) {
     case 'benefit_report': file = 'benefit_report.js'; break
     case 'user_benefit_report': file = 'user_benefit_report.js'; break
     case 'users_history': file = 'users_history.js'; break
+    case 'evaluations_excel': file = 'evaluations_excel.js'; break
+    case 'evaluations_detail_excel': file = 'evaluations_detail_excel.js'; break
   }
 
   return `./controllers/${file}`
