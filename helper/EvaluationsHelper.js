@@ -23,20 +23,22 @@ async function loadAllEvaluationsResults({ type, modulos, escuelas, cursos, tema
             total_incorrects
           } = topic;
     const subworkspaces = schoolsSubworkspacesResult[school_id];
-    const subworkspaces_names = subworkspaces.filter((ele) => modulos.includes(ele.id) )
-                                             .map((ele) => ele.name)
-                                             .join(', ');
-    topicResultData.push({ 
-      topic_id, 
-      subworkspaces_names, 
-      school_name, 
-      course_name, 
-      topic_name, 
-      total_corrects: total_corrects || 0,
-      total_incorrects: total_incorrects || 0,
-      total_evaluations
-    });
 
+    if (subworkspaces) {
+      const subworkspaces_names = subworkspaces.filter((ele) => modulos.includes(ele.id) )
+        .map((ele) => ele.name)
+        .join(', ');
+      topicResultData.push({
+        topic_id,
+        subworkspaces_names,
+        school_name,
+        course_name,
+        topic_name,
+        total_corrects: total_corrects || 0,
+        total_incorrects: total_incorrects || 0,
+        total_evaluations
+      });
+    }
   }
   return topicResultData
 } 
