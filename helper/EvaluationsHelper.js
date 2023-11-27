@@ -25,6 +25,7 @@ async function loadAllEvaluationsResults({ type, modulos, escuelas, cursos, tema
     const subworkspaces = schoolsSubworkspacesResult[school_id];
 
 
+
     if (subworkspaces) {
       const subworkspaces_names = subworkspaces.filter((ele) => modulos.includes(ele.id) )
         .map((ele) => ele.name)
