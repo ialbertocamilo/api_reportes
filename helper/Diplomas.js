@@ -222,10 +222,9 @@ exports.generateConditions = (
           )
       `
     }
-
+    // c.show_certification_to_user = 1 and
     return `
       (
-        c.show_certification_to_user = 1 and
         certification_issued_at is not null
         ${datesCondition}
         and
