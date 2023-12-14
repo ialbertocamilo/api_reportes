@@ -218,6 +218,7 @@ module.exports = {
           (select * from courses inner join course_school on courses.id = course_school.course_id where s.id = course_school.school_id and can_create_certificate_dc3_dc4 = 1 and courses.deleted_at is null) 
         `
     }
+    console.log(query,hasDC3);
     if (grouped) {
       query += ' group by s.id'
     }

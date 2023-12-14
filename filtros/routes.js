@@ -54,8 +54,7 @@ router.get('/schools/:workspaceId/:adminId?', async (req, res) => {
   } else {
     grouped = req.query.grouped === '1'
   }
-  const hasDc3 = Boolean(req.params.hasDc3);
-
+  const hasDc3 = Boolean(req.query.hasDc3);
   const datos = await tablas.loadsubworkspaceSchools(req.params.workspaceId, grouped, req.params.adminId,hasDc3)
   res.json(datos)
 })
