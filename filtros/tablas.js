@@ -176,7 +176,7 @@ module.exports = {
    *
    * @returns {Promise<*>}
    */
-  async loadsubworkspaceSchools (workspaceId, grouped, adminId) {
+  async loadsubworkspaceSchools (workspaceId, grouped, adminId,hasDC3) {
     console.log(adminId,'adminId');
     if (typeof grouped === 'undefined') {
       grouped = true
@@ -213,7 +213,11 @@ module.exports = {
             sw.subworkspace_id in (${subworkspacesIds.join()})
           and s.active = 1
     `
-
+    if(hasDC3){
+      query += ` and exists 
+          (select * from courses inner join course_school on courses.id = course_school.course_id where s.id = course_school.school_id and can_create_certificate_dc3_dc4 = 1 and courses.deleted_at is null) 
+        `
+    }
     if (grouped) {
       query += ' group by s.id'
     }

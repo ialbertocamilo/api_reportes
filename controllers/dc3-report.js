@@ -14,7 +14,7 @@ const { zipAndUploadFilesInS3 } = require('../s3/storage')
 const { pluck } = require('../helper/Helper')
 const fs = require('fs');
 
-async function exportarDC3({ type, cursos,reportName }) {
+async function exportarDC3({ type, cursos }) {
     const summariesWitDC3 = await loadSummaries(cursos)
     const fileNames = pluck(summariesWitDC3, 'dc3_path');
     const dateFileName = Date.now();
