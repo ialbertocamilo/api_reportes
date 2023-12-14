@@ -4,10 +4,11 @@ const { generateReportPath } = require('./helper/Queue')
 
 // moment('es')
 exports.response = (responseData) => {
-  const { createAt, modulo, error, alert } = responseData
+  const { createAt, modulo, error, alert,file_ext } = responseData
   if (modulo) {
+    console.log(modulo,createAt,file_ext);
     return {
-      ruta_descarga: generateReportPath(createAt),
+      ruta_descarga: generateReportPath(createAt,file_ext),
       createAt,
       modulo,
       new_name: `${modulo}_${moment(createAt)

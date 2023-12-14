@@ -42,11 +42,12 @@ module.exports = function (io) {
     const skipQueue = !!body.skipQueue
     delete body.filtersDescriptions
     delete body.skipQueue
+    const ext = body.ext || '.xlsx'
 
     let isAvailable = await isServerAvailable(body.workspaceId, body.adminId)
 
     if (!skipQueue) {
-      await registerInQueue(reportType, reportName, body.workspaceId, body.adminId, body, filtersDescriptions)
+      await registerInQueue(reportType, reportName, body.workspaceId, body.adminId, body, filtersDescriptions,ext)
     }
 
     if (skipQueue) {
@@ -141,17 +142,20 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     url: urlS3 || null
   })
   // Start the next report
-
+  console.log('findNextPendingReport');
   const nextReport = await findNextPendingReport(body.workspaceId)
+  console.log(nextReport);
   if (nextReport) {
+    console.log('emit: report-started');
     io.sockets.emit('report-started', {
       report: nextReport,
       adminId: body.adminId
     })
     // Submit a request to start report
-
+    console.log('startNextReport');
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
+  console.log('children.kill');
   children.kill()
 }
 
@@ -187,6 +191,7 @@ function getReportFilePath (reportType) {
     case 'users_history': file = 'users_history.js'; break
     case 'evaluations_excel': file = 'evaluations_excel.js'; break
     case 'evaluations_detail_excel': file = 'evaluations_detail_excel.js'; break
+    case 'dc3-report': file = 'dc3-report';break;
   }
 
   return `./controllers/${file}`

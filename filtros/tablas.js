@@ -177,7 +177,7 @@ module.exports = {
    * @returns {Promise<*>}
    */
   async loadsubworkspaceSchools (workspaceId, grouped, adminId) {
-
+    console.log(adminId,'adminId');
     if (typeof grouped === 'undefined') {
       grouped = true
     }
@@ -306,10 +306,10 @@ module.exports = {
     return rows
   },
   async loadSchoolCoursesStatesById (data) {
-    const { schoolIds, active, inactive } = data;
-    const SqlState = (active && inactive) ? '' :
+    const { schoolIds, active, inactive,can_create_certificate_dc3_dc4 } = data;
+    let SqlState = (active && inactive) ? '' :
                      `and c.active = ${active ? 1 : 0}`;
-
+    (can_create_certificate_dc3_dc4) && (SqlState += ' and c.can_create_certificate_dc3_dc4=1 ');
     const [ rows ] = await con.raw(`
       select
         c.*
