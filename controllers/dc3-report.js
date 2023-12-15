@@ -16,6 +16,9 @@ const fs = require('fs');
 
 async function exportarDC3({ type, cursos }) {
     const summariesWitDC3 = await loadSummaries(cursos)
+    if(summariesWitDC3.lenght == 0){
+        process.send({ alert: 'No se encontraron resultados' })
+    }
     const fileNames = pluck(summariesWitDC3, 'dc3_path');
     const dateFileName = Date.now();
     const zipFileName =dateFileName +'.zip';

@@ -7,7 +7,7 @@ const { CARPETA_DESCARGA } = require("../config");
 const { client } = require('../helper/s3-helpers.js')
 const archiver = require('archiver');
 
-const uploadFile = async (filePath) => {
+const uploadFile = async (filePath,unlinkfile=true) => {
   try {
     if(filePath === undefined) return
     const fileName = path.basename(filePath);
@@ -21,7 +21,9 @@ const uploadFile = async (filePath) => {
       Body: fileStream,
     })
     await client.send(compressedCommand)
-    fs.unlinkSync(CARPETA_DESCARGA+'/'+fileName)
+    if(unlinkfile){
+      fs.unlinkSync(CARPETA_DESCARGA+'/'+fileName)
+    }
   } catch (err) {
     console.error(err)
   }
@@ -60,7 +62,7 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
       console.log(`Archivos PDF comprimidos y cargados como ${zipFileName}`);
   });
   zipStream.finalize();
-  await uploadFile(zipFileName);
+  await uploadFile(zipFileName,false);
 }
 async function downloadFileFromS3(fileName) {
   // try {
