@@ -65,7 +65,7 @@ module.exports = function (io) {
       children.stderr.on('data', async (data) => {
 
         // When report execution has finished, notify user
-        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null, true)
+        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null, true,ext)
 
         // Print error log
         console.log(data.toString())
@@ -77,7 +77,7 @@ module.exports = function (io) {
         await reportFinishedHandler(
           protocol, headers, children, io, reportType, reportName, body,
           hasError ? null : result,
-          hasError
+          hasError,ext
         )
       })
 
@@ -98,7 +98,7 @@ module.exports = function (io) {
  * Mark report as ready, broadcast result and start next report
  * @returns {Promise<void>}
  */
-const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed) => {
+const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed,ext) => {
 
   const rutaDescarga = result ? result.ruta_descarga : ''
   await markReportAsReady(
@@ -139,7 +139,8 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     success,
     message,
     name: reportName,
-    url: urlS3 || null
+    url: urlS3 || null,
+    ext:ext
   })
   // Start the next report
   console.log('findNextPendingReport');
