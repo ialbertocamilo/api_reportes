@@ -59,11 +59,18 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
       const {content} = await downloadFileFromS3(filepath);
       zipStream.append(content, { name: pdfFileName });
   }
-  zipWriteStream.on('close', async () => {
-      const zipReadFileStream = fs.createReadStream(zipFileName);
+  // zipWriteStream.on('close', async () => {
+  //     const zipReadFileStream = fs.createReadStream(zipFileName);
+  //     console.log(`Archivos PDF comprimidos y cargados como ${zipFileName}`);
+  // });
+  const closeEventPromise = new Promise((resolve) => {
+    zipWriteStream.on('close', () => {
       console.log(`Archivos PDF comprimidos y cargados como ${zipFileName}`);
+      resolve();
+    });
   });
   zipStream.finalize();
+  await closeEventPromise;
   console.log('zipFileName in zipAndUploadFilesInS3',zipFileName);
   await uploadFile(zipFileName,false);
 }
