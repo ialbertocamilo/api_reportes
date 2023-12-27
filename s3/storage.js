@@ -54,6 +54,7 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
   const zipStream = archiver('zip');
   const zipWriteStream = fs.createWriteStream(zipFileName);
   zipStream.pipe(zipWriteStream);
+  console.log('fileNames',fileNames);
   for (const filepath of fileNames) {
       const pdfFileName = filepath.split('/')[1];
       console.log(filepath,'filepath');
