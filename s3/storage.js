@@ -11,6 +11,8 @@ const uploadFile = async (filePath,unlinkfile=true) => {
   try {
     if(filePath === undefined) return
     const fileName = path.basename(filePath);
+    console.log('filePath in uploadFile',filePath);
+    console.log('fileName in uploadFile',fileName);
     const fileStream = fs.createReadStream(CARPETA_DESCARGA+'/'+fileName)
     console.log('CARPETA_DESCARGA',CARPETA_DESCARGA+'/'+fileName)
     const keyFile = MARCA +'/reports/'+ fileName
@@ -62,6 +64,7 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
       console.log(`Archivos PDF comprimidos y cargados como ${zipFileName}`);
   });
   zipStream.finalize();
+  console.log('zipFileName in zipAndUploadFilesInS3',zipFileName);
   await uploadFile(zipFileName,false);
 }
 async function downloadFileFromS3(fileName) {
