@@ -176,8 +176,8 @@ module.exports = {
    *
    * @returns {Promise<*>}
    */
-  async loadsubworkspaceSchools (workspaceId, grouped, adminId) {
-
+  async loadsubworkspaceSchools (workspaceId, grouped, adminId,hasDC3) {
+    console.log(adminId,'adminId');
     if (typeof grouped === 'undefined') {
       grouped = true
     }
@@ -213,7 +213,12 @@ module.exports = {
             sw.subworkspace_id in (${subworkspacesIds.join()})
           and s.active = 1
     `
-
+    if(hasDC3){
+      query += ` and exists 
+          (select * from courses inner join course_school on courses.id = course_school.course_id where s.id = course_school.school_id and can_create_certificate_dc3_dc4 = 1 and courses.deleted_at is null) 
+        `
+    }
+    console.log(query,hasDC3);
     if (grouped) {
       query += ' group by s.id'
     }
@@ -306,10 +311,10 @@ module.exports = {
     return rows
   },
   async loadSchoolCoursesStatesById (data) {
-    const { schoolIds, active, inactive } = data;
-    const SqlState = (active && inactive) ? '' :
+    const { schoolIds, active, inactive,can_create_certificate_dc3_dc4 } = data;
+    let SqlState = (active && inactive) ? '' :
                      `and c.active = ${active ? 1 : 0}`;
-
+    (can_create_certificate_dc3_dc4) && (SqlState += ' and c.can_create_certificate_dc3_dc4=1 ');
     const [ rows ] = await con.raw(`
       select
         c.*

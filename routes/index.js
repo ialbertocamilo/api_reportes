@@ -320,4 +320,12 @@ module.exports = {
       children.kill()
     })
   },
+  dc3Report({body},res){
+    const children = fork('./controllers/dc3-report.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
 }

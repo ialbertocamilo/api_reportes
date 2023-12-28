@@ -28,7 +28,7 @@ exports.isServerAvailable = async (workspaceId, adminId) => {
  * Register report in queue
  */
 exports.registerInQueue = async (
-  reportType, reportName, workspaceId, adminId, filters, filtersDescriptions
+  reportType, reportName, workspaceId, adminId, filters, filtersDescriptions,ext='xlsx'
 ) => {
   try {
     // Check if there is other pending report
@@ -51,12 +51,12 @@ exports.registerInQueue = async (
     if (pendingReports.length === 0) {
 
       await sequelize.query(`
-        insert into generated_reports (report_type, name, workspace_id, admin_id, filters, filters_descriptions, is_ready, created_at)
-        values (?, ?, ?, ?, ?, ?, ?, ?)
+        insert into generated_reports (report_type, name, workspace_id, admin_id, filters, filters_descriptions, is_ready, created_at,ext)
+        values (?, ?, ?, ?, ?, ?, ?, ?,?)
         `,
         {
           type: sequelize.QueryTypes.INSERT,
-          replacements: [reportType, reportName, workspaceId, adminId, JSON.stringify(filters), JSON.stringify(filtersDescriptions), false, getCurrentStringDate()]
+          replacements: [reportType, reportName, workspaceId, adminId, JSON.stringify(filters), JSON.stringify(filtersDescriptions), false, getCurrentStringDate(),ext]
         })
 
       // await GeneratedReport.create({
@@ -199,8 +199,8 @@ exports.restartQueueExecution = async (io, adminId, workspaceId, baseUrl) => {
  * @param createAt
  * @returns {string}
  */
-exports.generateReportPath = (createAt) => {
-  return 'reports/' + createAt + extension
+exports.generateReportPath = (createAt,file_ext=extension) => {
+  return 'reports/' + createAt + file_ext
 }
 
 const getCurrentStringDate = () => {

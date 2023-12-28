@@ -42,11 +42,12 @@ module.exports = function (io) {
     const skipQueue = !!body.skipQueue
     delete body.filtersDescriptions
     delete body.skipQueue
+    const ext = body.ext || '.xlsx'
 
     let isAvailable = await isServerAvailable(body.workspaceId, body.adminId)
 
     if (!skipQueue) {
-      await registerInQueue(reportType, reportName, body.workspaceId, body.adminId, body, filtersDescriptions)
+      await registerInQueue(reportType, reportName, body.workspaceId, body.adminId, body, filtersDescriptions,ext)
     }
 
     if (skipQueue) {
@@ -64,7 +65,7 @@ module.exports = function (io) {
       children.stderr.on('data', async (data) => {
 
         // When report execution has finished, notify user
-        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null, true)
+        await reportFinishedHandler(protocol, headers, children, io, reportType, reportName, body, null, true,ext)
 
         // Print error log
         console.log(data.toString())
@@ -76,7 +77,7 @@ module.exports = function (io) {
         await reportFinishedHandler(
           protocol, headers, children, io, reportType, reportName, body,
           hasError ? null : result,
-          hasError
+          hasError,ext
         )
       })
 
@@ -97,7 +98,7 @@ module.exports = function (io) {
  * Mark report as ready, broadcast result and start next report
  * @returns {Promise<void>}
  */
-const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed) => {
+const reportFinishedHandler = async (protocol, headers, children, io, reportType, reportName, body, result, failed,ext) => {
 
   const rutaDescarga = result ? result.ruta_descarga : ''
   await markReportAsReady(
@@ -138,20 +139,24 @@ const reportFinishedHandler = async (protocol, headers, children, io, reportType
     success,
     message,
     name: reportName,
-    url: urlS3 || null
+    url: urlS3 || null,
+    ext:ext
   })
   // Start the next report
-
+  console.log('findNextPendingReport');
   const nextReport = await findNextPendingReport(body.workspaceId)
+  console.log(nextReport);
   if (nextReport) {
+    console.log('emit: report-started');
     io.sockets.emit('report-started', {
       report: nextReport,
       adminId: body.adminId
     })
     // Submit a request to start report
-
+    console.log('startNextReport');
     startNextReport(nextReport, protocol + '://' + headers.host)
   }
+  console.log('children.kill');
   children.kill()
 }
 
@@ -187,6 +192,7 @@ function getReportFilePath (reportType) {
     case 'users_history': file = 'users_history.js'; break
     case 'evaluations_excel': file = 'evaluations_excel.js'; break
     case 'evaluations_detail_excel': file = 'evaluations_detail_excel.js'; break
+    case 'dc3-report': file = 'dc3-report';break;
   }
 
   return `./controllers/${file}`
