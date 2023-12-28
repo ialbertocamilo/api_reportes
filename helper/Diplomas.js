@@ -111,7 +111,7 @@ exports.generateQuery = (
     select 
       w.name workspace_name,
       u.id user_id,
-      concat(coalesce(u.surname, ''), ' ', coalesce(u.lastname, ''), ' ', coalesce(u.name, '')) user_fullname,
+      concat(coalesce(u.lastname, ''), ' ', coalesce(u.surname, ''), ' ', coalesce(u.name, '')) user_fullname,
       u.document user_document,
       u.active user_active,
       s.name school_name,
