@@ -132,6 +132,7 @@ exports.generateQuery = (
     where
         ${conditions}
   `
+
 }
 
 /**
