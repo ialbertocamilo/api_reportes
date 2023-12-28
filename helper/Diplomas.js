@@ -107,7 +107,6 @@ exports.generateQuery = (
     modulesIds, usersIds, usersStatuses, schoolsIds,
     coursesIds, schoolsStatuses, coursesStatuses, date, compatiblesCoursesIds
   )
-
   return `
     select 
       w.name workspace_name,
