@@ -9,6 +9,7 @@ const { response } = require('../response');
 const { Op } = require('sequelize');
 const { con } = require('../db')
 
+const { AWS_ENDPOINT, AWS_BUCKET_NAME, MARCA } = require('../config.js')
 const { zipAndUploadFilesInS3 } = require('../s3/storage')
 const { pluck } = require('../helper/Helper')
 const fs = require('fs');
@@ -22,10 +23,16 @@ async function exportarRegistroCapacitacion({
     process.send({ alert: 'No se encontraron resultados' })
   }
 
-  const fileNames = pluck(summariesWithRegistros, 'registro_capacitacion_path');
+  const filenames = pluck(summariesWithRegistros, 'registro_capacitacion_path');
+
+  let urls = []
+  filenames.forEach(filename => {
+    urls.push(`${AWS_ENDPOINT}/${AWS_BUCKET_NAME}/${MARCA}/${filename}`)
+  })
+
   const dateFileName = Date.now();
   const zipFileName = dateFileName +'.zip';
-  await zipAndUploadFilesInS3(fileNames, zipFileName);
+  await zipAndUploadFilesInS3(urls, zipFileName);
 
   console.log('End function');
 
