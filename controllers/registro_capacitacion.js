@@ -27,7 +27,7 @@ async function exportarRegistroCapacitacion({
 
   let urls = []
   filenames.forEach(filename => {
-    urls.push(`${AWS_ENDPOINT}/${AWS_BUCKET_NAME}/${MARCA}/${filename}`)
+    urls.push(`${AWS_ENDPOINT}/${AWS_BUCKET_NAME}/${MARCA}${filename}`)
   })
 
   const dateFileName = Date.now();
