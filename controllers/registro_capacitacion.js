@@ -40,7 +40,7 @@ async function loadSummaries(coursesIds) {
     select user_id, registro_capacitacion_path 
     from summary_courses sc 
     where 
-        sc.course_id in ${coursesIds.join(',')} 
+        sc.course_id in (${coursesIds.join(',')})
         and sc.deleted_at is null 
         and sc.registro_capacitacion_path is not null;`
 
