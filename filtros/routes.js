@@ -1,14 +1,16 @@
 const router = require('express').Router()
 const tablas = require('./tablas')
 const { pluck } = require('../helper/Helper')
+const { isSuper } = require('../helper/Usuarios')
 const { loadWorkspaceSegmentationCriteria } = require('../helper/Criterios')
 router.get('/', async (req, res) => {
   res.send('Bienvenido a la api de filtros')
 })
 
 router.get('/datosiniciales/:workspaceId/:adminId', async (req, res) => {
+  const isSuperUser = await isSuper(req.params.adminId)
   const datos = await tablas.datosIniciales(
-    req.params.workspaceId, req.params.adminId
+    req.params.workspaceId, req.params.adminId, isSuperUser
   )
   res.json(datos)
 })

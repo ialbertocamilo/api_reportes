@@ -5,9 +5,9 @@ const { getSuboworkspacesIds, getAdminSubworkpacesIds } = require('../helper/Wor
 const { getCampaignsBySubworspaceId } = require('../helper/Votaciones')
 const knex = require('../db').con
 module.exports = {
-  async datosIniciales(workspaceId, adminId) {
+  async datosIniciales(workspaceId, adminId, isSuperUser) {
     const modules = await this.cargarModulos(workspaceId, adminId)
-    const admins = await this.cargarAdmins(workspaceId)
+    const admins = await this.cargarAdmins(workspaceId, adminId, isSuperUser)
     const vademecums = await this.cargarVademecums(workspaceId)
 
     return {
@@ -47,7 +47,7 @@ module.exports = {
     return rows
   },
 
-  async cargarAdmins(workspaceId) {
+  async cargarAdmins(workspaceId, adminId, isSuperUser) {
 
     const [rows] = await con.raw(`
         select
@@ -55,7 +55,7 @@ module.exports = {
             concat(
                 ifnull(u.name, ''), ' ', 
                 ifnull(u.lastname, ''),' ', 
-                ifnull(u.lastname, '')
+                ifnull(u.surname, '')
             ) as name
         from
             users u inner join assigned_roles ar on ar.entity_id = u.id
@@ -67,9 +67,10 @@ module.exports = {
                     and \`type\` = 'type' 
                     and code = 'cursalab'
             ) 
-            and u.active = 1 
-            and ar.role_id != 1 -- exclude super users
+            and u.active = 1
+            ${isSuperUser ? '' : ' and ar.role_id != 1 '} -- exclude super users
             and ar.scope = :workspaceId
+            order by name
       `,
       { workspaceId })
     return rows
