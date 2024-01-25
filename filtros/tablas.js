@@ -48,20 +48,30 @@ module.exports = {
   },
 
   async cargarAdmins(workspaceId) {
-    const adminRoleId = 3
-    const typeCursalabId = 4556
+
     const [rows] = await con.raw(`
         select
-          u.id, u.name
+            u.id, 
+            concat(
+                ifnull(u.name, ''), ' ', 
+                ifnull(u.lastname, ''),' ', 
+                ifnull(u.lastname, '')
+            ) as name
         from
             users u inner join assigned_roles ar on ar.entity_id = u.id
         where
-            ar.role_id = :adminRoleId and
-            u.type_id <> :typeCursalabId and
-            u.active = 1 and
-            ar.scope = :workspaceId
+            u.type_id <> (
+                select id 
+                from taxonomies
+                where \`group\` = 'user' 
+                    and \`type\` = 'type' 
+                    and code = 'cursalab'
+            ) 
+            and u.active = 1 
+            and ar.role_id != 1 -- exclude super users
+            and ar.scope = :workspaceId
       `,
-      { workspaceId,typeCursalabId ,adminRoleId })
+      { workspaceId })
     return rows
   },
 
