@@ -193,6 +193,7 @@ function getReportFilePath (reportType) {
     case 'evaluations_excel': file = 'evaluations_excel.js'; break
     case 'evaluations_detail_excel': file = 'evaluations_detail_excel.js'; break
     case 'dc3-report': file = 'dc3-report';break;
+    case 'registro_capacitacion': file = 'registro_capacitacion';break;
   }
 
   return `./controllers/${file}`
