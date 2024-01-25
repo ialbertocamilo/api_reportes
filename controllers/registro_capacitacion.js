@@ -18,6 +18,7 @@ async function exportarRegistroCapacitacion({
   type, modulesIds, schoolsIds, coursesIds
 }) {
 
+
   const summariesWithRegistros = await loadSummaries(coursesIds)
   if (summariesWithRegistros.length === 0) {
     process.send({ alert: 'No se encontraron resultados' })
