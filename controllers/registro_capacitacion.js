@@ -131,7 +131,8 @@ async function loadSummaries(modulesIds, courseId) {
       u.surname,
       u.document,
       w.name subworkspace,
-      sc.registro_capacitacion_path 
+      sc.registro_capacitacion_path,
+      sc.last_time_evaluated_at
     from users u 
       inner join workspaces w on w.id = u.subworkspace_id
       left join summary_courses sc on u.id = sc.user_id
