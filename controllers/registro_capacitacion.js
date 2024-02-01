@@ -145,6 +145,7 @@ async function loadSummaries(modulesIds, courseId) {
   return summaries
 }
 
+
 const transformDate = (datetime) => {
   return datetime ? moment(datetime).format('DD/MM/YYYY') : '-'
 }
