@@ -16,7 +16,7 @@ const { CARPETA_DESCARGA } = require('../config')
 const { loadUsersSegmentedv2 } = require('../helper/SegmentationHelper_v2')
 
 async function exportarRegistroCapacitacion({
-  format, modulesIds, schoolsIds, coursesIds
+  ext, modulesIds, schoolsIds, coursesIds
 }) {
 
   let defaultHeaders = [
@@ -30,7 +30,7 @@ async function exportarRegistroCapacitacion({
   //  Generate Excel file
   // ----------------------------------------
 
-  if (format === 'xlsx') {
+  if (ext === 'xlsx') {
     await createHeaders(defaultHeaders)
 
     const courses = await con('courses').where('id', coursesIds[0]);
@@ -59,7 +59,7 @@ async function exportarRegistroCapacitacion({
   //  Generate ZIP file with PDFs files
   // ----------------------------------------
 
-  if (format === 'zip') {
+  if (ext === 'zip') {
 
     const summariesWithRegistros = await loadSignedSummaries(modulesIds, coursesIds)
     if (summariesWithRegistros.length === 0) {
