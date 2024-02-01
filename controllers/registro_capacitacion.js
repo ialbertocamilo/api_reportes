@@ -14,6 +14,7 @@ const { worksheet, workbook, createAt, createHeaders } = require('../exceljs')
 const Excel = require('exceljs')
 const { CARPETA_DESCARGA } = require('../config')
 const { loadUsersSegmentedv2 } = require('../helper/SegmentationHelper_v2')
+const moment = require('moment/moment')
 
 async function exportarRegistroCapacitacion({
   ext, modulesIds, schoolsIds, coursesIds
@@ -24,6 +25,7 @@ async function exportarRegistroCapacitacion({
     'Nombre completo',
     'Documento de identidad',
     'Curso',
+    'Fecha',
     'Firmó'
   ];
 
@@ -42,6 +44,11 @@ async function exportarRegistroCapacitacion({
       cellRow.push(`${summary.name} ${summary.lastname} ${summary.surname}`)
       cellRow.push(summary.document)
       cellRow.push(courses[0].name)
+      cellRow.push(
+        summary.registro_capacitacion_path && summary.last_time_evaluated_at
+        ? transformDate(summary.last_time_evaluated_at)
+        : ''
+      )
       cellRow.push(summary.registro_capacitacion_path ? 'Sí' : 'No')
 
       worksheet.addRow(cellRow).commit()
@@ -137,3 +144,6 @@ async function loadSummaries(modulesIds, courseId) {
   return summaries
 }
 
+const transformDate = (datetime) => {
+  return datetime ? moment(datetime).format('DD/MM/YYYY') : '-'
+}
