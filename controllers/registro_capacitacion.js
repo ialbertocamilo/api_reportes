@@ -80,7 +80,7 @@ async function exportarRegistroCapacitacion({
     await zipAndUploadFilesInS3(urls, zipFileName);
 
     process.send(response({
-      createAt: dateFileName, file_ext:'.zip', modulo: 'RegistroCapacitacion'
+      createAt: dateFileName, file_ext:'.zip', modulo: 'RegistroCapacitacionzip'
     }))
   }
 }
