@@ -10,7 +10,7 @@ const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck, logtime } = require('../helper/Helper')
+const { pluck, logtime, logDurationInSeconds, getDurationInSeconds } = require('../helper/Helper')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition,
   loadUsersBySubWorspaceIds, subworkspacesUsersids
 } = require('../helper/Usuarios')
@@ -55,6 +55,11 @@ async function UsersHistory ({
     'Documento', 'Estado (Usuario)','email'
   ]
   await createHeaders(headersEstaticos.concat(headers))
+
+  // Start benchmark
+
+  logtime(`----> START Users history: ${workspaceId}`)
+  const startTime = new Date();
 
   // When no modules are provided, get its ids using its parent id
 
@@ -129,6 +134,13 @@ async function UsersHistory ({
     worksheet.addRow(cellRow).commit()
   }
 
+  // Finish benchmark
+
+  logtime(
+    `----> END Users history: ${workspaceId} - ` +
+    getDurationInSeconds(startTime, new Date())
+  )
+
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: '-' }))
@@ -149,7 +161,13 @@ async function loadUsersWithCoursesAndTopics (
 
   let query = `
       select
-          u.*,
+          u.name,
+          u.lastname,
+          u.surname,
+          u.document,
+          u.active,
+          u.email,
+          
           group_concat(distinct(s.name) separator ', ') school_name,
           tx.name as course_type,
           group_concat(distinct(old_subworkspace.name) separator ', ') module,

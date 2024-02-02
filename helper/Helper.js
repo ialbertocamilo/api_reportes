@@ -57,6 +57,15 @@ exports.logtime = (message) => {
   console.log(`Seconds:${seconds - 1666736790} Time:${timestamp} |`, message)
 }
 
+/**
+ * Logs difference in seconds from two DateTime objetcts
+ */
+exports.getDurationInSeconds = (startTime, endTime) => {
+  startTime = startTime.getTime();
+  endTime = endTime.getTime();
+  return Math.floor((endTime - startTime) / 1000) + ' seconds';
+}
+
 exports.groupArrayOfObjects = (list, key , type = 'get_object')=>{
   const new_list = list.reduce((rv, x)=>{
     (rv[x[key]] = rv[x[key]] || []).push(x);
