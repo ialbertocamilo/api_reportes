@@ -141,6 +141,7 @@ async function UsersHistory ({
     getDurationInSeconds(startTime, new Date())
   )
 
+
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
       process.send(response({ createAt, modulo: '-' }))
