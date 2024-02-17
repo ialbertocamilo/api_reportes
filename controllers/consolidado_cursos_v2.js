@@ -23,7 +23,8 @@ const {
   getCourseStatusName,
   getCourseStatusId, calculateTopicsReviewedPercentage,
   loadTopicQualificationTypes,
-  getTopicCourseGrade
+  getTopicCourseGrade,
+  loadModalities,
 } = require("../helper/CoursesTopicsHelper");
 
 
@@ -55,6 +56,7 @@ const { loadUsersCoursesProgress, calculateSchoolProgressPercentage,
 const headers = [
   'ULTIMA SESIÓN',
   'ESCUELA',
+  'MODALIDAD',
   'CURSO',
   'APROBACIÓN CURSO',
   'VISITAS',
@@ -136,7 +138,9 @@ async function generateSegmentationReport({
                                       modulos);
   const coursesStatuses = await loadCoursesStatuses();
 
+  const modalities = await loadModalities();
   // load qualification types
+  
   let QualificationTypes = await loadTopicQualificationTypes();
       QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
@@ -328,7 +332,8 @@ async function generateSegmentationReport({
         cellRow.push((schoolTotals.schoolPercentage || 0) + '%');
         cellRow.push((calculateSchoolAccomplishmentPercentage(coursesTopics, userSummaryTopicsCount, segmentedCoursesByUsers[user.id], course.school_id) || 0) + '%')
       }
-
+      const modality = modalities.find(m => m.id == course.modality_id);
+      cellRow.push(modality ? modality.name : '-');
       cellRow.push(course.course_name);
       const qualification = QualificationTypes[course.qualification_type_id];
       

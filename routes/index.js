@@ -328,4 +328,12 @@ module.exports = {
       children.kill()
     })
   },
+  assistsSessionReport({body},res){
+    const children = fork('./controllers/assists-session-report.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
 }
