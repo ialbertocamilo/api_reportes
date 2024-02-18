@@ -339,9 +339,9 @@ async function exportarUsuariosDW({
       }
       if(modality_course_code == 'virtual'){
         const user_assistance = assistances.find( (a) => a.topic_id == topicStore.id && a.user_id == user.id);
-        cellRow.push(user_assistance ? user_assistance.present_at_first_call : '-')
-        cellRow.push(user_assistance ? user_assistance.present_at_middle_call : '-')
-        cellRow.push(user_assistance ? user_assistance.present_at_last_call : '-')
+        cellRow.push(user_assistance ? moment(user_assistance.present_at_first_call).format('DD/MM/YYYY') : '-')
+        cellRow.push(user_assistance ? moment(user_assistance.present_at_middle_call).format('H:mm:ss DD/MM/YYYY') : '-')
+        cellRow.push(user_assistance ? moment(user_assistance.present_at_last_call).format('DD/MM/YYYY H:mm:ss') : '-')
         cellRow.push(user_assistance ? user_assistance.total_duration : '-')
         cellRow.push(user_assistance ? user_assistance.presence_in_meeting+' %' : '-')
       }

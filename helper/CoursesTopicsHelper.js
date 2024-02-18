@@ -70,7 +70,9 @@ exports.loadAssistances=async(course_id,type='in-person')=>{
     break;
     case 'virtual':
       assistances = await con('meetings as m')
-                  .select('t.id as topic_id','a.usuario_id as user_id', 'a.present_at_first_call', 'a.present_at_middle_call', 'a.present_at_last_call', 'a.total_duration')
+                  .select('t.id as topic_id',
+                          'a.usuario_id as user_id', 'a.present_at_first_call', 'a.present_at_middle_call', 'a.present_at_last_call', 'a.total_duration',
+                          'm.started_at','m.finished_at','m.starts_at')
                   .join('topics as t', 't.id', 'm.model_id')
                   .join('attendants as a', 'a.meeting_id', 'm.id')
                   .where('m.model_type', 'App\\Models\\Topic')
