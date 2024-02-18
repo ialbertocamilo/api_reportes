@@ -72,9 +72,9 @@ exports.loadAssistances=async(course_id,type='in-person')=>{
       assistances = await con('meetings as m')
                   .select('t.id as topic_id',
                           'a.usuario_id as user_id', 
-                          con.raw('IF(a.present_at_first_call = 1, "Asistió", "No asistió") as present_at_first_call'),
-                          con.raw('IF(a.present_at_middle_call = 1, "Asistió", "No asistió") as present_at_middle_call'),
-                          con.raw('IF(a.present_at_last_call = 1, "Asistió", "No asistió") as present_at_last_call'),
+                          con.raw('IF(a.present_at_first_call = 1, "Presente", "Ausente") as present_at_first_call'),
+                          con.raw('IF(a.present_at_middle_call = 1, "Presente", "Ausente") as present_at_middle_call'),
+                          con.raw('IF(a.present_at_last_call = 1, "Presente", "Ausente") as present_at_last_call'),
                           'a.total_duration',
                           'm.started_at','m.finished_at','m.starts_at')
                   .join('topics as t', 't.id', 'm.model_id')
