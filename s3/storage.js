@@ -84,7 +84,7 @@ async function zipPdfsAndUploadFilesInS3(pdfs, zipFileName) {
   zipStream.pipe(zipWriteStream);
 
   for (const pdf of pdfs) {
-    zipStream.append(fs.createReadStream(pdf.filePath), { name: pdf.filename });
+    zipStream.append(fs.createReadStream(pdf.filePath), { name: pdf.folder_name+'/'+pdf.filename });
   }
   // zipStream.finalize();
     await new Promise((resolve, reject) => {

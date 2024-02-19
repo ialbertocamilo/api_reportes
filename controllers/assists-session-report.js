@@ -114,6 +114,7 @@ async function exportAssists({ modulos = [],
             await fs.writeFileSync(filePath, PDF);
             pdfs.push({
                 filePath:filePath,
+                folder_name:stringToSlug(course.course_name),
                 filename:filename
             });
         }
