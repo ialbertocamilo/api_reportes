@@ -98,6 +98,7 @@ async function exportAssists({ modulos = [],
                     </div>
                     </div>
                 `,
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
                 // <div style="display: inline-block;">
                 //     <span class="pageNumber"></span> / <span class="totalPages"></span>
                 // </div>
