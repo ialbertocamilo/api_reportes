@@ -8,7 +8,6 @@ const moment = require('moment');
 const { response } = require('../response');
 const { Op } = require('sequelize');
 const { con } = require('../db')
-const pdfMaster = require("pdf-master");
 /* helpers */
 const {
     loadCoursesV3,
@@ -18,6 +17,7 @@ const { getSuboworkspacesIds } = require("../helper/Workspace");
 // const { createAt } = require('../exceljs');
 const { zipPdfsAndUploadFilesInS3,downloadFile } = require('../s3/storage')
 const { stringToSlug } = require('../helper/Helper')
+const { generatePdf } = require('../helper/pdf-helper.js')
 const fs = require('fs');
 const { CARPETA_DESCARGA } = require("../config");
 
@@ -109,7 +109,7 @@ async function exportAssists({ modulos = [],
             // const filename = stringToSlug(course.course_name)+'/'+stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
             const filename = stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
             console.log(filename,'filename');
-            const PDF = await pdfMaster.generatePdf("./templates/pdf/assistances-in-person.hbs",session_data,options_pdf);
+            const PDF = await generatePdf("./templates/pdf/assistances-in-person.hbs",session_data,options_pdf);
             const filePath = CARPETA_DESCARGA+'/'+filename;
             await fs.writeFileSync(filePath, PDF);
             pdfs.push({
