@@ -109,7 +109,7 @@ async function exportAssists({ modulos = [],
             const filename = stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
             console.log(filename,'filename');
             const PDF = await pdfMaster.generatePdf("./templates/pdf/assistances-in-person.hbs",session_data,options_pdf);
-            const filePath = `./prueba/${filename}.pdf`;
+            const filePath = `./prueba/${filename}`;
             await fs.writeFileSync(filePath, PDF);
             pdfs.push({
                 filePath:filePath,
