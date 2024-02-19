@@ -19,6 +19,7 @@ const { getSuboworkspacesIds } = require("../helper/Workspace");
 const { zipPdfsAndUploadFilesInS3,downloadFile } = require('../s3/storage')
 const { stringToSlug } = require('../helper/Helper')
 const fs = require('fs');
+const { CARPETA_DESCARGA } = require("../config");
 
 async function exportAssists({ modulos = [], 
     workspaceId, 
@@ -109,7 +110,7 @@ async function exportAssists({ modulos = [],
             const filename = stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
             console.log(filename,'filename');
             const PDF = await pdfMaster.generatePdf("./templates/pdf/assistances-in-person.hbs",session_data,options_pdf);
-            const filePath = `./prueba/${filename}`;
+            const filePath = CARPETA_DESCARGA+'/'+filename;
             await fs.writeFileSync(filePath, PDF);
             pdfs.push({
                 filePath:filePath,
