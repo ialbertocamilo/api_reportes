@@ -22,6 +22,7 @@
     "morgan": "^1.10.0",
     "mysql2": "^2.1.0",
     "node-cron": "2.0.3",
+    "pdf-master": "^1.1.0",
     "sequelize": "^6.12.2",
     "socket.io": "^4.5.4"
   },

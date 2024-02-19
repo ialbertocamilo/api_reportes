@@ -30,7 +30,7 @@ module.exports = function (io) {
   router.post('/poll-questions', handler.poolQuestions)
   router.post('/evaluations_data', handler.evaluationsData)
   router.post('/evaluations_detail_data', handler.evaluationsDetailData)
-  router.post('/asistencias', handler.assistsSessionReport)
+  // router.post('/asistencias', handler.assistsSessionReport)
 
   //  Reports with queues and push notifications
   // ========================================
@@ -195,6 +195,7 @@ function getReportFilePath (reportType) {
     case 'evaluations_detail_excel': file = 'evaluations_detail_excel.js'; break
     case 'dc3-report': file = 'dc3-report';break;
     case 'registro_capacitacion': file = 'registro_capacitacion';break;
+    case 'asistencias': file = 'assists-session-report.js';break;
   }
 
   return `./controllers/${file}`

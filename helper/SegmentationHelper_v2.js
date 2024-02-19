@@ -248,7 +248,8 @@ exports.loadUsersSegmentedv2 = async (
   activeUsers = false,
   inactiveUsers = false,
 
-  completed
+  completed,
+  includePersonalData=false
 ) => {
   logtime('start: user ids segmentation');
   // === extraer ids de usuarios segmentados ===
@@ -279,6 +280,7 @@ exports.loadUsersSegmentedv2 = async (
       const query = `
      select 
         u.id,
+        ${includePersonalData ? ' u.name,u.lastname,u.surname,u.document, ' : ''}
         sc.grade_average, sc.advanced_percentage,
         sc.status_id, sc.created_at as sc_created_at,
         sc.views as course_views, sc.passed as course_passed, 
@@ -744,6 +746,7 @@ exports.loadCoursesV3 = async (
       s.id as school_id,
       c.qualification_type_id,
       c.active as course_active,
+      c.modality_in_person_properties,
       tx.name as course_type,
       c.modality_id
     from course_school as cs

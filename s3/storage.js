@@ -31,14 +31,15 @@ const uploadFile = async (filePath,unlinkfile=true) => {
   }
 }
 
-function downloadFile(filePath) {
+function downloadFile(filePath,expiresIn=300,from_reports=true) {
+  if(from_reports){
+    filePath = `reports/${filePath}`
+  }
   try{
     if(!filePath ) return
-    const expiresIn = 60 * 5
-    console.log(filePath);
     const command = new GetObjectCommand({
       Bucket: AWS_BUCKET_NAME,
-      Key: `${MARCA}/reports/${filePath}`,
+      Key: `${MARCA}/${filePath}`,
     })
     const url = getSignedUrl(client, command, { expiresIn })
     console.log(url);
@@ -76,15 +77,28 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
   console.log('zipFileName in zipAndUploadFilesInS3',zipFileName);
   await uploadFile(zipFileName,false);
 }
-async function downloadFileFromS3(fileName) {
-  // try {
-    console.log('entra');
-    const s3Params = {
-      Bucket: AWS_BUCKET_NAME,
-      Key: `${MARCA}/${fileName}`,
-    };
-    const getObjectCommand = new GetObjectCommand(s3Params);
-    const {Body} = await client.send(getObjectCommand);
-    return { name: fileName, content: Body };
+async function zipPdfsAndUploadFilesInS3(pdfs, zipFileName) {
+  zipFileName = CARPETA_DESCARGA+'/'+zipFileName;
+  const zipStream = archiver('zip', { zlib: { level: 9 } });
+  const zipWriteStream = fs.createWriteStream(zipFileName);
+  zipStream.pipe(zipWriteStream);
+
+  for (const pdf of pdfs) {
+    zipStream.append(fs.createReadStream(pdf.filePath), { name: pdf.filename });
+  }
+  // zipStream.finalize();
+    await new Promise((resolve, reject) => {
+      zipWriteStream.on('close', () => {
+          resolve();
+      });
+      zipWriteStream.on('error', (err) => {
+          reject(err);
+      });
+      zipStream.finalize();
+  });
+
+  // Cargar el archivo ZIP en S3 después de que se haya completado la escritura
+  await uploadFile(zipFileName);
 }
-module.exports = { uploadFile, downloadFile ,zipAndUploadFilesInS3}
+
+module.exports = { uploadFile, downloadFile ,zipAndUploadFilesInS3,zipPdfsAndUploadFilesInS3}
