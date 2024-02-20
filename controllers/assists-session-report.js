@@ -107,7 +107,7 @@ async function exportAssists({ modulos = [],
                 margin: { top: "40px", bottom: "40px",left:'10px',right : '10px' },
             };
             // const filename = stringToSlug(course.course_name)+'/'+stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
-            const filename = stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
+            const filename = topic.id+stringToSlug('listado-de-asistencia-'+topic.name)+'.pdf';
             console.log(filename,'filename');
             const PDF = await generatePdf("./templates/pdf/assistances-in-person.hbs",session_data,options_pdf);
             const filePath = CARPETA_DESCARGA+'/'+filename;
