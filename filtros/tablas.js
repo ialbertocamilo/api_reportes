@@ -6,15 +6,13 @@ const { getCampaignsBySubworspaceId } = require('../helper/Votaciones')
 const knex = require('../db').con
 module.exports = {
   async datosIniciales(workspaceId, adminId, isSuperUser) {
-    const modules = await this.cargarModulos(workspaceId, adminId)
-    const admins = await this.cargarAdmins(workspaceId, adminId, isSuperUser)
-    const vademecums = await this.cargarVademecums(workspaceId)
-
-    return {
-      modules,
-      admins,
-      vademecums
-    }
+    const [modules, admins, vademecums, modalities] = await Promise.all([
+      this.cargarModulos(workspaceId, adminId),
+      this.cargarAdmins(workspaceId, adminId, isSuperUser),
+      this.cargarVademecums(workspaceId),
+      this.loadModalities()
+    ]);
+    return { modules, admins, vademecums, modalities };
   },
 
   /**
@@ -75,7 +73,10 @@ module.exports = {
       { workspaceId })
     return rows
   },
-
+  async loadModalities(){
+    const [rows] = await con.raw("select id,name,code from taxonomies where `group`='course' and `type` ='modality'");
+    return rows;  
+  },  
   async cargarVademecums(workspaceId) {
 
     const [subrows] = await con.raw(`select 
@@ -110,11 +111,11 @@ module.exports = {
    * @param includeInactive include inactive courses
    * @returns {Promise<*>}
    */
-  async loadSchoolCourses (schoolIds, includeInactive = false) {
+  async loadSchoolCourses (schoolIds, includeInactive = false,modality_id=null) {
     if (!schoolIds) {
       return []
     }
-
+    console.log('modality_id',modality_id);
     let columns = includeInactive
       ? `distinct c.id, if(c.active = 1, c.name, concat(c.name, ' [inactivo]')) name`
       : `distinct c.id, c.*`;
@@ -127,10 +128,11 @@ module.exports = {
       where 
           cs.school_id in (${schoolIds})
           ${includeInactive ? '' : ' and c.active = 1'}
+          ${modality_id ? `and c.modality_id = ${modality_id}` : ''}
           and c.deleted_at is null
       order by c.active desc, name asc
     `)
-
+    
     return rows
   },
   /**

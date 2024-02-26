@@ -55,7 +55,56 @@ exports.loadCoursesStatuses = async () => {
 exports.loadTopicsStatuses = async () => {
   return con("taxonomies").where("group", "topic").where("type", "user-status");
 };
+exports.loadModalities=async()=>{
+  return await con("taxonomies").select('id','name','code').where("group", "course").where("type", "modality");
+}
+exports.loadAssistances=async(course_id,type='in-person')=>{
+  let assistances = [];
+  switch (type) {
+    case 'in-person':
+      assistances = await con('topic_assistance_user as tau')
+                  .select('topic_id', 'user_id', 't.name as status_name', 'date_assistance')
+                  .join('taxonomies as t', 't.id', '=', 'tau.status_id')
+                  .join('topics as to', 'to.id', '=', 'tau.topic_id')
+                  .where('to.course_id',course_id);
+    break;
+    case 'virtual':
+      assistances = await con('meetings as m')
+                  .select('t.id as topic_id',
+                          'a.usuario_id as user_id', 
+                          con.raw('IF(a.present_at_first_call = 1, "Presente", "Ausente") as present_at_first_call'),
+                          con.raw('IF(a.present_at_middle_call = 1, "Presente", "Ausente") as present_at_middle_call'),
+                          con.raw('IF(a.present_at_last_call = 1, "Presente", "Ausente") as present_at_last_call'),
+                          'a.total_duration',
+                          'm.started_at','m.finished_at','m.starts_at')
+                  .join('topics as t', 't.id', 'm.model_id')
+                  .join('attendants as a', 'a.meeting_id', 'm.id')
+                  .where('m.model_type', 'App\\Models\\Topic')
+                  .andWhere('t.course_id', course_id)
+      for (const assistance of assistances) {
+          assistance.presence_in_meeting = getTotalDurationPercentInMeeting(assistance);
+      }
+    break;
+  }
+  return assistances;
+}
+function getTotalDurationPercentInMeeting(assistance){
+  const meeting_total_duration = getTotalDuration(assistance);
+  if (meeting_total_duration > 0){
+      return (assistance.total_duration / meeting_total_duration * 100).toFixed(2);
+  }
+  return 0;
+}
 
+function getTotalDuration(meeting) {
+  if (meeting.started_at && meeting.finished_at) {
+      const started_at = meeting.started_at < meeting.starts_at ?
+          meeting.starts_at : meeting.started_at;
+      const diffInMinutes = Math.abs((meeting.finished_at - started_at) / (1000 * 60));
+      return diffInMinutes;
+  }
+  return 0;
+}
 /**
  * Filter user topic status using its code, and return its id
  * @param userTopicStatuses

@@ -28,7 +28,10 @@ const {
   loadTopicsByCoursesIds,
   loadTopicQualificationTypes,
   getTopicCourseGrade,
-  loadTopicsByCourseUniqueId
+  loadTopicsByCourseUniqueId,
+  loadModalities,
+  loadAssistances,
+  getTotalDurationPercentInMeeting,
 } = require('../helper/CoursesTopicsHelper')
 const { getSuboworkspacesIds } = require('../helper/Workspace')
 const { loadCoursesV2, 
@@ -44,6 +47,7 @@ moment.locale('es')
 let headersDefault = [
   'ULTIMA SESIÓN',
   'ESCUELA',
+  'MODALIDAD',
   'CURSO',
   'RESULTADO CURSO',
   'REINICIOS CURSO',
@@ -67,7 +71,7 @@ let headersDefault = [
 
 async function exportarUsuariosDW({
   workspaceId, modulos, 
-  escuelas, cursos, temas, areas,
+  escuelas, modality_id,cursos, temas, areas,
   
   revisados, 
   aprobados, 
@@ -93,7 +97,21 @@ async function exportarUsuariosDW({
 
 
   // Generate Excel file header
-
+  const modalities = await loadModalities();
+  const modality_course_code = modalities.find((m) => m.id == modality_id).code
+  if(modality_course_code == 'in-person'){
+    const index = headersDefault.indexOf('SISTEMA DE CALIFICACIÓN') + 1;
+    headersDefault.splice(index, 0,'ASISTENCIA');
+    headersDefault.splice(index+1, 0,'FECHA DE ASISTENCIA');
+  }
+  if(modality_course_code == 'virtual'){
+    const index = headersDefault.indexOf('SISTEMA DE CALIFICACIÓN') + 1;
+    headersDefault.splice(index, 0,'PRIMERA ASISTENCIA');
+    headersDefault.splice(index+1, 0,'SEGUNDA ASISTENCIA');
+    headersDefault.splice(index+2, 0,'TERCERA ASISTENCIA');
+    headersDefault.splice(index+3, 0,'MINUTOS EN REUNION');
+    headersDefault.splice(index+4, 0,'PRESENCIA EN REUNION ');
+  }
   const [headersEstaticos,workspaceCriteria] = await getGenericHeadersV2({workspaceId,headersDefault})
   await createHeaders(headersEstaticos)
 
@@ -243,7 +261,13 @@ async function exportarUsuariosDW({
     } else {
       users_to_export = [...users_not_null, ...users_null];
     }
-
+    let assistances=[];
+    if(modality_course_code == 'in-person'){
+      assistances = await loadAssistances(course.course_id);
+    }
+    if(modality_course_code == 'virtual'){
+      assistances = await loadAssistances(course.course_id,'virtual');
+    }
     // recorrido para exportar
     for (const user of users_to_export) { 
       
@@ -286,6 +310,9 @@ async function exportarUsuariosDW({
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
       cellRow.push(course.school_name)
+      const modality = modalities.find(m => m.id == course.modality_id);
+      cellRow.push(modality ? modality.name : '-');
+      
       cellRow.push(course.course_name)
 
       // Course status
@@ -316,6 +343,20 @@ async function exportarUsuariosDW({
 
       cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
       cellRow.push(qualification ? qualification.name : '-')
+      //ASSISTANCE INFO ONLY FOR SESSIONS IN PERSON
+      if(modality_course_code == 'in-person'){
+        const user_assistance = assistances.find( (a) => a.topic_id == topicStore.id && a.user_id == user.id);
+        cellRow.push(user_assistance ? user_assistance.status_name : 'No asistió')
+        cellRow.push(user_assistance ? user_assistance.date_assistance : '-')
+      }
+      if(modality_course_code == 'virtual'){
+        const user_assistance = assistances.find( (a) => a.topic_id == topicStore.id && a.user_id == user.id);
+        cellRow.push(user_assistance ? user_assistance.present_at_first_call : '-')
+        cellRow.push(user_assistance ? user_assistance.present_at_middle_call : '-')
+        cellRow.push(user_assistance ? user_assistance.present_at_last_call : '-')
+        cellRow.push(user_assistance ? user_assistance.total_duration : '-')
+        cellRow.push(user_assistance ? user_assistance.presence_in_meeting+' %' : '-')
+      }
       cellRow.push(qualification ? getTopicCourseGrade(user.topic_grade, qualification.position) : '-')
 
       cellRow.push(user.topic_restarts || '-')
