@@ -271,7 +271,6 @@ async function generateSegmentationReport({
 
       const statusName = getCourseStatusName(coursesStatuses, user.course_status_id);
 
-      // === filtro de checks ===
       // 'No iniciado' does not exist in database, so it has no name,
       // and no filter, other statuses have a name and a filter so check
       // those cases
