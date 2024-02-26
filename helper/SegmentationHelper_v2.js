@@ -331,7 +331,7 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
   completed,
   StacksUsersIds = []
 ) => {
-  logtime('start: user ids segmentation');
+
   // === extraer ids de usuarios segmentados ===
 
   const segmentedUsers = await loadUsersSegmentedByCourse(course_id, modules,
@@ -349,7 +349,6 @@ exports.loadUsersSegmentedv2WithSummaryTopics = async (
 
 
   	// === extraer ids de usuarios segmentados ===
-	logtime('end: user ids segmentation');
 
     // === para 'completed' es boolean
     const StackSidesCompleted = completed ? 'left,inner,inner,left': 'inner';

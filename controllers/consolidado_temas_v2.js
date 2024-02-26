@@ -10,7 +10,7 @@ const { response } = require('../response')
 const { getGenericHeaders, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck, logtime } = require('../helper/Helper')
+const { pluck, logtime, getDurationInSeconds } = require('../helper/Helper')
 const { loadUsersCriteriaValues, getUserCriterionValues, addActiveUsersCondition } = require('../helper/Usuarios')
 const {
   loadTopicsStatuses, getTopicStatusId, getEvaluationTypeName,
@@ -49,6 +49,12 @@ async function exportarUsuariosDW ({
   activeTopics, inactiveTopics, end, start, validador, areas, tipocurso
 }) {
   // Generate Excel file header
+
+  // Start benchmark
+
+  logtime(`----> START Consolidado temas: ${workspaceId}`)
+  const startTime = new Date();
+
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
   await createHeaders(headersEstaticos.concat(headers))
@@ -144,6 +150,14 @@ async function exportarUsuariosDW ({
 
     worksheet.addRow(cellRow).commit()
   }
+
+  // Finish benchmark
+
+  logtime(
+    `----> END Consolidado temas: ${workspaceId} - ` +
+    getDurationInSeconds(startTime, new Date())
+  )
+
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {

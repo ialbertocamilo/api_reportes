@@ -143,14 +143,14 @@ async function generateSegmentationReport({
   // console.log('courses_count', courses.length)
 
   // === filtro de checks === 
-  const StateChecks = (aprobados && desaprobados &&
+  const allStatusesChecked = (aprobados && desaprobados &&
                        desarrollo && encuestaPendiente);
-  let StackChecks = [];
+  let selectedStatuses = [];
 
-  if (aprobados) { StackChecks.push( getCourseStatusId(coursesStatuses, 'aprobado') ) }
-  if (desaprobados) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desaprobado') ) }
-  if (desarrollo) { StackChecks.push( getCourseStatusId(coursesStatuses, 'desarrollo') ) }
-  if (encuestaPendiente) { StackChecks.push( getCourseStatusId(coursesStatuses, 'enc_pend') ) }
+  if (aprobados) { selectedStatuses.push( getCourseStatusId(coursesStatuses, 'aprobado') ) }
+  if (desaprobados) { selectedStatuses.push( getCourseStatusId(coursesStatuses, 'desaprobado') ) }
+  if (desarrollo) { selectedStatuses.push( getCourseStatusId(coursesStatuses, 'desarrollo') ) }
+  if (encuestaPendiente) { selectedStatuses.push( getCourseStatusId(coursesStatuses, 'enc_pend') ) }
   // === filtro de checks ===
 
   // === precargar usuarios y criterios
@@ -265,8 +265,18 @@ async function generateSegmentationReport({
     //exportar usuarios (users_to_export);
     for (const user of users_to_export) {
 
-      // === filtro de checks === 
-      if(!StateChecks && !StackChecks.includes(user.course_status_id)) continue;
+      const statusName = getCourseStatusName(coursesStatuses, user.course_status_id);
+
+      // === filtro de checks ===
+      // 'No iniciado' does not exist in database, so it has no name,
+      // and no filter, other statuses have a name and a filter so check
+      // those cases
+
+      if( !allStatusesChecked &&
+          !selectedStatuses.includes(user.course_status_id) &&
+          statusName) {
+        continue;
+      }
 
       const cellRow = [];
 
@@ -346,7 +356,7 @@ async function generateSegmentationReport({
 
       // estado para - 'RESULTADO DE TEMA'
       if(!user.course_status_name) {
-        cellRow.push(getCourseStatusName(coursesStatuses, user.course_status_id) || "No iniciado" );
+        cellRow.push(statusName || "No iniciado" );
       }else {
         cellRow.push(user.course_status_name);
       }

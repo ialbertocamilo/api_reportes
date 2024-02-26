@@ -246,16 +246,17 @@ exports.getUserCriterionValues = (
 };
 
 exports.getUserCriterionValues2 = async (userId, criterionNames, criteriaIds = []) => {
+
   const result = [];
   const found = [];
 
-  // const userValues = usersCriterionValues.filter(ucv => ucv.user_id === userId)
   const userValues = await loadCriterionValuesByUser(userId, criteriaIds);
 
   criterionNames.forEach((name) => {
     userValues.forEach((userCriterionValue) => {
 
       if (userCriterionValue.criterion_name === name) {
+
         // Get criterion value
 
         let value;
@@ -263,14 +264,15 @@ exports.getUserCriterionValues2 = async (userId, criterionNames, criteriaIds = [
           value = userCriterionValue.value_text;
 
         // Since value for name was found, added to found array
+
         found.push(name);
 
         // Add name and value for results collection
+
         result.push({
           criterion_name: name,
           criterion_value: value,
         });
-        // console.log('in push')
       }
     });
 

@@ -10,7 +10,9 @@ const { response } = require('../response')
 const { getGenericHeadersV2, getWorkspaceCriteria } = require('../helper/Criterios')
 const moment = require('moment')
 const { con } = require('../db')
-const { pluck, logtime, groupArrayOfObjects,setCustomIndexAtObject  } = require('../helper/Helper')
+const { pluck, logtime, groupArrayOfObjects,setCustomIndexAtObject,
+  getDurationInSeconds
+} = require('../helper/Helper')
 const { loadUsersCriteriaValues, 
         getUserCriterionValues,
         getUsersNullAndNotNull,
@@ -83,6 +85,13 @@ async function exportarUsuariosDW({
   completed = true,
   validador
 }) {
+
+  // Start benchmark
+
+  logtime(`----> START Consolidado temas: ${workspaceId}`)
+  const startTime = new Date();
+
+
   // Generate Excel file header
 
   const [headersEstaticos,workspaceCriteria] = await getGenericHeadersV2({workspaceId,headersDefault})
@@ -97,8 +106,6 @@ async function exportarUsuariosDW({
 
   // Load workspace criteria
 
-  // const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
-  // const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')
   const workspaceCriteriaNames = pluck(workspaceCriteria.filter(c=>c.code != 'module'), 'name');
   const subworkspaces = await getSuboworkspacesIds(workspaceId,'all')
 
@@ -107,25 +114,28 @@ async function exportarUsuariosDW({
   if (modulos.length === 0) {
     modulos = await getSuboworkspacesIds(workspaceId)
   }
+
   // Load user topic statuses
+
   const userTopicsStatuses = await loadTopicsStatuses()
 
   // Load user course statuses
+
   const userCourseStatuses = await loadCoursesStatuses()
 
   // load qualification types
+
   let QualificationTypes = await loadTopicQualificationTypes();
       QualificationTypes = setCustomIndexAtObject(QualificationTypes);
 
   // Load evaluation types
+
   const evaluationTypes = await loadEvaluationTypes()
 
   let users_to_export = [];
 
   const courses = await loadCoursesV2({
-      escuelas, cursos, temas,
-      CursosActivos, CursosInactivos,
-      tipocurso
+      escuelas, cursos, temas, CursosActivos, CursosInactivos, tipocurso
     }, workspaceId);
 
   // === filtro de checks === 
@@ -152,6 +162,7 @@ async function exportarUsuariosDW({
   // === precargar topics, usuarios y criterios ===
 
   for (const course of courses) {
+
     logtime(`CURRENT COURSE: ${course.course_id} - ${course.course_name}`);
 
     // datos de usuario - temas
@@ -202,7 +213,7 @@ async function exportarUsuariosDW({
         const CurrentUser = users_topics_grouped[index];
 
         if(CurrentUser[0].sc_created_at) {
-          CurrentUser.forEach((item) => users_to_export.push(item)); // usertopics          
+          CurrentUser.forEach((item) => users_to_export.push(item));
           continue;
         }
 
@@ -249,17 +260,19 @@ async function exportarUsuariosDW({
 
       const lastLogin = moment(userStore.last_login).format('DD/MM/YYYY H:mm:ss')
       const subworkspace= subworkspaces.find(s => s.id == userStore.subworkspace_id);
+
       // Add default values
+
       cellRow.push(subworkspace.name || '-')
       cellRow.push(userStore.name)
       cellRow.push(userStore.lastname)
       cellRow.push(userStore.surname)
       cellRow.push(userStore.document)
       cellRow.push(userStore.active === 1 ? 'Activo' : 'Inactivo')
-      // encontrar usuario por 'id'
 
-      // criterios de usuario
-      if(StackUserCriterios[id]) {
+      // User criteria
+
+      if (StackUserCriterios[id]) {
         const StoreUserValues = StackUserCriterios[id];
         StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
@@ -267,16 +280,16 @@ async function exportarUsuariosDW({
         const userValues = await getUserCriterionValues2(user.id, workspaceCriteriaNames);
         userValues.forEach((item) => cellRow.push(item.criterion_value || "-"));
 
-        StackUserCriterios[id] = userValues; 
+        StackUserCriterios[id] = userValues;
       }
-      // criterios de usuario
 
       cellRow.push(lastLogin !== 'Invalid date' ? lastLogin : '-')
 
       cellRow.push(course.school_name)
       cellRow.push(course.course_name)
 
-      // estado para - 'RESULTADO DE CURSO'
+      // Course status
+
       if(!user.course_status_name) {
         cellRow.push(getCourseStatusName(userCourseStatuses, user.course_status_id) || "No iniciado" );
       } else {
@@ -285,7 +298,7 @@ async function exportarUsuariosDW({
 
       cellRow.push(user.course_restarts || '-')
       cellRow.push(course.course_type || '-')
-      
+
       // encontrar topic por 'id'
       const { topic_id } = user;
       const topicStore = StackTopicsData[topic_id];
@@ -295,7 +308,6 @@ async function exportarUsuariosDW({
 
       cellRow.push(topicStore.topic_name) // topicStore
 
-        // estado para - 'RESULTADO DE TEMA'
         if(!user.topic_status_name) {
           cellRow.push(getTopicStatusName(userTopicsStatuses, user.topic_status_id) || 'No iniciado')
         }else{
@@ -305,7 +317,7 @@ async function exportarUsuariosDW({
       cellRow.push(topicStore .topic_active === 1 ? 'ACTIVO' : 'INACTIVO') // topicStore
       cellRow.push(qualification ? qualification.name : '-')
       cellRow.push(qualification ? getTopicCourseGrade(user.topic_grade, qualification.position) : '-')
-      // cellRow.push(user.topic_grade || '-')
+
       cellRow.push(user.topic_restarts || '-')
       cellRow.push(user.topic_attempts || '-')
       cellRow.push(user.topic_total_attempts || '-')
@@ -314,17 +326,23 @@ async function exportarUsuariosDW({
       cellRow.push(getEvaluationTypeName(evaluationTypes, topicStore.type_evaluation_id)) // topicStore
 
       cellRow.push(user.topic_views || '-')
-      // cellRow.push(user.minimum_grade || '-')
       cellRow.push(qualification ? getTopicCourseGrade(user.minimum_grade, qualification.position) : '-') // minimum_grade
       cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('DD/MM/YYYY') : '-')
       cellRow.push(user.topic_last_time_evaluated_at ? moment(user.topic_last_time_evaluated_at).format('H:mm:ss') : '-')
 
       cellRow.push(user.compatible || `-`);
       
-      // añadir fila 
+
       worksheet.addRow(cellRow).commit()
     }
   }
+
+  // Finish benchmark
+
+  logtime(
+    `----> END Consolidado temas: ${workspaceId} - ` +
+    getDurationInSeconds(startTime, new Date())
+  )
 
   if (worksheet._rowZero > 1) {
     workbook.commit().then(() => {
