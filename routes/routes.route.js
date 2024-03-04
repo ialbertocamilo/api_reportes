@@ -30,7 +30,7 @@ module.exports = function (io) {
   router.post('/poll-questions', handler.poolQuestions)
   router.post('/evaluations_data', handler.evaluationsData)
   router.post('/evaluations_detail_data', handler.evaluationsDetailData)
-  // router.post('/asistencias', handler.assistsSessionReport)
+  router.post('/process_progress', handler.processProgress)
 
   //  Reports with queues and push notifications
   // ========================================

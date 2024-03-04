@@ -72,8 +72,9 @@ async function resolvePromisesAndGetUsers (ArrayPromises) {
 }
 
 async function loadUsersSegmentedByCourse (course_id, modules,
-                                      areas, activeUsers, inactiveUsers) {
-
+                                      areas, activeUsers, inactiveUsers,model_type = 'App\\Models\\Course',code_user = 'employee'
+                                      ,notConsiderUsersId='') {
+                                        
     const segments = await con("segments_values as sv")
     .select(
       "sv.criterion_id",
@@ -86,7 +87,7 @@ async function loadUsersSegmentedByCourse (course_id, modules,
     .join("segments as sg", "sg.id", "sv.segment_id")
     .join("criteria as c", "c.id", "sv.criterion_id")
     .join("taxonomies as t", "t.id", "c.field_id")
-    .where("sg.model_type", "App\\Models\\Course")
+    .where("sg.model_type", model_type)
     .where("sg.model_id", course_id)
     .where("sg.deleted_at", null)
     .where("sv.deleted_at", null);
@@ -95,8 +96,7 @@ async function loadUsersSegmentedByCourse (course_id, modules,
     "segment_id",
     "get_array"
     );
-  
-
+    const type_user = await con('taxonomies').select('id').where('group','user').where('type','type').where('code',code_user).first();
     // === filtro para modulos ===
     const modules_query = modules && modules.length > 0
     ? `and u.subworkspace_id in (${modules.join()})`
@@ -107,6 +107,7 @@ async function loadUsersSegmentedByCourse (course_id, modules,
     let where_active_users = '';
     if(activeUsers && !inactiveUsers) where_active_users += ` and u.active = 1`;
     if(!activeUsers && inactiveUsers) where_active_users += ` and u.active = 0`;
+    if(notConsiderUsersId != ''){ where_active_users += ` and u.id not in (${notConsiderUsersId}) ` };
     // === filtro para usuarios ===
 
     // === filtro para areas ===
@@ -160,8 +161,8 @@ async function loadUsersSegmentedByCourse (course_id, modules,
         where 
           u.deleted_at is null
           ${where_active_users}
-
           ${modules_query}
+          and u.type_id = ${type_user.id}
           ${where_criterions_values_user_area}
       `);
 
@@ -171,7 +172,7 @@ async function loadUsersSegmentedByCourse (course_id, modules,
     const users = await resolvePromisesAndGetUsers(ArrayPromises);
     return uniqueElements(users, "id");
 };
-
+exports.loadUsersSegmentedByCourse  = loadUsersSegmentedByCourse;
 // ==== loadUsersSegmentedTest 1 ==== 259034.692ms  227429.066 ms 231821.527 ms
 exports.loadUsersSegmented = async (course_id) => {
   // select `id` from `users`

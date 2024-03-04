@@ -312,6 +312,14 @@ module.exports = {
       children.kill()
     })
   },
+  processProgress({body},res){
+    const children = fork('./controllers/process_progress.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   user_benefit_report({body},res){
     const children = fork('./controllers/user_benefit_report.js')
     children.send(body)
