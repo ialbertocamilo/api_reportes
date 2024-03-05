@@ -147,7 +147,7 @@ async function loadAllEvaluationsDetailsResults({ topicId, evaluations = [], tem
     for(const answer of answers) {
 
       const { preg_id, opc } = answer;
-      const { rpta_ok } = questions[preg_id];
+      const { rpta_ok } = questions[preg_id] || '';
       const is_correct = (opc == rpta_ok);
 
       // === total evaluaciones ===
