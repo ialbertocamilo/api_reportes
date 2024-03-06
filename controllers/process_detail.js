@@ -80,15 +80,7 @@ async function loadProcesses(workspaceId, processesIds) {
 async function listUsersStatusByActivities(users_id,subworkspaces,_process,instructors) {
     
     const activities = await loadActivitiesByStages(_process.stages_id);
-    // const query_users = `select w.name,u.document,t.code, psua.activity_id from users u
-    //                 join workspaces w on w.id=u.subworkspace_id
-    //                 left join process_summary_users_activities psua on psua.user_id  = u.id 
-    //                 left join taxonomies t ON t.id = psua.status_id
-    //                 where u.id in (${users_id.map(u => u.id).join(',')}) and (psua.activity_id is null or psua.activity_id in (:activities_id));`
-    
-    // const [users] = await con.raw(query_users, {
-    //                     activities_id: activities.map(a => a.id).join(","),
-    //                 });
+
     for (const activity of activities) {
         let array_activity = [];
         array_activity.push(instructors.instructors_documents || '-'); //DOCUMENTO Instructor
@@ -125,10 +117,27 @@ async function listUsersStatusByActivities(users_id,subworkspaces,_process,instr
 
             break;
             case 'temas':
-                
+                const users_status_topic = await loadUserStatusTopic(users_id,activity.model_id);
+                for (const user_status_topic of users_status_topic) {
+                    let cellRow = [];
+                    const subworkspace= subworkspaces.find(s => s.id == user_status_topic.subworkspace_id);
+                    // Add default values
+                    cellRow.push(subworkspace.name || '-') // Módulo
+                    cellRow.push(user_status_topic.document || '-')//Documento
+
+                    cellRow = cellRow.concat(array_activity)
+                    cellRow.push('-')//Validación (Item)
+                    cellRow.push(user_status_topic.views)//Visitas
+                    cellRow.push(user_status_topic.status)//Estado
+                    cellRow.push(user_status_topic.grade)//Nota
+                    cellRow.push('-')//Cumplimiento
+                    cellRow.push(formatDatetimeToString(user_status_topic.topic_date))//Fecha y hora
+                    cellRow.push('-')//Respuesta
+                    worksheet.addRow(cellRow).commit()
+                }
             break;
             case 'evaluacion':
-
+                
             break;
             case 'checklist':
                 const users_status_checklist = await loadUsersCheckists(null,[activity.model_id], null, null, true, false, null, null,[], users_id.map(u=> u.id));
@@ -230,4 +239,26 @@ async function loadActivitiesByStages(stages_id){
 
     const [activities] = await con.raw(query_activities);
     return activities;
+}
+
+async function loadUserStatusTopic(users_id,topic_id){
+    const query_users_status_topic = `
+    SELECT 
+        IF(st.topic_id IS NULL, 1, 0) AS needs_override,
+        u.subworkspace_id,
+        u.document,
+        if(t.name is null,'Pendiente',t.name)as 'status',
+        if(st.views is null,'0',st.views)as 'views',
+        if(st.grade is null,'-',st.grade)as 'grade',
+        if(st.last_time_evaluated_at is null,if(st.created_at is null,'-',st.created_at),st.last_time_evaluated_at) as 'topic_date'
+    FROM 
+        users u
+    left join
+        summary_topics st on st.user_id  = u.id and st.topic_id  = ${topic_id}
+    left join
+        taxonomies t on t.id = st.status_id 
+    where u.id in (${users_id.map(u=>u.id).join()})
+    `
+    const [users_status_topic] = await con.raw(query_users_status_topic);
+    return users_status_topic;
 }
