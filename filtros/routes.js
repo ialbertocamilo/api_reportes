@@ -184,5 +184,9 @@ router.get(`/sub-workspace/:subworkspacesIds/campaigns`, async (req, res) => {
   const datos = await tablas.loadCampaignsSubworkspaceById(subworkspacesIds)
   res.json(datos)
 });
-
+router.get('/processes/:workspaceId', async (req, res) => {
+  const { workspaceId } = req.params
+  const datos = await tablas.loadProcessess(workspaceId)
+  res.json(datos)
+})
 module.exports = router

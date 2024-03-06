@@ -320,6 +320,14 @@ module.exports = {
       children.kill()
     })
   },
+  processDetail({body},res){
+    const children = fork('./controllers/process_detail.js')
+    children.send(body)
+    children.on('message', (data) => {
+      res.send(data)
+      children.kill()
+    })
+  },
   user_benefit_report({body},res){
     const children = fork('./controllers/user_benefit_report.js')
     children.send(body)

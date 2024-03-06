@@ -31,6 +31,7 @@ module.exports = function (io) {
   router.post('/evaluations_data', handler.evaluationsData)
   router.post('/evaluations_detail_data', handler.evaluationsDetailData)
   router.post('/process_progress', handler.processProgress)
+  router.post('/process_detail', handler.processDetail)
 
   //  Reports with queues and push notifications
   // ========================================

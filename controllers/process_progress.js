@@ -28,9 +28,9 @@ let defaultHeaders = [
     'Usuarios Completados',
     'Completados'
 ];
-async function exportarDiplomas({modulesIds }) {
+async function exportarDiplomas({modulesIds,workspaceId }) {
 
-    const processes = await loadProcesses();
+    const processes = await loadProcesses(workspaceId);
     const maxStages = processes[0].count_stages;
     for (let index = 0; index < maxStages; index++) {
         defaultHeaders.push(`Etapa ${index+1} (usuarios)`);
@@ -89,14 +89,14 @@ async function exportarDiplomas({modulesIds }) {
     }
 }
 
-async function loadProcesses() {
+async function loadProcesses(workspaceId) {
     const query = `select 
                         p.id,p.title,p.starts_at,p.finishes_at,
                         group_concat(s.id) as 'stages_id' ,count(s.id) as 'count_stages',
                         (SELECT COUNT(pri.user_id) FROM process_instructors pri WHERE pri.process_id = p.id) AS count_instructors,
                         (SELECT group_concat(pri.user_id) FROM process_instructors pri WHERE pri.process_id = p.id) AS instructors_id
                     from processes p join stages s on s.process_id = p.id 
-                    where  p.deleted_at is null and s.deleted_at is null and s.active =1
+                    where p.workspace_id=${workspaceId} and p.deleted_at is null and s.deleted_at is null and s.active =1
                     order by count_stages desc,s.position asc;
                 `
     const [processes] = await con.raw(query)
