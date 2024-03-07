@@ -45,3 +45,70 @@ exports.loadSchoolsByCourse = async({courses_selected})=>{
                 .join('schools as s','s.id','=','cs.school_id')
                 .whereIn('cs.course_id',courses_selected);
 }
+exports.parseResponseUser = async (response,type_poll_question)=>{
+    switch (type_poll_question.code) {
+        case 'texto':
+        return response;
+        case 'califica':
+            try {
+                const parse_response = JSON.parse(response);
+                return parse_response[0] ? parse_response[0].resp_cal : '-';
+            } catch (e) {
+                return '-';
+            }
+        case 'opcion-multiple':
+            try {
+                return JSON.parse(response);
+            } catch (error) {
+                return [];
+            }
+        default : 
+        return response;
+    }
+}
+exports.loadUsersPolls= async (users_id,poll_id)=>{
+    const query_questions = `
+    select pq.titulo,pq.id,t.code from poll_questions pq 
+    LEFT JOIN taxonomies t on t.id = pq.type_id 
+    where pq.poll_id = :pollId and pq.deleted_at is null and pq.active =1`; 
+    const [questions] = await con.raw(query_questions, {
+        pollId: poll_id,
+    })
+    const query_users_polls_answers = `
+    SELECT 
+        IF(pqa.poll_question_id IS NULL, 1, 0) AS needs_override,
+        u.subworkspace_id,
+        u.document,
+        pq.titulo,
+        t.code,
+        pqa.poll_question_id,
+        pqa.respuestas,
+        pqa.created_at
+    FROM 
+        users u
+    LEFT JOIN 
+        poll_question_answers pqa ON pqa.user_id = u.id and pqa.poll_question_id  in (${questions.map(u=>u.id).join()})
+    LEFT JOIN 
+        poll_questions pq on pq.id = pqa.poll_question_id
+    LEFT JOIN 
+        taxonomies t on t.id = pq.type_id 
+    WHERE 
+        u.id IN (${users_id.map(u=>u.id).join()})
+    `
+    let [users_polls_answers] = await con.raw(query_users_polls_answers)
+    let newItems = [];
+    users_polls_answers = users_polls_answers.map((r) => {
+        if (r.needs_override) {
+            questions.forEach(question => {
+                let new_item = {};
+                Object.assign(new_item, r);
+                new_item.titulo = question.titulo
+                new_item.code = question.code
+                newItems.push(new_item);
+            });
+            return null
+        }
+        return r
+    }).filter((element) => element !== null);
+    return users_polls_answers.concat(newItems)
+}

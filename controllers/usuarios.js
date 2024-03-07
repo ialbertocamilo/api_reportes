@@ -28,7 +28,7 @@ const defaultHeaders = [
 
 async function exportarUsuariosDW ({ workspaceId, modulos,
                                      UsuariosActivos, UsuariosInactivos,
-                                     careers, areas }) {
+                                     careers, areas,platform }) {
   // When no modules are provided, get its ids using its parent id
 
   if (modulos.length === 0) {
@@ -37,7 +37,7 @@ async function exportarUsuariosDW ({ workspaceId, modulos,
 
   // Load records from database
 
-  const users = await getUsersCareersAreas(modulos, UsuariosActivos, UsuariosInactivos, careers, areas)
+  const users = await getUsersCareersAreas(modulos, UsuariosActivos, UsuariosInactivos, careers, areas,platform)
   const usersIds = pluck(users, 'id')
   const workspaceCriteria = await getWorkspaceCriteria(workspaceId)
   const workspaceCriteriaNames = pluck(workspaceCriteria, 'name')

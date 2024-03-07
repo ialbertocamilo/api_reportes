@@ -2,6 +2,7 @@ const { con } = require("../db")
 const moment = require("moment/moment")
 const { pluck, logtime, setCustomIndexAtObject } = require('./Helper')
 const { loadCriterionValuesByUser } = require('./Criterian')
+const { getPlatformId } = require('./Taxonomy')
 
 
 exports.getUsers = async (modulesIds, activeUsers, inactiveUsers) => {
@@ -70,7 +71,7 @@ exports.havingProccessValueUser = havingProccessValueUser;
 exports.innerCriterionValueUser = innerCriterionValueUser;
 
 exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
-                                       careers, areas,
+                                       careers, areas,platform,
 
                                        colsquery = 'u.*',
                                        colsrelations = '',
@@ -90,11 +91,15 @@ exports.getUsersCareersAreas = async ( modulesIds, activeUsers, inactiveUsers,
   if (modulesIds && !activeUsers && inactiveUsers) {
     query += ` and u.active = 0`;
   }
-
+  const platform_id = await getPlatformId(platform);
+  if(platform_id){
+    query += ` and u.type_id=${platform_id} `;
+  }
   query += ` and u.deleted_at is null `;
 
   query += ` group by u.id`;
-
+  
+  console.log(query,'query');
   const stateHavingCareerArea = (careers.length > 0 && areas.length > 0)
   if(stateHavingCareerArea) query += havingProccessValueUser(careers, areas);  
 

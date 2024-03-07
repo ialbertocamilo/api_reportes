@@ -8,7 +8,7 @@ const { workbook, worksheet, createHeaders, createAt } = require('../exceljs');
 const { response } = require('../response');
 const { pluck } = require('../helper/Helper.js')
 
-const { pollQuestionReportData,loadSubWorkSpaces,loadSchoolsByCourse } = require('../helper/Poll.js')
+const { pollQuestionReportData,loadSubWorkSpaces,loadSchoolsByCourse,parseResponseUser } = require('../helper/Poll.js')
 
 
 let defaultHeaders = [
@@ -97,27 +97,6 @@ async function exportReportPollQuestion(filters) {
         });
     } else {
         process.send({ alert: 'No se encontraron resultados' });
-    }
-}
-function parseResponseUser(response,type_poll_question){
-    switch (type_poll_question.code) {
-        case 'texto':
-        return response;
-        case 'califica':
-            try {
-                const parse_response = JSON.parse(response);
-                return parse_response[0] ? parse_response[0].resp_cal : '-';
-            } catch (e) {
-                return '-';
-            }
-        case 'opcion-multiple':
-            try {
-                return JSON.parse(response);
-            } catch (error) {
-                return [];
-            }
-        default : 
-        return response;
     }
 }
   
