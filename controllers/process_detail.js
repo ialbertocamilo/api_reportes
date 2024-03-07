@@ -46,6 +46,10 @@ async function exportarDiplomas({ processesIds, workspaceId }) {
 
     for (const _process of processes) {
         const users_id = await loadUsersSegmentedByCourse(_process.id, [], [], 1, 0, 'App\\Models\\Process', 'employee_onboarding', _process.instructors_id);
+        console.log('users_id',users_id);
+        if(users_id.length == 0){
+            continue;
+        }
         const instructors = await listInstructors(_process.instructors_id);
         const prueba =await listUsersStatusByActivities(users_id,subworkspaces,_process,instructors[0]);
         // process.send({ alert: prueba })
