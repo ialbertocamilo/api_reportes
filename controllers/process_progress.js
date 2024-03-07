@@ -113,7 +113,7 @@ async function listQuantityUsersInProcessByStatus(users_id,process_id){
  
      const quantity_users_in_progress = users_status_in_stages.filter(us => us.code == 'in-progress').length;
      const percent_users_in_progress = quantity_users_in_progress>0 ? quantity_users_in_progress/count_users : 0;
-     const quantity_users_completed = users_status_in_stages.filter(us => us.code == 'completed').length;
+     const quantity_users_completed = users_status_in_stages.filter(us => us.code == 'finished').length;
      const percent_users_completed = quantity_users_completed>0 ? quantity_users_completed/count_users : 0;
      const calculate_users_pending = count_users - (quantity_users_in_progress + quantity_users_completed);
      const quantity_users_pending = calculate_users_pending > 0 ? calculate_users_pending : 0;
