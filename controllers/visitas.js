@@ -24,7 +24,7 @@ let headers = [
 ]
 
 async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
-  careers, areas, tipocurso, schools, courses , start, end }) {
+  careers, areas, tipocurso, schools, courses , start, end,platform }) {
   // Generate Excel file header
 
   const headersEstaticos = await getGenericHeaders(workspaceId)
@@ -45,7 +45,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
   const usersTopicsData = await loadUsersWithVisits(
     workspaceId, modulos, UsuariosActivos, UsuariosInactivos, 
     careers, areas, tipocurso, schools, courses, 
-    start, end
+    start, end,platform
   );
 
   // console.log('data', usersData);
@@ -160,7 +160,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
 async function loadUsersWithVisits (
   workspaceId, modulesIds, activeUsers, inactiveUsers,
   careers, areas, tipocurso, schools, courses, 
-  start, end
+  start, end,platform
 ) {
 
   const subworkspacesIds = await getSuboworkspacesIds(workspaceId)
@@ -177,7 +177,7 @@ async function loadUsersWithVisits (
     const InitialUsers = await getUsersCareersAreas(modulesIds, 
                                             activeUsers, inactiveUsers, 
                                             careers, areas,
-                       
+                                            platform,
                                             colsquery,
                                             colsrelations);
 
