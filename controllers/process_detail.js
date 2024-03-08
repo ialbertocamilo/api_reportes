@@ -71,6 +71,7 @@ async function loadProcesses(workspaceId, processesIds) {
                         (SELECT group_concat(pri.user_id) FROM process_instructors pri WHERE pri.process_id = p.id) AS instructors_id
                     from processes p join stages s on s.process_id = p.id 
                     where p.workspace_id=:workspace_id and p.id in (:processes_ids) and p.deleted_at is null and s.deleted_at is null and s.active =1
+                    group by s.process_id 
                     order by count_stages desc,s.position asc;
                 `
     const [processes] = await con.raw(query, {
