@@ -51,8 +51,7 @@ async function exportarDiplomas({ processesIds, workspaceId }) {
             continue;
         }
         const instructors = await listInstructors(_process.instructors_id);
-        const prueba =await listUsersStatusByActivities(users_id,subworkspaces,_process,instructors[0]);
-        // process.send({ alert: prueba })
+        await listUsersStatusByActivities(users_id,subworkspaces,_process,instructors[0]);
     }
     if (worksheet._rowZero > 1) {
         const dateFileName = Date.now();
