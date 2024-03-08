@@ -654,10 +654,9 @@ module.exports = {
   async loadProcessess(workspace_id){
     const query = `select 
         p.id,p.title,p.starts_at,p.finishes_at,
-        count(s.id) as 'count_stages'
+        count(s.process_id) as 'count_stages'
         from processes p join stages s on s.process_id = p.id 
-        where p.workspace_id=:workspaceId and p.deleted_at is null and s.deleted_at is null and s.active =1
-        having count_stages>0 order by p.title asc;
+        where p.workspace_id=:workspaceId and s.deleted_at is null and s.active =1 group by s.process_id HAVING count_stages>0 order by p.title asc;
       `
       const [rows] = await con.raw(query,
           { workspaceId: workspace_id}
