@@ -82,7 +82,7 @@ async function exportarDiplomas({modulesIds,workspaceId }) {
     if (worksheet._rowZero > 1) {
         const dateFileName = Date.now();
         workbook.commit().then(() => {
-            process.send(response({ createAt: dateFileName, file_ext: '.xlsx', modulo: 'ProcessProgress' }))
+            process.send(response({ createAt, modulo: 'ProcessProgress' }))
         })
     } else {
         process.send({ alert: 'No se encontraron resultados' })
