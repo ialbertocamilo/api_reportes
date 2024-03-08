@@ -76,7 +76,7 @@ async function loadProcesses(workspaceId, processesIds) {
                 `
     const [processes] = await con.raw(query, {
         workspace_id: workspaceId,
-        processes_ids: processesIds.join('')
+        processes_ids: processesIds.join(',')
     })
     return processes
 }
