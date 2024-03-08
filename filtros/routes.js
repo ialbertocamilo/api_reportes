@@ -30,6 +30,13 @@ router.get('/courses/:schoolIds/all', async (req, res) => {
   res.json(datos)
 })
 
+router.get('/courses/:schoolIds/registro-capacitacion', async (req, res) => {
+  const datos = await tablas.loadSchoolCoursesWithRegistroCapacitacion(
+    req.params.schoolIds
+  )
+  res.json(datos)
+})
+
 router.get('/courses/checklist/:workspaceId', async (req, res) => {
 
   const datos = await tablas.loadChecklists(req.params.workspaceId)

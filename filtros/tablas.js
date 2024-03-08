@@ -135,6 +135,25 @@ module.exports = {
     
     return rows
   },
+  async loadSchoolCoursesWithRegistroCapacitacion(schoolsId) {
+    if(schoolsId.length === 0){
+      return []
+    }
+    const [rows] = await con.raw(`
+      select
+        c.*
+      from courses c 
+          inner join course_school cs on c.id = cs.course_id
+      where 
+        cs.school_id in (:schoolIds)
+        and json_extract(c.registro_capacitacion, "$.active") in (1, true)
+        and c.active = 1 
+        and c.deleted_at is null
+    `, { schoolIds: schoolsId }
+    )
+    return rows
+  }
+  ,
   /**
    * Load courses from several schools
    * @param schoolsId
