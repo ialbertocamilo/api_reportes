@@ -17,7 +17,7 @@ const { loadUsersSegmentedv2 } = require('../helper/SegmentationHelper_v2')
 const moment = require('moment/moment')
 
 async function exportarRegistroCapacitacion({
-  ext, modulesIds, schoolsIds, coursesIds
+  ext, modulesIds, schoolsIds, coursesIds, startDate, endDate
 }) {
 
   let defaultHeaders = [
@@ -36,23 +36,27 @@ async function exportarRegistroCapacitacion({
     await createHeaders(defaultHeaders)
 
     const courses = await con('courses').where('id', coursesIds[0]);
-    const summaries = await loadSummaries(modulesIds, coursesIds[0]);
-    summaries.forEach(summary => {
-      const cellRow = []
+    const summaries = await loadSummaries(
+      modulesIds, coursesIds[0], startDate, endDate
+    );
+    if (summaries) {
+      summaries.forEach(summary => {
+        const cellRow = []
 
-      cellRow.push(summary.subworkspace)
-      cellRow.push(`${summary.name} ${summary.lastname} ${summary.surname}`)
-      cellRow.push(summary.document)
-      cellRow.push(courses[0].name)
-      cellRow.push(
-        summary.registro_capacitacion_path && summary.last_time_evaluated_at
-        ? transformDate(summary.last_time_evaluated_at)
-        : ''
-      )
-      cellRow.push(summary.registro_capacitacion_path ? 'Sí' : 'No')
+        cellRow.push(summary.subworkspace)
+        cellRow.push(`${summary.name} ${summary.lastname} ${summary.surname}`)
+        cellRow.push(summary.document)
+        cellRow.push(courses[0].name)
+        cellRow.push(
+          summary.registro_capacitacion_path && summary.last_time_evaluated_at
+            ? transformDate(summary.last_time_evaluated_at)
+            : ''
+        )
+        cellRow.push(summary.registro_capacitacion_path ? 'Sí' : 'No')
 
-      worksheet.addRow(cellRow).commit()
-    })
+        worksheet.addRow(cellRow).commit()
+      })
+    }
 
     if (worksheet._rowZero > 1) {
       workbook.commit().then(() => {
@@ -92,23 +96,30 @@ async function exportarRegistroCapacitacion({
   }
 }
 
-async function loadSignedSummaries(modulesIds, coursesIds) {
+async function loadSignedSummaries(modulesIds, coursesIds, startDate, endDate) {
 
   const query = `
-    select user_id, registro_capacitacion_path 
-    from users u
-      inner join summary_courses sc on u.id = sc.user_id
-    where 
-      sc.course_id in (${coursesIds.join(',')})
-      and u.subworkspace_id in (${modulesIds.join(',')})
-      and sc.deleted_at is null 
-      and sc.registro_capacitacion_path is not null;`
+      select user_id, registro_capacitacion_path
+      from users u
+               inner join summary_courses sc on u.id = sc.user_id
+      where
+          sc.course_id in (?)
+        and u.subworkspace_id in (?)
+        and sc.deleted_at is null
+        and sc.registro_capacitacion_path is not null
+          ${startDate ? 'and date(sc.last_time_evaluated_at) >= ?' : ''}
+          ${endDate ? 'and date(sc.last_time_evaluated_at) <= ?' : ''}`;
 
-  const [summaries] = await con.raw(query)
+  const bindings = [coursesIds, modulesIds];
+
+  if (startDate) bindings.push(startDate);
+  if (endDate) bindings.push(endDate);
+
+  const [summaries] = await con.raw(query, bindings)
   return summaries
 }
 
-async function loadSummaries(modulesIds, courseId) {
+async function loadSummaries(modulesIds, courseId, startDate, endDate) {
 
   const usersSegmented = await loadUsersSegmentedv2(
     courseId,
@@ -124,7 +135,7 @@ async function loadSummaries(modulesIds, courseId) {
   const usersIds = pluck(usersSegmented, 'id')
   if (!usersIds.length) return;
 
-  const query = `
+  let query = `
     select 
       u.name,
       u.lastname,
@@ -137,11 +148,18 @@ async function loadSummaries(modulesIds, courseId) {
       inner join workspaces w on w.id = u.subworkspace_id
       left join summary_courses sc on u.id = sc.user_id
     where 
-      sc.course_id = ${courseId}
-      and u.id in (${usersIds.join(',')})
-      and sc.deleted_at is null`
+      sc.course_id = ?
+      and u.id in (?)
+      and sc.deleted_at is null
+        ${startDate ? 'and date(sc.last_time_evaluated_at) >= ?' : ''}
+        ${endDate ? 'and date(sc.last_time_evaluated_at) <= ?' : ''}`
 
-  const [summaries] = await con.raw(query)
+  const bindings = [courseId, usersIds];
+
+  if (startDate) bindings.push(startDate);
+  if (endDate) bindings.push(endDate);
+
+  const [summaries] = await con.raw(query, bindings)
   return summaries
 }
 
