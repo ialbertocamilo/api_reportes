@@ -147,7 +147,7 @@ async function loadSummaries(modulesIds, courseId, startDate, endDate) {
       sc.last_time_evaluated_at
     from users u 
       inner join workspaces w on w.id = u.subworkspace_id
-      left join summary_courses sc on u.id = sc.user_id
+      left join summary_courses sc on u.id = sc.user_id 
     where 
       sc.course_id = ?
       and u.id in (?)
