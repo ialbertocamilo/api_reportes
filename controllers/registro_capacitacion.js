@@ -27,6 +27,7 @@ async function exportarRegistroCapacitacion({
     'Curso',
     'Fecha',
     'Firmó'
+
   ];
 
   //  Generate Excel file
