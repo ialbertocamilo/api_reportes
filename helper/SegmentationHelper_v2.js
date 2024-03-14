@@ -96,7 +96,28 @@ async function loadUsersSegmentedByCourse (course_id, modules,
     "segment_id",
     "get_array"
     );
-    const type_user = await con('taxonomies').select('id').where('group','user').where('type','type').where('code',code_user).first();
+    let userTypesIds = [];
+    if (code_user === 'employee') {
+      const userTypes = await con('taxonomies')
+        .select('id')
+        .where('group','user')
+        .where('type','type')
+        .whereIn('code', ['employee', 'client']);
+
+      userTypesIds = pluck(userTypes, 'id');
+
+    } else {
+      const type_user = await con('taxonomies')
+        .select('id')
+        .where('group','user')
+        .where('type','type')
+        .where('code',code_user)
+        .first();
+
+      userTypesIds.push(type_user.id)
+    }
+
+
     // === filtro para modulos ===
     const modules_query = modules && modules.length > 0
     ? `and u.subworkspace_id in (${modules.join()})`
@@ -162,7 +183,7 @@ async function loadUsersSegmentedByCourse (course_id, modules,
           u.deleted_at is null
           ${where_active_users}
           ${modules_query}
-          and u.type_id = ${type_user.id}
+          and u.type_id in (${userTypesIds.join(',')})
           ${where_criterions_values_user_area}
       `);
 
