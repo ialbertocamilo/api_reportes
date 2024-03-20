@@ -43,6 +43,7 @@ async function exportReportPollQuestion(filters) {
         {numeric:1,value:'Muy malo'},
     ];
     for (const poll_questions_answer of poll_questions_answers) {
+
         const response_user = await parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question);
 
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
