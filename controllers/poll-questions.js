@@ -43,7 +43,7 @@ async function exportReportPollQuestion(filters) {
         {numeric:1,value:'Muy malo'},
     ];
     for (const poll_questions_answer of poll_questions_answers) {
-        const response_user = parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question); 
+        const response_user = await parseResponseUser(poll_questions_answer.respuestas,filters.type_poll_question);
         const workspace = subworkspaces.find(subworkspace =>subworkspace.id == poll_questions_answer.subworkspace_id)
         const schools_name = pluck(schools.filter(s=>s.course_id == poll_questions_answer.course_id),'name').join(',');
         if(filters.type_poll_question.code == 'opcion-multiple' && response_user.length > 0){
@@ -99,4 +99,3 @@ async function exportReportPollQuestion(filters) {
         process.send({ alert: 'No se encontraron resultados' });
     }
 }
-  
