@@ -59,7 +59,7 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
   for (const filepath of fileNames) {
       const pdfFileName = filepath.split('/')[1];
       console.log(filepath,'filepath');
-      const {content} = await downloadFileFromS3(filepath);
+      const {content} = await downloadFile(filepath);
       zipStream.append(content, { name: pdfFileName });
   }
   // zipWriteStream.on('close', async () => {
