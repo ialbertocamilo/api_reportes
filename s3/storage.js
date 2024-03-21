@@ -49,6 +49,19 @@ function downloadFile(filePath,expiresIn=300,from_reports=true) {
   }  
   
 }
+
+async function downloadFileFromS3(fileName) {
+  // try {
+  console.log('entra');
+  const s3Params = {
+    Bucket: AWS_BUCKET_NAME,
+    Key: `${MARCA}/${fileName}`,
+  };
+  const getObjectCommand = new GetObjectCommand(s3Params);
+  const {Body} = await client.send(getObjectCommand);
+  return { name: fileName, content: Body };
+}
+
 // Zipea un listado de archivos almacenados en el s3, y sube el mismo zip al s3 para su posterior descarga
 async function zipAndUploadFilesInS3(fileNames, zipFileName) {
   zipFileName = CARPETA_DESCARGA+'/'+zipFileName
@@ -59,7 +72,7 @@ async function zipAndUploadFilesInS3(fileNames, zipFileName) {
   for (const filepath of fileNames) {
       const pdfFileName = filepath.split('/')[1];
       console.log(filepath,'filepath');
-      const {content} = await downloadFile(filepath);
+      const {content} = await downloadFileFromS3(filepath);
       zipStream.append(content, { name: pdfFileName });
   }
   // zipWriteStream.on('close', async () => {
