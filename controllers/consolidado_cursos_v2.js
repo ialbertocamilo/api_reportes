@@ -108,7 +108,7 @@ async function generateSegmentationReport({
     headers.splice(schoolProgressIndex, 0, 'APROBACIÓN ESCUELA');
     headers.unshift('RANGO DE ANTIGÜEDAD')
 
-    headers.splice(7, 0, 'CUMPLIMIENTO CURSO');
+    headers.splice(8, 0, 'CUMPLIMIENTO CURSO');
   }
 
   // Generate Excel file header
