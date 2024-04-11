@@ -1,6 +1,6 @@
 const moment = require("moment");
 const { con } = require("../db");
-const { loadTopicsByCourseId, getCourseStatusId } = require("./CoursesTopicsHelper");
+const { loadTopicsByCourseId, getCourseStatusId, loadEvaluationTypes } = require("./CoursesTopicsHelper");
 const {
   groupArrayOfObjects,
   groupArrayOfObjects_v2,
@@ -595,6 +595,11 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
 
     const ArrayStackUserIds = calcStackByNumber(StacksUsersIds, 1000);
 
+    // Get id of open evaluation
+
+    const evaluationsTypes = await loadEvaluationTypes();
+    const openEvaluation = evaluationsTypes.find(item => item.code === 'open')
+    const openEvaluationId = openEvaluation ? openEvaluation.id : null;
 
     // logtime('start: users_test');
     function buildQueryUsersIds(userValues) {
@@ -622,14 +627,13 @@ exports.loadUsersSegmentedv2WithSummaryTopicsEva = async (
 
     where 
       u.id in (${userValues.join()})
-      and t.type_evaluation_id = 4577
+      and t.type_evaluation_id = ${openEvaluationId}
       and t.assessable = 1
       
       ${where_in_topics}
       ${where_active_topics}
       
       ${start_date_query} ${end_date_query}`;
-      // t.type_evaluation_id = 4557 = tipo de evluacion: 'abierta'
 
       // logtime(second_query);
     return second_query;
