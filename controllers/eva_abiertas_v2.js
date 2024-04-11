@@ -24,7 +24,8 @@ const { loadCoursesV2,
 const { loadTopicsStatuses, 
         loadTopicsByCoursesIds,
         loadCompatiblesId,
-        getTopicStatusName } = require('../helper/CoursesTopicsHelper')
+        getTopicStatusName, loadEvaluationTypes
+} = require('../helper/CoursesTopicsHelper')
 const { loadSummaryCoursesByUsersAndCoursesTopics } = require('../helper/Summaries')
 let headers = [
   'ÚLTIMA SESIÓN',
@@ -246,23 +247,9 @@ async function exportarEvaluacionesAbiertas ({
           const questions = questionsData.filter( ({topic_id: q_topic_id}) =>  q_topic_id === topic_id );
           answers_q_check = questions.length;
 
-          // const questions = await getQuestionsByTopic(topic_id, countLimit);   
-          // answers_q_check = questions.length;
-                    
           if(questions.length) {
             questions.forEach((question, index) => {
               const answer = answers[index];
-
-             /* if(!question) {
-                console.log('error :', {question, answer});
-                throw new Error(`Ooops C:${course.course_id} - 
-                                       C:${course.course_name} - 
-                                       U:${user.id} - 
-                                       T:${user.topic_id}`);
-              
-              } */
-              
-              // console.log(`question - answer`, { question, answer });
 
               cellRow.push(question ? strippedString(question.pregunta) : '-');
               cellRow.push((answer && answer.respuesta && question) ? strippedString(answer.respuesta) : '-');
@@ -413,6 +400,11 @@ async function loadQuestionsByCourses(courses_ids) {
     .where('code', 'written-answer');
   const type = questionTypes[0];
 
+  const evaluationsTypes = await loadEvaluationTypes();
+  const openEvaluation = evaluationsTypes.find(item => item.code === 'open')
+  const openEvaluationId = openEvaluation ? openEvaluation.id : null;
+
+
   const query = `
     SELECT
       *
@@ -425,9 +417,8 @@ async function loadQuestionsByCourses(courses_ids) {
         t.id
       FROM topics t
       WHERE t.course_id IN (${courses_ids.join()})
-      AND t.type_evaluation_id = 4577)`
-  // t.type_evaluation_id = 4557 = tipo de evluacion: 'abierta'
-  // logtime(query);
+      AND t.type_evaluation_id = ${openEvaluationId})`
+
   const [ rows ] = await con.raw(query);
   return rows;
 }
@@ -438,6 +429,11 @@ async function loadCountQuestions(courses_ids) {
     .where('group', 'question')
     .where('code', 'written-answer');
   const type = questionTypes[0];
+
+  const evaluationsTypes = await loadEvaluationTypes();
+  const openEvaluation = evaluationsTypes.find(item => item.code === 'open')
+  const openEvaluationId = openEvaluation ? openEvaluation.id : null;
+
 
   const query = `
       SELECT 
@@ -452,9 +448,9 @@ async function loadCountQuestions(courses_ids) {
             t.id 
           FROM topics t 
             WHERE t.course_id IN (${courses_ids.join()}) 
-            AND t.type_evaluation_id = 4577)
+            AND t.type_evaluation_id = ${openEvaluationId})
 
-    GROUP BY q.topic_id
+    GROUP BY q.topic_id 
     ORDER BY num_questions DESC`;
   // t.type_evaluation_id = 4557 = tipo de evluacion: 'abierta'
   // logtime(query);
