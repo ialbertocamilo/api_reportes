@@ -38,6 +38,7 @@ async function exportAssists({ modulos = [],
         CursosActivos, CursosInactivos }, 
         modulos);
 
+        
     const pdfs = [];
     for (const course of courses) {
         const course_modality_in_person_properties = JSON.parse(course.modality_in_person_properties);
