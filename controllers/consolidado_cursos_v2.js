@@ -358,6 +358,7 @@ async function generateSegmentationReport({
           console.log(userSummaryTopicsCount);
           console.log('----------------');
           console.log(
+
             'coursesTopics: ', coursesTopics,
             'userSummaryTopicsCount: ', userSummaryTopicsCount);
 
