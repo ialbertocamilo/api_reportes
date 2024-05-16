@@ -188,13 +188,13 @@ exports.loadUsersWithCourses = async (
                inner join course_school cs on c.id = cs.course_id
                inner join taxonomies tx on tx.id = c.type_id
                inner join schools s on cs.school_id = s.id
-               inner join school_workspace sw on s.id = sw.school_id
+               inner join school_subworkspace sw on s.id = sw.school_id
 
   `
   query += ` where 
       sc.deleted_at is null and
       u.subworkspace_id in (${modulesIds.join()}) and
-      sw.workspace_id = ${workspaceId} `
+      sw.subworkspace_id in (${modulesIds.join()}) `
 
 
   // Add type_course and dates at ('created_at')

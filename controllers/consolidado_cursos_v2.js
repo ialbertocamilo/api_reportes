@@ -352,17 +352,6 @@ async function generateSegmentationReport({
 
       if (isPromart) {
         cellRow.push((calculateCourseAccomplishmentPercentage(course.course_id, coursesTopics, userSummaryTopicsCount) || 0) + '%')
-
-        if (userStore.document == '74445607') {
-          console.log('>>>>>>>>>>>>>>>>>')
-          console.log(userSummaryTopicsCount);
-          console.log('----------------');
-          console.log(
-
-            'coursesTopics: ', coursesTopics,
-            'userSummaryTopicsCount: ', userSummaryTopicsCount);
-
-        }
       }
 
       cellRow.push(user.course_views || "-");
