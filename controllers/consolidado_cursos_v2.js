@@ -329,7 +329,7 @@ async function generateSegmentationReport({
       const taken = user.taken || 0;
       const reviewed = user.reviewed || 0;
       const completed = passed + taken + reviewed;
-      const userSummaryTopicsCount = summaryTopicsCount.filter(stc => stc.user_id === user.id)
+      const userSummaryTopicsCount = summaryTopicsCount.filter(stc => +stc.user_id === +user.id)
 
       cellRow.push(lastLogin !== "Invalid date" ? lastLogin : "-");
       cellRow.push(course.school_name);
@@ -352,6 +352,16 @@ async function generateSegmentationReport({
 
       if (isPromart) {
         cellRow.push((calculateCourseAccomplishmentPercentage(course.course_id, coursesTopics, userSummaryTopicsCount) || 0) + '%')
+
+        if (userStore.document == '74445607') {
+          console.log('>>>>>>>>>>>>>>>>>')
+          console.log(userSummaryTopicsCount);
+          console.log('----------------');
+          console.log(
+            'coursesTopics: ', coursesTopics,
+            'userSummaryTopicsCount: ', userSummaryTopicsCount);
+
+        }
       }
 
       cellRow.push(user.course_views || "-");
