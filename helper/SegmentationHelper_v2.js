@@ -1005,9 +1005,9 @@ async function loadSegments (modelType, modelIds) {
       "sv.criterion_value_id",
       'sv.starts_at',
       'sv.finishes_at',
-      'sv.days_less_than',
-      'sv.days_greater_than',
-      'sv.days_duration',
+      // 'sv.days_less_than',
+      // 'sv.days_greater_than',
+      // 'sv.days_duration',
       "sg.model_id as course_id",
     )
     .join("segments as sg", "sg.id", "sv.segment_id")
