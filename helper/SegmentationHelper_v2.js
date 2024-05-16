@@ -946,10 +946,31 @@ function userMatchesSegments(userId, segments, userCriteriaValues) {
       let uniqueCriterionIds = pluckUnique(segmentValues, 'criterion_id')
       let userCriterionMatches = []
       segmentValues.forEach(sv => {
+        let starts_at;
+        let finishes_at;
+        if (sv.starts_at && sv.finishes_at) {
+          starts_at = moment(sv.starts_at, 'YYYY-MM-DD');
+          finishes_at = moment(sv.finishes_at, 'YYYY-MM-DD');
+        }
 
         let userCriteriaValue = userCriteriaValues.find(uscv => {
-          return +sv.criterion_value_id === +uscv.criterion_value_id &&
-            +sv.criterion_id === +uscv.criterion_id
+          let matches =
+            +sv.criterion_value_id === +uscv.criterion_value_id &&
+            +sv.criterion_id === +uscv.criterion_id;
+
+            if (matches) {
+              return matches
+            } else  {
+
+              if (starts_at && finishes_at) {
+                const userDate = moment(uscv.value_text.substring(0, 10), 'YYYY-MM-DD')
+                return userDate
+                  ? userDate.isBetween(starts_at, finishes_at)
+                  : false
+              }
+            }
+
+            return false;
         })
 
         // Save criterion id of found value
@@ -982,6 +1003,11 @@ async function loadSegments (modelType, modelIds) {
       "sv.criterion_id",
       "sv.segment_id",
       "sv.criterion_value_id",
+      'sv.starts_at',
+      'sv.finishes_at',
+      'sv.days_less_than',
+      'sv.days_greater_than',
+      'sv.days_duration',
       "sg.model_id as course_id",
     )
     .join("segments as sg", "sg.id", "sv.segment_id")
@@ -998,20 +1024,21 @@ exports.loadSegments = loadSegments;
  */
 async function loadUsersSegmentsCriterionValues(segments, usersIds) {
 
-  let criterionValuesIds = pluckUnique(
-    segments, 'criterion_value_id').filter((e) => e !== null)
   let criteriaIds = pluckUnique(segments, 'criterion_id').filter((e) => e !== null)
 
   // Load users criterion values
 
   const query = `
-    select cvu.user_id, cvu.criterion_value_id, cv.criterion_id
+    select 
+        cvu.user_id, 
+        cvu.criterion_value_id, 
+        cv.criterion_id,
+        cv.value_text
     from 
         criterion_value_user cvu
         join criterion_values cv on cv.id = cvu.criterion_value_id
     where
         cvu.user_id in (${usersIds.join(',')}) 
-        and cvu.criterion_value_id in (${criterionValuesIds.join(',')})
         and cv.criterion_id in (${criteriaIds.join(',')})
   `
   const [segmentsUsersCriterionValues] = await con.raw(query);
