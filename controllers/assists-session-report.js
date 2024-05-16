@@ -29,7 +29,7 @@ async function exportAssists({ modulos = [],
     tipocurso,
     CursosActivos = false, CursosInactivos = false,
     activeTopics=false,inactiveTopics=false,
-    activeUsers=false,inactiveUsers=false
+    UsuariosActivos=false,UsuariosInactivos=false
  }) {
     if (modulos.length === 0) {
         modulos = await getSuboworkspacesIds(workspaceId);
@@ -50,8 +50,8 @@ async function exportAssists({ modulos = [],
                 [],
                 null,
                 null,
-                activeUsers,
-                inactiveUsers,
+                UsuariosActivos,
+                UsuariosInactivos,
                 true,
                 true
             ),
