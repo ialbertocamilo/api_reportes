@@ -230,7 +230,7 @@ async function generateSegmentationReport ({
       cellRow.push(userStore.document)
       cellRow.push(userStore.active === 1 ? 'Activo' : 'Inactivo')
       cellRow.push(userStore.email)
-      if (process.env.MARCA === 'claro') { cellRow.push(userStore.phone_number) }
+      if (process.env.MARCA === 'inretail-test2') { cellRow.push(userStore.phone_number) }
       // encontrar usuario por 'id'
 
       // criterios de usuario
