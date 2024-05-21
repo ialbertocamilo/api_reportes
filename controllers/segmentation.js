@@ -33,6 +33,13 @@ async function generateSegmentationReport ({
   escuelas,
   workspaceId
 }) {
+
+  if (process.env.MARCA === 'claro') {
+    const index = headers.indexOf('EMAIL');
+    headers.splice(index + 1, 0, 'Número de teléfono');
+  }
+
+
   // Generate Excel file header
   await createHeaders(headers)
   //Load Courses
@@ -55,6 +62,8 @@ async function generateSegmentationReport ({
         cellRow.push(user.surname)
         cellRow.push(user.document)
         cellRow.push(user.email)
+        if (process.env.MARCA === 'claro') { cellRow.push(user.phone_number) }
+
         cellRow.push(course.school_name)
         cellRow.push(course.course_name)
         cellRow.push(course.course_active ? 'Activo' : 'Inactivo')

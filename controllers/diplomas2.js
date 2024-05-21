@@ -64,6 +64,10 @@ const headersReport = [
 ]
 async function exportarDiplomas({ data, states }) {
 
+  if (process.env.MARCA === 'claro') {
+    defaultHeaders.push('Número de teléfono')
+  }
+
   const { estados_usuario,
     estados_escuela,
     estados_curso } = states;
@@ -149,6 +153,9 @@ async function exportarDiplomas({ data, states }) {
     cellRow.push(summary.user_fullname)
     cellRow.push(summary.user_document)
     cellRow.push(summary.user_active ? 'Activo' : 'Inactivo')
+    if (process.env.MARCA === 'claro') { cellRow.push(summary.phone_number) }
+
+
     if(StackUserCriterios[summary.user_id]) {
       const StoreUserValues = StackUserCriterios[summary.user_id];
       StoreUserValues.forEach((item) => cellRow.push(item.criterion_value || "-"));

@@ -211,6 +211,7 @@ async function exportTemasNoEvaluables ({
       cellRow.push(userStore.surname)
       cellRow.push(userStore.document)
       cellRow.push(userStore.active === 1 ? 'Activo' : 'Inactivo')
+      if (process.env.MARCA === 'claro') { cellRow.push(userStore.phone_number) }
       // encontrar usuario por 'id'
 
       // criterios de usuario

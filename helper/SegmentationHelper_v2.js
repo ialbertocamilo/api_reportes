@@ -302,7 +302,7 @@ exports.loadUsersSegmentedv2 = async (
       const query = `
      select 
         u.id,
-        ${includePersonalData ? ' u.name,u.lastname,u.surname,u.document, ' : ''}
+        ${includePersonalData ? ' u.name,u.lastname,u.surname,u.document,u.phone_number, ' : ''}
         sc.grade_average, sc.advanced_percentage,
         sc.status_id, sc.created_at as sc_created_at,
         sc.views as course_views, sc.passed as course_passed, 

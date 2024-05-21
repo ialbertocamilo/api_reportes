@@ -342,22 +342,6 @@ exports.loadUsersIdsWithCriterionValues = async (
   return pluck(users, "id");
 };
 
-exports.loadUsersBySubWorspaceIds = async (
-    subWorkspaceIds, indexId = false) => {
-
-   const [users] = await con.raw(
-    ` 
-      select
-        u.id, u.name,
-        u.lastname, u.surname, u.email,
-        u.document, u.active, u.last_login
-      from users u where
-        u.subworkspace_id IN (${subWorkspaceIds.join()})
-  `);
-
-  return indexId ? setCustomIndexAtObject(users) : users;
-};
-
 exports.getUsersNullAndNotNull = (users) => {
 
   let users_null = [],
@@ -375,13 +359,12 @@ exports.getUsersNullAndNotNull = (users) => {
 exports.loadUsersBySubWorspaceIds = async (
   subWorkspaceIds, indexId = false) => {
 
-
  const [users] = await con.raw(
 
   ` 
     select
       u.subworkspace_id,
-      u.id, u.name,
+      u.id, u.name, u.phone_number,
       u.lastname, u.surname, u.email,
       u.document, u.active, u.last_login
     from users u where

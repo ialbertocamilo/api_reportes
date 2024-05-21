@@ -59,6 +59,7 @@ async function AvanceCurricula ({ workspaceId, modulos, UsuariosActivos, Usuario
     cellRow.push(user.surname)
     cellRow.push(user.document)
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
+    if (process.env.MARCA === 'claro') { cellRow.push(user.phone_number) }
 
     // Add user's criterion values
 

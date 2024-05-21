@@ -76,13 +76,14 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     const user = usersTopicsData[i];
     const cellRow = []
     // === user data ===
-    const { name, lastname, surname, document: numdoc, active, last_login } = usersData[user.id];
+    const { name, lastname, surname, document: numdoc, active, last_login, phone_number } = usersData[user.id];
 
     cellRow.push(name);
     cellRow.push(lastname);
     cellRow.push(surname);
     cellRow.push(numdoc);
     cellRow.push(active === 1 ? 'Activo' : 'Inactivo');
+    if (process.env.MARCA === 'claro') { cellRow.push(phone_number) }
     // === user data ===
 
     // === user criteria ===
@@ -252,7 +253,8 @@ async function getSubWorkspaceUsers(modulesIds) {
     u.lastname,
     u.surname,
     u.document,
-    u.last_login
+    u.last_login,
+    u.phone_number
     
   FROM users u
   WHERE u.subworkspace_id in (${modulesIds.join()}) 

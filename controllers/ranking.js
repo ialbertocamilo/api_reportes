@@ -67,7 +67,7 @@ async function ranking({
     cellRow.push(user.surname)
     cellRow.push(user.document)
     cellRow.push(user.active === 1 ? 'Activo' : 'Inactivo')
-
+    if (process.env.MARCA === 'claro') { cellRow.push(user.phone_number) }
     // Add user's criterion values
 
     const userValues = getUserCriterionValues(user.id, workspaceCriteriaNames, usersCriterionValues)

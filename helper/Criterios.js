@@ -73,6 +73,11 @@ exports.getGenericHeadersNotasXCurso = async (workspaceId, criteria_id=[]) => {
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)','EMAIL'
   ]
+
+  if (process.env.MARCA === 'claro') {
+    headers.push('Número de teléfono')
+  }
+
   const workspaceCriteria = await exports.getWorkspaceCriteria(workspaceId,criteria_id)
   workspaceCriteria.forEach(el => headers.push(el.name))
   return headers
@@ -82,6 +87,10 @@ exports.getGenericHeaders = async (workspaceId,criteria_id=[]) => {
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ]
+  if (process.env.MARCA === 'claro') {
+    headers.push('Número de teléfono')
+  }
+
   const workspaceCriteria = await exports.getWorkspaceCriteria(workspaceId,criteria_id)
   workspaceCriteria.forEach(el => headers.push(el.name))
   return headers
@@ -91,6 +100,9 @@ exports.getGenericHeadersV2 = async ({workspaceId,headersDefault=[]})=>{
     'Módulo','Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ]
+  if (process.env.MARCA === 'claro') {
+    headers.push('Número de teléfono')
+  }
   const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId);
   workspaceCriteria.filter(c=> c.code != 'module').forEach(el => (el.name) && headers.push(el.name));
   return [headers.concat(headersDefault),workspaceCriteria];
@@ -100,6 +112,9 @@ exports.getGenericHeadersByCriterioCodes = async (workspaceId, codes = '') => {
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ];
+  if (process.env.MARCA === 'claro') {
+    headers.push('Número de teléfono')
+  }
   const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId, codes);
   workspaceCriteria.forEach(el => headers.push(el.name));
   return headers;
