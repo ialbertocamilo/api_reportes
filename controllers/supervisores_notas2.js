@@ -220,6 +220,7 @@ async function generateSegmentationReport ({
       
       const cellRow = []
 
+
       // encontrar usuario por 'id'
       const { id } = user
       const userStore = StackUsersData[id]
