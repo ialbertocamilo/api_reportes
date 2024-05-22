@@ -100,8 +100,11 @@ async function generateSegmentationReport({
 
 
 
-  // Homecenters Peruanos -> id 11
-  let isPromart = (workspaceId === 11 && format !== "sql")
+  // Homecenters Peruanos, Homecenter Ecuador -> id 11, 33
+  let isPromart = (
+    (workspaceId === 11 || workspaceId === 33)
+    && format !== "sql"
+  )
   if (isPromart) {
     let schoolProgressIndex = 2
     headers.splice(schoolProgressIndex, 0, 'CUMPLIMIENTO ESCUELA');
@@ -295,7 +298,7 @@ async function generateSegmentationReport({
       cellRow.push(userStore.document);
       cellRow.push(userStore.active === 1 ? "Activo" : "Inactivo");
       cellRow.push(userStore.email);
-      if (process.env.MARCA === 'inretail-test2') { cellRow.push(userStore.phone_number) }
+      if (process.env.MARCA === 'claro') { cellRow.push(userStore.phone_number) }
       // encontrar usuario por 'id'
 
       // criterios de usuario

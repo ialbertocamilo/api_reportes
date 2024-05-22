@@ -34,7 +34,7 @@ async function generateSegmentationReport ({
   workspaceId
 }) {
 
-  if (process.env.MARCA === 'inretail-test2') {
+  if (process.env.MARCA === 'claro') {
     const index = headers.indexOf('EMAIL');
     headers.splice(index + 1, 0, 'Número de teléfono');
   }
@@ -62,7 +62,7 @@ async function generateSegmentationReport ({
         cellRow.push(user.surname)
         cellRow.push(user.document)
         cellRow.push(user.email)
-        if (process.env.MARCA === 'inretail-test2') { cellRow.push(user.phone_number) }
+        if (process.env.MARCA === 'claro') { cellRow.push(user.phone_number) }
 
         cellRow.push(course.school_name)
         cellRow.push(course.course_name)

@@ -293,7 +293,7 @@ async function exportarUsuariosDW({
       cellRow.push(userStore.surname)
       cellRow.push(userStore.document)
       cellRow.push(userStore.active === 1 ? 'Activo' : 'Inactivo')
-      if (process.env.MARCA === 'inretail-test2') { cellRow.push(userStore.phone_number) }
+      if (process.env.MARCA === 'claro') { cellRow.push(userStore.phone_number) }
 
       // User criteria
 

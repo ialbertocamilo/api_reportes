@@ -64,7 +64,7 @@ const headersReport = [
 ]
 async function exportarDiplomas({ data, states }) {
 
-  if (process.env.MARCA === 'inretail-test2') {
+  if (process.env.MARCA === 'claro') {
     defaultHeaders.push('Número de teléfono')
   }
 
@@ -153,7 +153,7 @@ async function exportarDiplomas({ data, states }) {
     cellRow.push(summary.user_fullname)
     cellRow.push(summary.user_document)
     cellRow.push(summary.user_active ? 'Activo' : 'Inactivo')
-    if (process.env.MARCA === 'inretail-test2') { cellRow.push(summary.phone_number) }
+    if (process.env.MARCA === 'claro') { cellRow.push(summary.phone_number) }
 
 
     if(StackUserCriterios[summary.user_id]) {

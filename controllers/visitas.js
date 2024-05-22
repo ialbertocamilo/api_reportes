@@ -83,7 +83,7 @@ async function visitas ({ workspaceId, modulos, UsuariosActivos, UsuariosInactiv
     cellRow.push(surname);
     cellRow.push(numdoc);
     cellRow.push(active === 1 ? 'Activo' : 'Inactivo');
-    if (process.env.MARCA === 'inretail-test2') { cellRow.push(phone_number) }
+    if (process.env.MARCA === 'claro') { cellRow.push(phone_number) }
     // === user data ===
 
     // === user criteria ===

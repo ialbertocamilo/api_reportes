@@ -74,7 +74,7 @@ exports.getGenericHeadersNotasXCurso = async (workspaceId, criteria_id=[]) => {
     'Documento', 'Estado (Usuario)','EMAIL'
   ]
 
-  if (process.env.MARCA === 'inretail-test2') {
+  if (process.env.MARCA === 'claro') {
     headers.push('Número de teléfono')
   }
 
@@ -87,7 +87,7 @@ exports.getGenericHeaders = async (workspaceId,criteria_id=[]) => {
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ]
-  if (process.env.MARCA === 'inretail-test2') {
+  if (process.env.MARCA === 'claro') {
     headers.push('Número de teléfono')
   }
 
@@ -100,7 +100,7 @@ exports.getGenericHeadersV2 = async ({workspaceId,headersDefault=[]})=>{
     'Módulo','Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ]
-  if (process.env.MARCA === 'inretail-test2') {
+  if (process.env.MARCA === 'claro') {
     headers.push('Número de teléfono')
   }
   const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId);
@@ -112,7 +112,7 @@ exports.getGenericHeadersByCriterioCodes = async (workspaceId, codes = '') => {
     'Nombre', 'Apellido Paterno', 'Apellido Materno',
     'Documento', 'Estado (Usuario)'
   ];
-  if (process.env.MARCA === 'inretail-test2') {
+  if (process.env.MARCA === 'claro') {
     headers.push('Número de teléfono')
   }
   const workspaceCriteria = await exports.getWorkspaceCriteriaByCodes(workspaceId, codes);
